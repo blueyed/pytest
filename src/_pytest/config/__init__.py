@@ -383,6 +383,7 @@ class PytestPluginManager(PluginManager):
             "load_entrypoint_plugins",
             help="only load specified plugins via entrypoint",
             default=notset,
+            type="args",
         )
 
     def pytest_configure(self, config):
@@ -934,7 +935,6 @@ class Config:
 
         load_entrypoint_plugins = self.getini("load_entrypoint_plugins")
         if load_entrypoint_plugins is not notset and not len(load_entrypoint_plugins):
-            assert isinstance(load_entrypoint_plugins, list)
             return
 
         if os.environ.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"):
