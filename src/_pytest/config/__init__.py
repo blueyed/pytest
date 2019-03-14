@@ -294,10 +294,11 @@ class PytestPluginManager(PluginManager):
         ret = super(PytestPluginManager, self).is_blocked(name)
         if not ret:
             try:
-                load_entrypoint_plugins = self.config.getini("load_entrypoint_plugins")
-            except (AttributeError, ValueError):
+                config = self.config
+            except AttributeError:
                 pass
             else:
+                load_entrypoint_plugins = config.getini("load_entrypoint_plugins")
                 if load_entrypoint_plugins is not notset:
                     if name not in load_entrypoint_plugins:
                         return True
