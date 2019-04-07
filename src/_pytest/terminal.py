@@ -615,7 +615,7 @@ class TerminalReporter:
 
         if self.config.getoption("collectonly"):
             if self.stats.get("failed"):
-                self._tw.sep("!", "collection failures")
+                self.write_sep("!", "collection failures")
                 for rep in self.stats.get("failed"):
                     rep.toterminal(self._tw)
 
@@ -817,7 +817,7 @@ class TerminalReporter:
             if showcapture != "all" and showcapture not in secname:
                 continue
             if "teardown" in secname:
-                self._tw.sep("-", secname)
+                self.write_sep("-", secname)
                 if content[-1:] == "\n":
                     content = content[:-1]
                 self._tw.line(content)
@@ -868,7 +868,7 @@ class TerminalReporter:
         for secname, content in rep.sections:
             if showcapture != "all" and showcapture not in secname:
                 continue
-            self._tw.sep("-", secname)
+            self.write_sep("-", secname)
             if content[-1:] == "\n":
                 content = content[:-1]
             self._tw.line(content)
