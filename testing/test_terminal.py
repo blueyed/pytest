@@ -775,8 +775,8 @@ def test_fail_extra_reporting(testdir, monkeypatch):
     result.stdout.fnmatch_lines(
         [
             "*test summary*",
-            "FAILED test_fail_extra_reporting.py::test_this - AssertionError: this_failedt...",
-            "FAILED test_fail_extra_reporting.py::test_linematcher - remains unmatched: 'l...",
+            "FAILED test_fail_extra_reporting.py:2::test_this - AssertionError: this_failedt...",
+            "FAILED test_fail_extra_reporting.py:7::test_linematcher - remains unmatched: 'l...",
             "*= 2 failed in *",
         ]
     )

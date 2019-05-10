@@ -1007,7 +1007,21 @@ class TerminalReporter:
 
 def _get_pos(config, rep):
     nodeid = config.cwd_relative_nodeid(rep.nodeid)
-    return nodeid
+    path, _, testname = nodeid.rpartition("::")
+    if not testname:
+        return nodeid
+
+    try:
+        reprcrash = rep.longrepr.reprcrash
+    except AttributeError:
+        return nodeid
+
+    if isinstance(reprcrash.path, six.string_types):
+        crash_path = py.path.local(reprcrash.path)
+    else:
+        crash_path = reprcrash.path
+    rel_crash_path = config.invocation_dir.bestrelpath(crash_path)
+    return "%s::%s:%s" % (rel_crash_path, testname, reprcrash.lineno)
 
 
 def _get_line_with_reprcrash_message(config, rep, termwidth):
