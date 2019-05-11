@@ -1247,3 +1247,52 @@ def test_pdb_wrapper_class_is_reused(testdir):
     result.stdout.fnmatch_lines(
         ["*set_trace_called*", "*set_trace_called*", "* 1 passed in *"]
     )
+
+
+def test_pdb_in_thread_after_exit(testdir):
+    """Ensure that pdb.set_trace works after main thread exited already.
+
+    This tests both continuation after the main thread exited, and a new
+    set_trace afterwards.
+    """
+    p1 = testdir.makepyfile(
+        """
+        import threading
+
+        main_thread = threading.current_thread()
+        evt = threading.Event()
+        evt2 = threading.Event()
+
+        def test():
+
+            def target():
+                print("target_" + "start")
+                evt.set()
+                assert main_thread.is_alive()
+                __import__('pdb').set_trace()
+                assert not main_thread.is_alive()
+                __import__('pdb').set_trace()
+                print("target_" + "end")
+
+            thread = threading.Thread(target=target)
+            thread.start()
+
+            evt.wait()
+            evt2.wait()
+        """
+    )
+    child = testdir.spawn_pytest(str(p1) + " -s")
+    child.expect("target_start")
+    child.expect(r"\(Pdb")
+    child.sendline("evt2.set()")
+    child.expect_exact(
+        "= \x1b[32m\x1b[1m1 passed\x1b[0m\x1b[32m in"
+    )  # main thread exited
+    child.sendline("c")
+    child.expect(r"\(Pdb")
+    child.sendline("c")
+    child.expect("target_end")
+    child.wait()
+    rest = child.read().decode("utf8")
+    assert "Exception in thread" not in rest
+    assert child.exitstatus == 0
