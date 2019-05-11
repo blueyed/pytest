@@ -1007,7 +1007,7 @@ class TerminalReporter:
 
 def _get_pos(config, rep):
     nodeid = config.cwd_relative_nodeid(rep.nodeid)
-    path, _, testname = nodeid.rpartition("::")
+    path, _, testname = nodeid.partition("::")
     if not testname:
         return nodeid
 
