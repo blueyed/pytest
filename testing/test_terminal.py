@@ -756,23 +756,54 @@ class TestTerminalFunctional:
         result.stdout.fnmatch_lines(["collected 3 items", "hello from hook: 3 items"])
 
 
-def test_fail_extra_reporting(testdir, monkeypatch):
+@pytest.mark.parametrize("tty", (True, False))
+@pytest.mark.parametrize("use_CI", (True, False))
+def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
+    if use_CI:
+        monkeypatch.setenv("CI", "true")
+    else:
+        monkeypatch.delenv("CI", raising=False)
     monkeypatch.setenv("COLUMNS", "80")
+    monkeypatch.setenv("PY_COLORS", "0")
+
     testdir.makepyfile(
         """
-        def test_this():
-            assert 0, 'this_failed' * 100
+        def test_this(request):
+            tr = request.config.pluginmanager.getplugin("terminalreporter")
+            assert tr.isatty is {tty}
+            assert 0, 'this_failed' * 8
 
         def test_linematcher():
             from _pytest.pytester import LineMatcher
 
             LineMatcher(["1", "2", "3"]).fnmatch_lines(["2", "last_unmatched"])
-    """
+    """.format(
+            tty=tty
+        )
     )
-    result = testdir.runpytest()
-    result.stdout.no_fnmatch_line("*short test summary*")
-    result = testdir.runpytest("-rf")
-    result.stdout.fnmatch_lines(
+
+    if tty:
+        child = testdir.spawn_pytest("-rf")
+        lm = LineMatcher(child.read().decode().splitlines())
+    else:
+        result = testdir.runpytest()
+        result.stdout.no_fnmatch_line("*short test summary*")
+        result = testdir.runpytest("-rf")
+        lm = result.stdout
+
+    if use_CI or not tty:
+        msgs = [
+            "FAILED test_fail_extra_reporting.py:4(test_this) - AssertionError: "
+            + ("this_failed" * 8),
+            "FAILED test_fail_extra_reporting.py:9(test_linematcher) - remains unmatched: 'last_unmatched'",
+        ]
+    else:
+        msgs = [
+            "FAILED test_fail_extra_reporting.py:4(test_this) - AssertionError: this_faile...",
+            "FAILED test_fail_extra_reporting.py:9(test_linematcher) - remains unmatched: ...",
+        ]
+
+    lm.fnmatch_lines(
         [
             '>       LineMatcher(["1", "2", "3"]).fnmatch_lines(["2", "last_unmatched"])',
             "E       Failed: nomatch: '2'",
@@ -782,10 +813,9 @@ def test_fail_extra_reporting(testdir, monkeypatch):
             "E           and: '3'",
             "E       remains unmatched: 'last_unmatched'",
             "*test summary*",
-            "FAILED test_fail_extra_reporting.py:2(test_this) - AssertionError: this_faile...",
-            "FAILED test_fail_extra_reporting.py:7(test_linematcher) - remains unmatched: ...",
-            "*= 2 failed in *",
         ]
+        + msgs
+        + ["*= 2 failed in *"]
     )
 
 
