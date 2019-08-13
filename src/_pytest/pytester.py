@@ -1234,6 +1234,8 @@ class Testdir(object):
             pytest.skip("pypy-64 bit not supported")
         if sys.platform.startswith("freebsd"):
             pytest.xfail("pexpect does not work reliably on freebsd")
+        if not hasattr(pexpect, "spawn"):
+            pytest.skip("pexpect.spawn not available")
         logfile = self.tmpdir.join("spawn.out").open("wb")
 
         # Do not load user config.
