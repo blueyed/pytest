@@ -1,1 +1,1 @@
-Do not use ``TestCase.debug()`` for unittests with ``--pdb``.
+Fix interaction with ``--pdb`` and unittests: do not use unittest's ``TestCase.debug()``.

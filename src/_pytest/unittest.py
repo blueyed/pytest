@@ -1,4 +1,5 @@
 """ discovery and running of std-library "unittest" style tests. """
+import functools
 import sys
 import traceback
 
@@ -188,6 +189,14 @@ class TestCaseFunction(Function):
         pass
 
     def runtest(self):
+        testMethod = getattr(self._testcase, self._testcase._testMethodName)
+
+        @functools.wraps(testMethod)
+        def wrapped_testMethod(*args, **kwargs):
+            self.ihook.pytest_pyfunc_call(pyfuncitem=self)
+
+        self._testcase._wrapped_testMethod = wrapped_testMethod
+        self._testcase._testMethodName = "_wrapped_testMethod"
         self._testcase(result=self)
 
     def _prunetraceback(self, excinfo):

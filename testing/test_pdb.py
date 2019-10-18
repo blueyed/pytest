@@ -177,25 +177,36 @@ class TestPDB:
             child.wait()
         assert not child.isalive()
 
-    @pytest.mark.xfail(reason="running .debug() all the time is bad (#5991)")
     def test_pdb_unittest_postmortem(self, testdir):
         p1 = testdir.makepyfile(
             """
             import unittest
+
+            teardown_called = 0
+
             class Blub(unittest.TestCase):
                 def tearDown(self):
-                    self.filename = None
-                def test_false(self):
+                    global teardown_called
+                    teardown_called += 1
+
+                def test_error(self):
+                    assert teardown_called == 0
                     self.filename = 'debug' + '.me'
                     assert 0
+
+                def test_check(self):
+                    assert teardown_called == 1
         """
         )
-        child = testdir.spawn_pytest("--pdb %s" % p1)
+        child = testdir.spawn_pytest(
+            "--pdb {p1}::Blub::test_error {p1}::Blub::test_check".format(p1=p1)
+        )
         child.expect("Pdb")
-        child.sendline("p self.filename")
-        child.sendeof()
+        child.sendline("p 'filename=' + self.filename")
+        child.expect("'filename=debug.me'")
+        child.sendline("c")
         rest = child.read().decode("utf8")
-        assert "debug.me" in rest
+        assert "= 1 failed, 1 passed in" in rest
         self.flush(child)
 
     def test_pdb_unittest_skip(self, testdir):
