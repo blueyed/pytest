@@ -108,6 +108,7 @@ class TestCaseFunction(Function):
     nofuncargs = True
     _excinfo = None
     _testcase = None
+    _need_tearDown = None
 
     def setup(self):
         self._testcase = self.parent.obj(self.name)
@@ -116,6 +117,8 @@ class TestCaseFunction(Function):
             self._request._fillfixtures()
 
     def teardown(self):
+        if self._need_tearDown:
+            self._testcase.tearDown()
         self._testcase = None
         self._obj = None
 
@@ -194,11 +197,30 @@ class TestCaseFunction(Function):
         class _GetOutOf_testPartExecutor(KeyboardInterrupt):
             """Helper exception to get out of unittests's testPartExecutor."""
 
+        unittest = sys.modules.get("unittest")
+        reraise = (KeyboardInterrupt, SystemExit, unittest.SkipTest)
+        if unittest:
+            reraise += (unittest.SkipTest,)
+
         @functools.wraps(testMethod)
         def wrapped_testMethod(*args, **kwargs):
             try:
                 self.ihook.pytest_pyfunc_call(pyfuncitem=self)
+            except reraise:
+                raise
             except BaseException as exc:
+                expecting_failure_method = getattr(
+                    testMethod, "__unittest_expecting_failure__", False
+                )
+                expecting_failure_class = getattr(
+                    self, "__unittest_expecting_failure__", False
+                )
+                expecting_failure = expecting_failure_class or expecting_failure_method
+                self._need_tearDown = True
+
+                if expecting_failure:
+                    raise
+
                 raise _GetOutOf_testPartExecutor(exc)
 
         self._testcase._wrapped_testMethod = wrapped_testMethod
