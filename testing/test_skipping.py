@@ -1144,6 +1144,9 @@ def test_summary_list_after_errors(testdir):
         import pytest
         def test_fail():
             assert 0
+
+        def test_pytest_fail():
+            pytest.fail("fail exc")
     """
     )
     result = testdir.runpytest("-ra")
@@ -1152,6 +1155,7 @@ def test_summary_list_after_errors(testdir):
             "=* FAILURES *=",
             "*= short test summary info =*",
             "FAILED test_summary_list_after_errors.py::test_fail - assert 0",
+            "FAILED test_summary_list_after_errors.py::test_pytest_fail - fail exc",
         ]
     )
 
