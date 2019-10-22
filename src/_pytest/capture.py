@@ -15,6 +15,8 @@ from typing import BinaryIO
 from typing import Generator
 from typing import Iterable
 from typing import Optional
+from typing import Callable
+from typing import List
 
 import pytest
 from _pytest.compat import CaptureAndPassthroughIO
@@ -82,15 +84,15 @@ def pytest_load_initial_conftests(early_config: Config):
         sys.stderr.write(err)
 
 
-def _get_multicapture(method: "_CaptureMethod") -> "MultiCapture":
+def _get_multicapture(method: "_CaptureMethod", capman: "CaptureManager" = None) -> "MultiCapture":
     if method == "fd":
-        return MultiCapture(out=True, err=True, Capture=FDCapture)
+        return MultiCapture(out=True, err=True, Capture=FDCapture, capman=capman)
     elif method == "sys":
-        return MultiCapture(out=True, err=True, Capture=SysCapture)
+        return MultiCapture(out=True, err=True, Capture=SysCapture, capman=capman)
     elif method == "no":
-        return MultiCapture(out=False, err=False, in_=False)
+        return MultiCapture(out=False, err=False, in_=False, capman=capman)
     elif method == "tee-sys":
-        return MultiCapture(out=True, err=True, in_=False, Capture=TeeSysCapture)
+        return MultiCapture(out=True, err=True, in_=False, Capture=TeeSysCapture, capman=capman)
     raise ValueError("unknown capturing method: {!r}".format(method))
 
 
@@ -111,11 +113,20 @@ class CaptureManager:
         self._method = method
         self._global_capturing = None
         self._capture_fixture = None  # type: Optional[CaptureFixture]
+        self._atexit_funcs: List[Callable] = []
+        atexit.register(self._atexit_run)
 
     def __repr__(self):
         return "<CaptureManager _method={!r} _global_capturing={!r} _capture_fixture={!r}>".format(
             self._method, self._global_capturing, self._capture_fixture
         )
+
+    def _atexit_register(self, func):
+        self._atexit_funcs.append(func)
+
+    def _atexit_run(self):
+        for func in self._atexit_funcs:
+            func()
 
     def is_capturing(self):
         if self.is_globally_capturing():
@@ -457,13 +468,13 @@ class MultiCapture:
     _state = None
     _in_suspended = False
 
-    def __init__(self, out=True, err=True, in_=True, Capture=None):
+    def __init__(self, out=True, err=True, in_=True, Capture=None, capman: CaptureManager = None):
         if in_:
-            self.in_ = Capture(0)
+            self.in_ = Capture(0, capman=capman)
         if out:
-            self.out = Capture(1)
+            self.out = Capture(1, capman=capman)
         if err:
-            self.err = Capture(2)
+            self.err = Capture(2, capman=capman)
 
     def __repr__(self):
         return "<MultiCapture out={!r} err={!r} in_={!r} _state={!r} _in_suspended={!r}>".format(
@@ -542,8 +553,9 @@ class FDCaptureBinary:
     EMPTY_BUFFER = b""
     _state = None
 
-    def __init__(self, targetfd, tmpfile=None):
+    def __init__(self, targetfd, tmpfile=None, capman: CaptureManager = None):
         self.targetfd = targetfd
+        self._capman = capman
         try:
             self.targetfd_save = os.dup(self.targetfd)
         except OSError:
@@ -562,7 +574,7 @@ class FDCaptureBinary:
                     with f:
                         tmpfile = safe_text_dupfile(f, mode="wb+")
                 if targetfd in patchsysdict:
-                    self.syscapture = SysCapture(targetfd, tmpfile)
+                    self.syscapture = SysCapture(targetfd, tmpfile, capman)
                 else:
                     self.syscapture = NoCapture()
             self.tmpfile = tmpfile
@@ -601,9 +613,12 @@ class FDCaptureBinary:
         os.dup2(targetfd_save, self.targetfd)
         os.close(targetfd_save)
         self.syscapture.done()
-        # Redirect any remaining output.
-        os.dup2(self.targetfd, self.tmpfile_fd)
-        atexit.register(self.tmpfile.close)
+        if self._capman:
+            # Redirect any remaining output.
+            os.dup2(self.targetfd, self.tmpfile_fd)
+            self._capman._atexit_register(self.tmpfile.close)
+        else:
+            self.tmpfile.close()
         self._state = "done"
 
     def suspend(self):
@@ -646,8 +661,9 @@ class SysCaptureBinary:
     EMPTY_BUFFER = b""
     _state = None
 
-    def __init__(self, fd, tmpfile=None, stdin=CLOSE_STDIN):
+    def __init__(self, fd, tmpfile=None, stdin=CLOSE_STDIN, capman: CaptureManager = None):
         name = patchsysdict[fd]
+        self._capman = capman
         self._old = getattr(sys, name)
         self.name = name
         if tmpfile is None:
@@ -682,7 +698,10 @@ class SysCaptureBinary:
     def done(self):
         setattr(sys, self.name, self._old)
         del self._old
-        atexit.register(self.tmpfile.close)
+        if self._capman:
+            self._capman._atexit_register(self.tmpfile.close)
+        else:
+            self.tmpfile.close()
         self._state = "done"
 
     def suspend(self):
@@ -713,7 +732,8 @@ class SysCapture(SysCaptureBinary):
 
 
 class TeeSysCapture(SysCapture):
-    def __init__(self, fd, tmpfile=None):
+    def __init__(self, fd, tmpfile=None, capman: CaptureManager = None):
+        self._capman = capman
         name = patchsysdict[fd]
         self._old = getattr(sys, name)
         self.name = name
