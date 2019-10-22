@@ -17,6 +17,7 @@ from more_itertools import collapse
 
 import pytest
 from _pytest import nodes
+from _pytest.compat import shell_quote
 from _pytest.main import ExitCode
 
 REPORT_COLLECTING_RESOLUTION = 0.5
@@ -594,6 +595,16 @@ class TerminalReporter:
         plugininfo = config.pluginmanager.list_plugin_distinfo()
         if plugininfo:
             result.append("plugins: %s" % ", ".join(_plugin_nameversions(plugininfo)))
+
+        if config._implicit_args:
+            result.append(
+                "implicit args: %s"
+                % ", ".join(
+                    "{!r} ({})".format(" ".join([shell_quote(x) for x in values]), desc)
+                    for desc, values in config._implicit_args
+                )
+            )
+
         return result
 
     def pytest_collection_finish(self, session):

@@ -360,3 +360,9 @@ if getattr(attr, "__version_info__", ()) >= (19, 2):
     ATTRS_EQ_FIELD = "eq"
 else:
     ATTRS_EQ_FIELD = "cmp"
+
+
+if sys.version_info < (3,):
+    from pipes import quote as shell_quote
+else:
+    from shlex import quote as shell_quote  # noqa: F401
