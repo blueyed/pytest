@@ -115,6 +115,7 @@ class CaptureManager:
         self._capture_fixture = None  # type: Optional[CaptureFixture]
         self._atexit_funcs: List[Callable] = []
         atexit.register(self._atexit_run)
+        self._tmpfiles = {}
 
     def __repr__(self):
         return "<CaptureManager _method={!r} _global_capturing={!r} _capture_fixture={!r}>".format(
@@ -468,7 +469,9 @@ class MultiCapture:
     _state = None
     _in_suspended = False
 
-    def __init__(self, out=True, err=True, in_=True, Capture=None, capman: CaptureManager = None):
+    def __init__(
+        self, out=True, err=True, in_=True, Capture=None, capman: CaptureManager = None
+    ):
         if in_:
             self.in_ = Capture(0, capman=capman)
         if out:
@@ -570,9 +573,19 @@ class FDCaptureBinary:
                 self.syscapture = SysCapture(targetfd)
             else:
                 if tmpfile is None:
-                    f = TemporaryFile()
-                    with f:
-                        tmpfile = safe_text_dupfile(f, mode="wb+")
+                    if capman:
+                        try:
+                            tmpfile = capman._tmpfiles[targetfd]
+                            assert not tmpfile.closed
+                        except KeyError:
+                            f = TemporaryFile()
+                            with f:
+                                tmpfile = safe_text_dupfile(f, mode="wb+")
+                            capman._tmpfiles[targetfd] = tmpfile
+                    else:
+                        f = TemporaryFile()
+                        with f:
+                            tmpfile = safe_text_dupfile(f, mode="wb+")
                 if targetfd in patchsysdict:
                     self.syscapture = SysCapture(targetfd, tmpfile, capman)
                 else:
