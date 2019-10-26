@@ -1,0 +1,12 @@
+image: freebsd/12.x
+
+sources:
+  - https://github.com/blueyed/pytest
+
+environment:
+  - env: TOXENV=py37-lsof-pexpect-numpy-twisted PYTEST_COVERAGE=1 PYTEST_ADDOPTS=
+
+tasks:
+  - test: |
+      cd pytest
+      tox -vv
