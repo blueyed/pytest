@@ -14,7 +14,7 @@ environment:
 tasks:
   - install: |
       cd pytest
-      tox -vv --notest
+      tox --notest
 
   - test: |
       cd pytest
