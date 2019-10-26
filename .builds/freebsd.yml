@@ -10,7 +10,6 @@ environment:
   # NOTE: no numpy, since it has no wheel.
   TOXENV: py36-lsof-pexpect-twisted
   PYTEST_COVERAGE: 1
-  PYTEST_ADDOPTS: -m uses_pexpect
 
 tasks:
   - install: |
