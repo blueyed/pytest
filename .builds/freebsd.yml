@@ -7,7 +7,7 @@ packages:
   - py36-tox
 
 environment:
-  TOXENV: py37-lsof-pexpect-numpy-twisted
+  TOXENV: py36-lsof-pexpect-numpy-twisted
   PYTEST_COVERAGE: 1
 
 tasks:
