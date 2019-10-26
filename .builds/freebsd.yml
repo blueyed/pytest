@@ -11,6 +11,10 @@ environment:
   PYTEST_COVERAGE: 1
 
 tasks:
+  - install: |
+      cd pytest
+      tox -vv --notest
+
   - test: |
       cd pytest
       tox -vv
