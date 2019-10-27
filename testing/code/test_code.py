@@ -162,7 +162,7 @@ class TestTracebackEntry:
                 assert False
         except AssertionError:
             exci = ExceptionInfo.from_current()
-        entry = exci.traceback[0]
+        entry = exci.traceback[-1]
         assert entry.name == "test_getsource"
         source = entry.getsource()
         assert source is not None
