@@ -481,18 +481,6 @@ class ExceptionInfo(Generic[_E]):
             if exprinfo and exprinfo.startswith(cls._assert_start_repr):
                 _striptext = "AssertionError: "
 
-        # Merge with frame's stack.
-        if sys.version_info >= (3, 7):
-            if not frame:
-                frame = sys._getframe().f_back
-            tb = exc_info[2]
-            while frame:
-                tb = TracebackType(
-                    tb, frame, tb_lasti=frame.f_lasti, tb_lineno=frame.f_lineno
-                )
-                frame = frame.f_back
-            exc_info = exc_info[:2] + (tb,)
-
         return cls(exc_info, _striptext)
 
     @classmethod
@@ -550,11 +538,31 @@ class ExceptionInfo(Generic[_E]):
 
     @property
     def tb(self) -> TracebackType:
-        """the exception raw traceback"""
+        """the exception's raw traceback"""
         assert (
             self._excinfo is not None
         ), ".tb can only be used after the context manager exits"
         return self._excinfo[2]
+
+    @property
+    def tb_with_stack(self) -> TracebackType:
+        """the exception's raw traceback (including upper frames in Python 3.7)"""
+        assert (
+            self._excinfo is not None
+        ), ".tb can only be used after the context manager exits"
+
+        tb = self._excinfo[2]
+
+        # Merge with frame's stack.
+        if sys.version_info >= (3, 7):
+            frame = tb.tb_frame
+            while frame:
+                tb = TracebackType(
+                    tb, frame, tb_lasti=frame.f_lasti, tb_lineno=frame.f_lineno
+                )
+                frame = frame.f_back
+
+        return tb
 
     @property
     def typename(self) -> str:
