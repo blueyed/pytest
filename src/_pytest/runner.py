@@ -236,7 +236,7 @@ class CallInfo:
         try:
             result = func()
         except:  # noqa
-            excinfo = ExceptionInfo.from_current()
+            excinfo = ExceptionInfo.from_current(merge_frame=sys._getframe())
             if reraise is not None and excinfo.errisinstance(reraise):
                 raise
             result = None

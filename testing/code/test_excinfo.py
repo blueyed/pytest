@@ -64,7 +64,7 @@ def test_excinfo_getstatement():
         g.__code__.co_firstlineno - 1 + 1,
     ]
     values = list(excinfo.traceback)
-    foundlinenumbers = [x.lineno for x in values[-3:]]
+    foundlinenumbers = [x.lineno for x in values]
     assert foundlinenumbers == linenumbers
     # for x in info:
     #    print "%s:%d  %s" %(x.path.relto(root), x.lineno, x.statement)

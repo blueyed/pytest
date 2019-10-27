@@ -460,7 +460,7 @@ class ExceptionInfo(Generic[_E]):
         exc_info: Tuple["Type[_E]", "_E", TracebackType],
         exprinfo: Optional[str] = None,
         *,
-        frame: Optional[FrameType] = None,
+        merge_frame: Optional[FrameType] = None,
     ) -> "ExceptionInfo[_E]":
         """returns an ExceptionInfo for an existing exc_info tuple.
 
@@ -481,11 +481,20 @@ class ExceptionInfo(Generic[_E]):
             if exprinfo and exprinfo.startswith(cls._assert_start_repr):
                 _striptext = "AssertionError: "
 
+        # Merge with frame's stack.
+        if merge_frame and sys.version_info >= (3, 7):
+            tb = exc_info[2]
+            f = merge_frame
+            while f:
+                tb = TracebackType(tb, f, tb_lasti=f.f_lasti, tb_lineno=f.f_lineno)
+                f = f.f_back
+            exc_info = exc_info[:2] + (tb,)
+
         return cls(exc_info, _striptext)
 
     @classmethod
     def from_current(
-        cls, exprinfo: Optional[str] = None, *, frame: Optional[FrameType] = None
+        cls, exprinfo: Optional[str] = None, *, merge_frame: Optional[FrameType] = None
     ) -> "ExceptionInfo[BaseException]":
         """returns an ExceptionInfo matching the current traceback
 
@@ -502,12 +511,8 @@ class ExceptionInfo(Generic[_E]):
         assert tup[0] is not None, "no current exception"
         assert tup[1] is not None, "no current exception"
         assert tup[2] is not None, "no current exception"
-
-        if not frame:
-            frame = sys._getframe().f_back
-
         exc_info = (tup[0], tup[1], tup[2])
-        return ExceptionInfo.from_exc_info(exc_info, exprinfo, frame=frame)
+        return ExceptionInfo.from_exc_info(exc_info, exprinfo, merge_frame=merge_frame)
 
     @classmethod
     def for_later(cls) -> "ExceptionInfo[_E]":
@@ -538,31 +543,11 @@ class ExceptionInfo(Generic[_E]):
 
     @property
     def tb(self) -> TracebackType:
-        """the exception's raw traceback"""
+        """the exception raw traceback"""
         assert (
             self._excinfo is not None
         ), ".tb can only be used after the context manager exits"
         return self._excinfo[2]
-
-    @property
-    def tb_with_stack(self) -> TracebackType:
-        """the exception's raw traceback (including upper frames in Python 3.7)"""
-        assert (
-            self._excinfo is not None
-        ), ".tb can only be used after the context manager exits"
-
-        tb = self._excinfo[2]
-
-        # Merge with frame's stack.
-        if sys.version_info >= (3, 7):
-            frame = tb.tb_frame
-            while frame:
-                tb = TracebackType(
-                    tb, frame, tb_lasti=frame.f_lasti, tb_lineno=frame.f_lineno
-                )
-                frame = frame.f_back
-
-        return tb
 
     @property
     def typename(self) -> str:

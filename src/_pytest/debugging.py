@@ -345,14 +345,14 @@ def _postmortem_traceback(excinfo):
     from doctest import UnexpectedException
 
     # Save original exception, to be used with e.g. pdb.pm().
-    sys.last_type, sys.last_value = excinfo._excinfo[:2]
-    sys.last_traceback = tb = excinfo.tb_with_stack
+    sys.last_type, sys.last_value, sys.last_traceback = excinfo._excinfo
 
     if isinstance(excinfo.value, UnexpectedException):
         # A doctest.UnexpectedException is not useful for post_mortem.
         # Use the underlying exception instead:
         return excinfo.value.exc_info[2]
     else:
+        tb = excinfo._excinfo[2]
         while tb:
             if tb is excinfo.traceback[0]._rawentry:
                 break
