@@ -124,24 +124,7 @@ def pytest_runtest_setup(item):
 
 def pytest_runtest_call(item):
     _update_current_test_var(item, "call")
-    try:
-        del sys.last_type
-        del sys.last_value
-        del sys.last_traceback
-    except AttributeError:
-        pass
-    try:
-        item.runtest()
-    except Exception:
-        # Store trace info to allow postmortem debugging
-        type, value, tb = sys.exc_info()
-        assert tb is not None
-        tb = tb.tb_next  # Skip *this* frame
-        sys.last_type = type
-        sys.last_value = value
-        sys.last_traceback = tb
-        del type, value, tb  # Get rid of these in this frame
-        raise
+    item.runtest()
 
 
 def pytest_runtest_teardown(item, nextitem):

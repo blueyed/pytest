@@ -490,6 +490,9 @@ class ExceptionInfo(Generic[_E]):
                 f = f.f_back
             exc_info = exc_info[:2] + (tb,)
 
+        # Save original exception, to be used with e.g. pdb.pm().
+        sys.last_type, sys.last_value, sys.last_traceback = exc_info
+
         return cls(exc_info, _striptext)
 
     @classmethod
