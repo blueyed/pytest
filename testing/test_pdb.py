@@ -92,17 +92,36 @@ class TestPDB:
         return pdblist
 
     def test_pdb_on_fail(self, testdir, pdblist):
+        sys.last_type, sys.last_value, sys.last_traceback = (None, None, None)
         rep = runpdb_and_get_report(
             testdir,
             """
-            def test_func():
+            def inner():
                 assert 0
+
+            def test_func():
+                inner()
         """,
         )
         assert rep.failed
         assert len(pdblist) == 1
         tb = _pytest._code.Traceback(pdblist[0][0])
-        assert tb[-1].name == "test_func"
+        assert len(tb) == 2
+        assert tb[-1].name == "inner"
+        assert tb[-2].name == "test_func"
+
+        # Check values being set for post_mortem.
+        assert sys.last_type == AssertionError
+        assert type(sys.last_value) == AssertionError
+        assert sys.last_traceback != pdblist[0][0]
+
+        # XXX: cut at CallInfo.from_call..
+        tb = sys.last_traceback
+        assert tb.tb_frame.f_code.co_name == "from_call"
+
+        assert pdblist[0][0].tb_frame.f_code.co_name == "test_func"
+        assert pdblist[0][0].tb_next.tb_frame.f_code.co_name == "inner"
+        assert pdblist[0][0].tb_next.tb_next is None
 
     def test_pdb_on_xfail(self, testdir, pdblist):
         rep = runpdb_and_get_report(
