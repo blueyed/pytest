@@ -20,6 +20,7 @@ import py
 import _pytest
 from _pytest import fixtures
 from _pytest import nodes
+from _pytest._code import ExceptionInfo
 from _pytest._code import filter_traceback
 from _pytest._code.source import getfslineno
 from _pytest.compat import ascii_escaped
@@ -782,11 +783,20 @@ class FunctionMixin(PyobjMixin):
             self.parent.newinstance()
             self.obj = self._getobj()
 
-    def _prunetraceback(self, excinfo):
+    def _prunetraceback(self, excinfo: ExceptionInfo):
         if hasattr(self, "_obj") and not self.config.getoption("fulltrace", False):
             code = _pytest._code.Code(get_real_func(self.obj))
             path, firstlineno = code.path, code.firstlineno
             traceback = excinfo.traceback
+
+            # XXX: remove any entries from the full tb previously ignored
+            # already.  Without this, it would include e.g. src/pytest.py:101
+            # or /usr/lib/python3.7/runpy.py:193 (previously unknown).
+            # The cutting needs some fix for generators anyway IIRC.
+            if excinfo._merge_frame:
+                while traceback[0]._rawentry.tb_frame is not excinfo._merge_frame:
+                    traceback.pop(0)
+
             ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
             if ntraceback == traceback:
                 ntraceback = ntraceback.cut(path=path)
