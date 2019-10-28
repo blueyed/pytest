@@ -275,12 +275,15 @@ def _test_pytest_function(pyfuncitem):
     _pdb = pytestPDB._init_pdb("runcall")
     testfunction = pyfuncitem.obj
     pyfuncitem.obj = _pdb.runcall
-    if "func" in pyfuncitem._fixtureinfo.argnames:  # pragma: no branch
+    if "func" in pyfuncitem.funcargs:  # pragma: no branch
         raise ValueError("--trace can't be used with a fixture named func!")
     pyfuncitem.funcargs["func"] = testfunction
-    new_list = list(pyfuncitem._fixtureinfo.argnames)
-    new_list.append("func")
-    pyfuncitem._fixtureinfo.argnames = tuple(new_list)
+    if "func" not in pyfuncitem._fixtureinfo.argnames:
+        # TODO: when using parameterized tests, the _fixtureinfo is shared
+        # that needs to move to FunctionDefinition
+        new_list = list(pyfuncitem._fixtureinfo.argnames)
+        new_list.append("func")
+        pyfuncitem._fixtureinfo.argnames = tuple(new_list)
 
 
 def _enter_pdb(node, excinfo, rep):

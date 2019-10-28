@@ -1025,6 +1025,34 @@ class TestTraceOption:
         assert "Exit: Quitting debugger" not in child.before.decode("utf8")
         TestPDB.flush(child)
 
+    def test_trace_with_parametrize_handles_shared_fixtureinfo(self, testdir):
+        p1 = testdir.makepyfile(
+            """
+            import pytest
+
+            @pytest.mark.parametrize('myparam', [1,2])
+            def test_1(myparam):
+                assert True
+            """
+        )
+        child = testdir.spawn_pytest("--trace " + str(p1))
+        child.expect_exact("> PDB runcall (IO-capturing turned off) >")
+        child.expect_exact("test_1")
+        child.expect_exact("Pdb")
+        child.sendline("args")
+        child.expect_exact("myparam = 1\r\n")
+        child.sendline("c")
+        child.expect_exact("Pdb")
+        child.sendline("args")
+        child.expect_exact("myparam = 2\r\n")
+        child.sendline("c")
+        rest = child.read().decode("utf8")
+        assert "2 passed in" in rest
+        assert "reading from stdin while output" not in rest
+        # Only printed once - not on stderr.
+        assert "Exit: Quitting debugger" not in child.before.decode("utf8")
+        TestPDB.flush(child)
+
 
 def test_trace_after_runpytest(testdir):
     """Test that debugging's pytest_configure is re-entrant."""
