@@ -6,7 +6,7 @@ import py
 import _pytest
 import pytest
 
-pytestmark = pytest.mark.slow
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 MODSET = [
     x
