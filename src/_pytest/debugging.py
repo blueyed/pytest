@@ -301,7 +301,7 @@ def _enter_pdb(node, excinfo, rep):
                 content = content[:-1]
             tw.line(content)
 
-    tw.sep(">", "traceback")
+    tw.sep("!", "traceback for {}".format(excinfo.typename))
     rep.toterminal(tw)
     tw.sep(">", "entering PDB")
     tb = _postmortem_traceback(excinfo)
