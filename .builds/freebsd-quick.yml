@@ -33,4 +33,5 @@ tasks:
       export TRAVIS=true
       export CI=true
       export TRAVIS_PULL_REQUEST="$GITHUB_PR_NUMBER"
+      export CODECOV_NAME="freebsd-quick $TOXENV"
       scripts/report-coverage.sh
