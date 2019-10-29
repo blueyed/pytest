@@ -30,5 +30,9 @@ tasks:
 
   - report: |
       cd pytest
-      TRAVIS=true CI=true TRAVIS_PULL_REQUEST="$GITHUB_PR_NUMBER" CODECOV_NAME="$TOXENV-freebsd-quick" \
-        scripts/report-coverage.sh
+      export CODECOV_FLAGS="freebsd"
+      export CODECOV_NAME="$TOXENV-freebsd-quick"
+      export TRAVIS=true
+      export CI=true
+      export TRAVIS_PULL_REQUEST="$GITHUB_PR_NUMBER"
+      scripts/report-coverage.sh
