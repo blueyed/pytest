@@ -51,7 +51,7 @@ script: tox -vv
 after_success:
   - |
     if [[ "$PYTEST_COVERAGE" = 1 ]]; then
-      env CODECOV_NAME="$TOXENV-$TRAVIS_OS_NAME" scripts/report-coverage.sh
+      env CODECOV_FLAGS=travis CODECOV_NAME="$TOXENV-$TRAVIS_OS_NAME" scripts/report-coverage.sh
     fi
 
 branches:
