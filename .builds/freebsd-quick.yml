@@ -9,12 +9,28 @@ packages:
 environment:
   TOXENV: py36
   PYTEST_COVERAGE: 1
+  _PYTEST_TOX_COVERAGE_RUN: coverage run -m
+  _PYTEST_TOX_EXTRA_DEP: coverage-enable-subprocess
 
 tasks:
   - install: |
+      if [[ -n "$GITHUB_REF" ]] && [[ "$GITHUB_REF" != refs/heads/my-master ]]; then
+        echo "Only building my-master branch (and PRs)"
+        complete-build
+      fi
       cd pytest
       tox --notest
 
   - test: |
       cd pytest
+      export "COVERAGE_FILE=$PWD/.coverage"
+      export "COVERAGE_PROCESS_START=$PWD/.coveragerc"
       tox -vv -- -m "not slow"
+
+  - report: |
+      cd pytest
+
+      export TRAVIS=true
+      export CI=true
+      export TRAVIS_PULL_REQUEST="$GITHUB_PR_NUMBER"
+      scripts/report-coverage.sh
