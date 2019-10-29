@@ -26,7 +26,7 @@ tasks:
       cd pytest
       export "COVERAGE_FILE=$PWD/.coverage"
       export "COVERAGE_PROCESS_START=$PWD/.coveragerc"
-      tox -vv -- -m "not slow"
+      tox -vv
 
   - report: |
       cd pytest
