@@ -7,8 +7,7 @@ packages:
   - py36-tox
 
 environment:
-  # NOTE: no numpy, since it has no wheel.
-  TOXENV: py36-lsof-pexpect-twisted
+  TOXENV: py36
   PYTEST_COVERAGE: 1
 
 tasks:
@@ -18,4 +17,4 @@ tasks:
 
   - test: |
       cd pytest
-      tox -vv
+      tox -vv -- -m "not slow"
