@@ -112,6 +112,11 @@ class Node:
         return self.session.gethookproxy(self.fspath)
 
     def __repr__(self):
+        return "<{} nodeid={!r}>".format(
+            self.__class__.__name__, getattr(self, "nodeid", None)
+        )
+
+    def __str__(self):
         return "<{} {}>".format(self.__class__.__name__, getattr(self, "name", None))
 
     def warn(self, warning):

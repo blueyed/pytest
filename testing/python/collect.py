@@ -298,11 +298,12 @@ class TestFunction:
         f2 = self.make_function(testdir, name="name", callobj=func2)
         assert f1 != f2
 
-    def test_repr_produces_actual_test_id(self, testdir):
+    def test_str_produces_actual_test_id(self, testdir):
         f = self.make_function(
-            testdir, name=r"test[\xe5]", callobj=self.test_repr_produces_actual_test_id
+            testdir, name=r"test[\xe5]", callobj=self.test_str_produces_actual_test_id
         )
-        assert repr(f) == r"<Function test[\xe5]>"
+        assert str(f) == r"<Function test[\xe5]>"
+        assert repr(f) == r"<Function nodeid='::test[\\xe5]'>"
 
     def test_issue197_parametrize_emptyset(self, testdir):
         testdir.makepyfile(
