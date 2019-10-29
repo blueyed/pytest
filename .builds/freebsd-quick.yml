@@ -8,16 +8,17 @@ packages:
 
 environment:
   TOXENV: py36
-  PYTEST_COVERAGE: 1
   _PYTEST_TOX_COVERAGE_RUN: coverage run -m
   _PYTEST_TOX_EXTRA_DEP: coverage-enable-subprocess
 
 tasks:
-  - install: |
+  - check-skip: |
       if [[ -n "$GITHUB_REF" ]] && [[ "$GITHUB_REF" != refs/heads/my-master ]]; then
-        echo "Only building my-master branch (and PRs)"
+        echo "Skipping build for non-PR on $GITHUB_REF"
         complete-build
       fi
+
+  - install: |
       cd pytest
       tox --notest
 
@@ -29,9 +30,5 @@ tasks:
 
   - report: |
       cd pytest
-
-      export TRAVIS=true
-      export CI=true
-      export TRAVIS_PULL_REQUEST="$GITHUB_PR_NUMBER"
-      export CODECOV_NAME="freebsd-quick $TOXENV"
-      scripts/report-coverage.sh
+      TRAVIS=true CI=true TRAVIS_PULL_REQUEST="$GITHUB_PR_NUMBER" CODECOV_NAME="$TOXENV-freebsd-quick" \
+        scripts/report-coverage.sh
