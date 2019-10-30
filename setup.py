@@ -22,14 +22,13 @@ def main():
         setup_requires=["setuptools-scm", "setuptools>=40.0"],
         package_dir={"": "src"},
         extras_require={
-            "testing": [
+            "testing": [  # fmt: off
                 "argcomplete",
-                "hypothesis>=3.56",
                 "mock",
                 "nose",
                 "requests",
                 "xmlschema",
-            ]
+            ]  # fmt: on
         },
         install_requires=INSTALL_REQUIRES,
     )
