@@ -1031,23 +1031,43 @@ class TestTraceOption:
             import pytest
 
             @pytest.mark.parametrize('myparam', [1,2])
-            def test_1(myparam):
-                assert True
+            def test_1(myparam, request):
+                assert myparam in (1, 2)
+                assert request.function.__name__ == "test_1"
+
+            @pytest.mark.parametrize('func', [1,2])
+            def test_func(func, request):
+                assert func in (1, 2)
+                assert request.function.__name__ == "test_func"
+
+            @pytest.mark.parametrize('myparam', [1,2])
+            def test_func_kw(myparam, request, func="func_kw"):
+                assert myparam in (1, 2)
+                assert func == "func_kw"
+                assert request.function.__name__ == "test_func_kw"
             """
         )
         child = testdir.spawn_pytest("--trace " + str(p1))
-        child.expect_exact("> PDB runcall (IO-capturing turned off) >")
-        child.expect_exact("test_1")
-        child.expect_exact("Pdb")
-        child.sendline("args")
-        child.expect_exact("myparam = 1\r\n")
-        child.sendline("c")
-        child.expect_exact("Pdb")
-        child.sendline("args")
-        child.expect_exact("myparam = 2\r\n")
-        child.sendline("c")
+        for func, argname in [
+            ("test_1", "myparam"),
+            ("test_func", "func"),
+            ("test_func_kw", "myparam"),
+        ]:
+            child.expect_exact("> PDB runcall (IO-capturing turned off) >")
+            child.expect_exact(func)
+            child.expect_exact("Pdb")
+            child.sendline("args")
+            child.expect_exact("{} = 1\r\n".format(argname))
+            child.expect_exact("Pdb")
+            child.sendline("c")
+            child.expect_exact("Pdb")
+            child.sendline("args")
+            child.expect_exact("{} = 2\r\n".format(argname))
+            child.expect_exact("Pdb")
+            child.sendline("c")
+            child.expect_exact("> PDB continue (IO-capturing resumed) >")
         rest = child.read().decode("utf8")
-        assert "2 passed in" in rest
+        assert "6 passed in" in rest
         assert "reading from stdin while output" not in rest
         # Only printed once - not on stderr.
         assert "Exit: Quitting debugger" not in child.before.decode("utf8")
@@ -1178,7 +1198,7 @@ def test_pdbcls_via_local_module(testdir):
 
                 def runcall(self, *args, **kwds):
                     print("runcall_called", args, kwds)
-                    assert "func" in kwds
+                    assert "func" not in kwds
         """,
     )
     result = testdir.runpytest(
