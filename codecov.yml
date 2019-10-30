@@ -8,4 +8,4 @@ comment: off
 
 codecov:
   ci:
-    - sourcehut
+    - builds.sr.ht
