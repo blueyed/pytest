@@ -7,7 +7,7 @@ packages:
   - py36-tox
 
 environment:
-  PYTEST_ADDOPTS: --showlocals
+  PYTEST_ADDOPTS: --showlocals testing/test_pdb.py
   # NOTE: no numpy, since it has no wheel.
   TOXENV: py36-lsof-pexpect-twisted
   PYTEST_COVERAGE: 1
