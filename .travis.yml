@@ -43,7 +43,7 @@ before_script:
       export _PYTEST_TOX_COVERAGE_RUN="coverage run -m"
       export _PYTEST_TOX_EXTRA_DEP=coverage-enable-subprocess
     fi
-  - tox --notest
+  - tox --notest -vv
 
 script: tox -vv
 
