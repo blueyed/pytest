@@ -8,7 +8,10 @@ packages:
 
 environment:
   CI: "true"
-  TOXENV: py36
+  TOXENV: py36-xdist
+  PYTEST_ADDOPTS: -vv --showlocals --durations=100
+  # XXX: makes testing/test_pdb.py hang (with pexpect).
+  PYTEST_REORDER_TESTS: 0
   _PYTEST_TOX_COVERAGE_RUN: coverage run -m
   _PYTEST_TOX_EXTRA_DEP: coverage-enable-subprocess
 
