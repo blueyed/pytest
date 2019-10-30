@@ -869,18 +869,18 @@ class Testdir:
 
         if stdin is self.CLOSE_STDIN:
             stdin = SysCapture.CLOSE_STDIN
-        else:
-            old_stdin = sys.stdin
-            if isinstance(stdin, str):
+        elif isinstance(stdin, str):
 
-                class EchoingInput(StringIO):
-                    def readline(self, *args, **kwargs):
-                        ret = super().readline(*args, **kwargs)
-                        if ret is not None:
-                            sys.stdout.write(ret)
-                        return ret
+            class EchoingInput(StringIO):
+                def readline(self, *args, **kwargs):
+                    ret = super().readline(*args, **kwargs)
+                    if ret:
+                        sys.stdout.write(ret)
+                    return ret
 
-                stdin = EchoingInput(stdin)
+            stdin = EchoingInput(stdin)
+        elif stdin is None:
+            stdin = sys.stdin
         Capture = functools.partial(SysCapture, stdin=stdin)
 
         capture = MultiCapture(Capture=Capture)
@@ -909,8 +909,6 @@ class Testdir:
             capture.stop_capturing()
             sys.stdout.write(out)
             sys.stderr.write(err)
-            if stdin is not self.CLOSE_STDIN:
-                sys.stdin = old_stdin
 
         res = RunResult(
             reprec.ret, out.splitlines(), err.splitlines(), time.time() - now

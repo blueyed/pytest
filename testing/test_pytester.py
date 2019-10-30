@@ -601,15 +601,67 @@ def test_runtest_inprocess_stdin(testdir, monkeypatch):
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
-    p1 = testdir.makepyfile("def test(): assert input() == '42'")
+    p1 = testdir.makepyfile(
+        """
+        import pytest, sys
+
+        def test():
+            sys.stdout.write("\\ntest_input: ")
+            assert input() == "42"
+            with pytest.raises(EOFError):
+                input()
+    """
+    )
     result = testdir.runpytest(str(p1), "-s", stdin="42\n")
-    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    result.stdout.fnmatch_lines(["test_input: 42", "* 1 passed in *"])
     assert result.ret == 0
 
     # Using "-s" with no stdin uses outer stdin.
     monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(b"42\n")))
-    p1 = testdir.makepyfile("def test(): assert input() == '42'")
+    p1 = testdir.makepyfile(
+        """
+        import pytest
+
+        def test():
+            assert input() == '42'
+            with pytest.raises(EOFError):
+                input()
+    """
+    )
     result = testdir.runpytest(str(p1), "-s")
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    # EchoingInput handles None.
+    mocked_readline_ret = ["42", None]
+
+    def mocked_readline():
+        return mocked_readline_ret.pop(0)
+
+    monkeypatch.setattr(sys.stdin, "readline", mocked_readline)
+    p1 = testdir.makepyfile(
+        """
+        import pytest, sys
+
+        def test():
+            print("=== start")
+            assert sys.stdin.readline() == "42"
+            assert sys.stdin.readline() is None
+    """
+    )
+    result = testdir.runpytest(str(p1), "-s", stdin=None)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    # stdin=None uses sys.stdin.
+    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(b"42\n")))
+    p1 = testdir.makepyfile(
+        """
+        def test():
+            assert input() == '42'
+    """
+    )
+    result = testdir.runpytest(str(p1), "-s", stdin=None)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
