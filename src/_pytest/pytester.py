@@ -1,4 +1,5 @@
 """(disabled by default) support for testing pytest and pytest plugins."""
+import functools
 import gc
 import importlib
 import os
@@ -11,6 +12,7 @@ import traceback
 from collections.abc import Sequence
 from fnmatch import fnmatch
 from io import StringIO
+from typing import Type  # noqa: TYP001 (not in 3.5.0, 3.5.1)
 from typing import Union
 from weakref import WeakKeyDictionary
 
@@ -848,7 +850,7 @@ class Testdir:
             for finalizer in finalizers:
                 finalizer()
 
-    def runpytest_inprocess(self, *args, stdin=CLOSE_STDIN, **kwargs) -> RunResult:
+    def runpytest_inprocess(self, *args, **kwargs) -> RunResult:
         """Return result of running pytest in-process, providing a similar
         interface to what self.runpytest() provides.
         """
@@ -857,15 +859,24 @@ class Testdir:
         if syspathinsert:
             self.syspathinsert()
         now = time.time()
+
+        if "stdin" in kwargs:
+            stdin = kwargs.pop("stdin")
+        else:
+            if "-s" in args:
+                stdin = sys.stdin
+            else:
+                stdin = self.CLOSE_STDIN
+
         if stdin is self.CLOSE_STDIN:
-            Capture = SysCapture
+            Capture = (
+                SysCapture
+            )  # type: Union[Type[SysCapture], functools.partial[SysCapture]]
         else:
             old_stdin = sys.stdin
             if isinstance(stdin, str):
-                import io
-                import functools
 
-                class EchoingInput(io.StringIO):
+                class EchoingInput(StringIO):
                     def readline(self, *args, **kwargs):
                         ret = super().readline(*args, **kwargs)
                         if ret is not None:
@@ -874,7 +885,7 @@ class Testdir:
 
                 Capture = functools.partial(SysCapture, stdin=EchoingInput(stdin))
             else:
-                Capture = stdin
+                Capture = functools.partial(SysCapture, stdin=stdin)
 
         capture = MultiCapture(Capture=Capture)
         capture.start_capturing()

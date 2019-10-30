@@ -585,6 +585,35 @@ def test_run_stdin(testdir):
     assert result.ret == 0
 
 
+def test_runtest_inprocess_stdin(testdir, monkeypatch):
+    import io
+
+    p1 = testdir.makepyfile(
+        """
+        import pytest
+
+        def test():
+            with pytest.raises(OSError, match="^pytest: reading from stdin"):
+                input()
+        """
+    )
+    result = testdir.runpytest(str(p1), stdin="42\n")
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    p1 = testdir.makepyfile("def test(): assert input() == '42'")
+    result = testdir.runpytest(str(p1), "-s", stdin="42\n")
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    # Using "-s" with no stdin uses outer stdin.
+    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(b"42\n")))
+    p1 = testdir.makepyfile("def test(): assert input() == '42'")
+    result = testdir.runpytest(str(p1), "-s")
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+
 def test_popen_stdin_pipe(testdir):
     proc = testdir.popen(
         [sys.executable, "-c", "import sys; print(sys.stdin.read())"],
