@@ -12,7 +12,6 @@ import traceback
 from collections.abc import Sequence
 from fnmatch import fnmatch
 from io import StringIO
-from typing import Type  # noqa: TYP001 (not in 3.5.0, 3.5.1)
 from typing import Union
 from weakref import WeakKeyDictionary
 
@@ -869,9 +868,7 @@ class Testdir:
                 stdin = self.CLOSE_STDIN
 
         if stdin is self.CLOSE_STDIN:
-            Capture = (
-                SysCapture
-            )  # type: Union[Type[SysCapture], functools.partial[SysCapture]]
+            stdin = SysCapture.CLOSE_STDIN
         else:
             old_stdin = sys.stdin
             if isinstance(stdin, str):
@@ -883,9 +880,8 @@ class Testdir:
                             sys.stdout.write(ret)
                         return ret
 
-                Capture = functools.partial(SysCapture, stdin=EchoingInput(stdin))
-            else:
-                Capture = functools.partial(SysCapture, stdin=stdin)
+                stdin = EchoingInput(stdin)
+        Capture = functools.partial(SysCapture, stdin=stdin)
 
         capture = MultiCapture(Capture=Capture)
         capture.start_capturing()
