@@ -5,3 +5,7 @@ coverage:
     changes: true
 
 comment: off
+
+codecov:
+  ci:
+    - sourcehut
