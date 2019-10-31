@@ -246,7 +246,9 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_make_collect_report(collector):
-    call = CallInfo.from_call(lambda: list(collector.collect()), "collect")
+    call = CallInfo.from_call(
+        lambda: list(collector.collect()), "collect", reraise=(KeyboardInterrupt,)
+    )
     longrepr = None
     if not call.excinfo:
         outcome = "passed"

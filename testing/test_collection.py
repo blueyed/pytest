@@ -1257,3 +1257,19 @@ def test_collector_respects_tbstyle(testdir):
             "*= 1 error in *",
         ]
     )
+
+
+def test_keyboardinterrupt_during_collection(testdir):
+    sub = testdir.mkdir("sub")
+    sub.ensure("__init__.py")
+    sub.ensure("test_file.py").write("raise KeyboardInterrupt()")
+    result = testdir.runpytest(no_reraise_ctrlc=True)
+    assert result.ret == ExitCode.INTERRUPTED
+    result.stdout.fnmatch_lines(
+        [
+            "*! KeyboardInterrupt !*",
+            "*/sub/test_file.py:1: KeyboardInterrupt",
+            "(to show a full traceback on KeyboardInterrupt use --full-trace)",
+            "*= no tests ran in *=",
+        ]
+    )
