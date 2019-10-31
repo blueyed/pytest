@@ -783,6 +783,7 @@ class FormattedExcinfo:
         for index, entry in enumerate(traceback):
             einfo = (last == entry) and excinfo or None
             reprentry = self.repr_traceback_entry(entry, einfo)
+
             entries.append(reprentry)
         return ReprTraceback(entries, extraline, style=self.style)
 
@@ -994,9 +995,10 @@ class ReprEntry(TerminalRepr):
 
     def toterminal(self, tw):
         if self.style == "short":
-            self.reprfileloc.toterminal(tw)
+            self.reprfileloc.toterminal(tw, style="short")
             self._color_error_lines(tw, self.lines)
             return
+
         if self.reprfuncargs:
             self.reprfuncargs.toterminal(tw)
         self._color_error_lines(tw, self.lines)
@@ -1020,14 +1022,15 @@ class ReprFileLocation(TerminalRepr):
         self.lineno = lineno
         self.message = message
 
-    def toterminal(self, tw):
+    def toterminal(self, tw, style=None):
         # filename and lineno output for each entry,
         # using an output format that most editors unterstand
         msg = self.message
         i = msg.find("\n")
         if i != -1:
             msg = msg[:i]
-        tw.write(self.path, bold=True, red=True)
+        bold = style != "short"
+        tw.write("%s" % self.path, bold=bold)
         tw.line(":{}: {}".format(self.lineno, msg))
 
 
