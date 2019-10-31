@@ -795,7 +795,8 @@ class DontReadFromInput:
 
     def read(self, *args):
         raise IOError(
-            "pytest: reading from stdin while output is captured!  Consider using `-s`."
+            "pytest: reading from stdin while output is captured!\n"
+            "Consider using `-s` or `-o capture_suspend_on_stdin=1`."
         )
 
     readline = read
