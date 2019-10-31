@@ -334,5 +334,5 @@ def post_mortem(t):
     p = pytestPDB._init_pdb("post_mortem")
     p.reset()
     p.interaction(None, t)
-    if p.quitting:
+    if getattr(p, "quitting", False):
         outcomes.exit("Quitting debugger")
