@@ -482,18 +482,6 @@ class ExceptionInfo(Generic[_E]):
             if exprinfo and exprinfo.startswith(cls._assert_start_repr):
                 _striptext = "AssertionError: "
 
-        # Merge with frame's stack.
-        if merge_frame and sys.version_info >= (3, 7):
-            tb = exc_info[2]
-            f = merge_frame
-            while f:
-                tb = TracebackType(tb, f, tb_lasti=f.f_lasti, tb_lineno=f.f_lineno)
-                f = f.f_back
-            exc_info = exc_info[:2] + (tb,)
-
-        # Save original exception, to be used with e.g. pdb.pm().
-        sys.last_type, sys.last_value, sys.last_traceback = exc_info
-
         return cls(exc_info, _striptext, merge_frame=merge_frame)
 
     @classmethod
