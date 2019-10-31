@@ -915,26 +915,35 @@ def test_store_except_info_on_error() -> None:
         nodeid = "item_that_raises"
         raise_error = True
 
-        def runtest(self):
-            if self.raise_error:
-                raise IndexError("TEST")
+        class config:
+            def getoption(name, default):
+                assert name == "usepdb"
+                return False
+
+        class ihook:
+            def pytest_runtest_call(item):
+                if item.raise_error:
+                    raise IndexError("TEST")
 
     try:
-        runner.pytest_runtest_call(ItemMightRaise())
+        runner.call_runtest_hook(ItemMightRaise(), "call")
     except IndexError:
         pass
     # Check that exception info is stored on sys
-    assert sys.last_type is IndexError
+    assert sys.last_type is IndexError, sys.last_value
     assert isinstance(sys.last_value, IndexError)
     assert sys.last_value.args[0] == "TEST"
     assert sys.last_traceback
 
-    # The next run should clear the exception info stored by the previous run
+    # The next run should _not_ clear the exception info stored by the previous run.
+    # It should always reflect the last unhandled exception, e.g. to be used
+    # from a debugger, although it could _maybe_ be said that pytest handled
+    # it (by turning it into a report (where it is not stored as is though)).
     ItemMightRaise.raise_error = False
-    runner.pytest_runtest_call(ItemMightRaise())
-    assert not hasattr(sys, "last_type")
-    assert not hasattr(sys, "last_value")
-    assert not hasattr(sys, "last_traceback")
+    runner.call_runtest_hook(ItemMightRaise(), "call")
+    assert sys.last_type is IndexError, sys.last_value
+    assert sys.last_value.args[0] == "TEST"
+    assert sys.last_traceback
 
 
 def test_current_test_env_var(testdir, monkeypatch) -> None:
