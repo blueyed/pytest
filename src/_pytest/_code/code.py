@@ -266,12 +266,25 @@ class TracebackEntry:
             fn = "???"
         name = self.frame.code.name
         try:
-            line = str(self.statement).lstrip()
+            code = str(self.statement)
+        except AttributeError:
+            lines = "    ???"
         except KeyboardInterrupt:
             raise
-        except:  # noqa
-            line = "???"
-        return "  File %r:%d in %s\n  %s\n" % (fn, self.lineno + 1, name, line)
+        except Exception as exc:
+            lines = "    ??? ({!r})".format(exc)
+        else:
+            if "\n" in code:
+                import textwrap
+
+                lines = "\n".join(
+                    "    " + line for line in textwrap.dedent(code).splitlines()
+                )
+            else:
+                lines = "    " + code.lstrip()
+        return '  File "{}", line {}, in {}\n{}'.format(
+            fn, self.lineno + 1, name, lines
+        )
 
     @property
     def name(self):
@@ -381,6 +394,9 @@ class Traceback(list):
                         return i
             values.append(entry.frame.f_locals)
         return None
+
+    def __str__(self):
+        return "\n".join(str(x) for x in self)
 
 
 co_equal = compile(

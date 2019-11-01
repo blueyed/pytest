@@ -348,7 +348,7 @@ def test_excinfo_no_sourcecode():
     except ValueError:
         excinfo = _pytest._code.ExceptionInfo.from_current()
     s = str(excinfo.traceback[-1])
-    assert s == "  File '<string>':1 in <module>\n  ???\n"
+    assert s == '  File "<string>", line 1, in <module>\n    ???'
 
 
 def test_excinfo_no_python_sourcecode(tmpdir):
