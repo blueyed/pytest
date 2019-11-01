@@ -238,6 +238,8 @@ class CallInfo:
                     tb = TracebackType(tb, f, tb_lasti=f.f_lasti, tb_lineno=f.f_lineno)
                     f = f.f_back
                 exc_info = exc_info[:2] + (tb,)
+            else:
+                exc_info = excinfo._excinfo
 
             # Save original exception, to be used with e.g. pdb.pm().
             sys.last_type, sys.last_value, sys.last_traceback = exc_info
