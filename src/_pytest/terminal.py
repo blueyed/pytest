@@ -51,14 +51,15 @@ def _getdimensions():
             try:
                 size = os.get_terminal_size(check.fileno())
             except (AttributeError, ValueError, OSError):
-                checked.append((check, sys.exc_info()))
+                checked.append((check, check.isatty(), sys.exc_info()))
                 # fd is None, closed, detached, or not a terminal.
                 continue
             else:
-                checked.append((check, ("ok", size)))
-                break
-        else:
-            size = os.terminal_size(fallback)
+                checked.append((check, check.isatty(), ("ok", size)))
+
+        assert 0, checked
+        # else:
+        #     size = os.terminal_size(fallback)
         if columns <= 0:
             columns = size.columns
         if lines <= 0:
