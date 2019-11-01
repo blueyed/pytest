@@ -183,8 +183,12 @@ class TestTraceback:
         )
 
         # Same, but multiple source lines, and entries.
+        # fmt: off
         def inner():
-            raise AssertionError(sys._getframe().f_lineno)
+            raise AssertionError(  # some comment
+                sys._getframe().f_lineno
+            )
+        # fmt: on
 
         try:
             inner()
@@ -195,11 +199,11 @@ class TestTraceback:
         assert str(tb) == "\n".join(
             [
                 '  File "{}", line {}, in test_getsource'.format(
-                    __file__, baselnum + 3
+                    __file__, baselnum + 5
                 ),
                 "    inner()",
                 '  File "{}", line {}, in inner'.format(__file__, baselnum),
-                "    raise AssertionError(",
+                "    raise AssertionError(  # some comment",
                 "        sys._getframe().f_lineno",
                 "    )",
             ]
