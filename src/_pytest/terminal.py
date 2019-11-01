@@ -66,9 +66,30 @@ def _getdimensions():
     return columns, lines
 
 
+_cached_terminal_width = None
+
+
 def get_terminal_width():
-    width, _ = _getdimensions()
-    return width
+    global _cached_terminal_width
+
+    if _cached_terminal_width is None:
+        import signal
+
+        _prev_sig_handler = None
+
+        def _clear_cache_on_sigwinch(signum, frame):
+            global _cached_terminal_width
+
+            _cached_terminal_width = None
+            if _prev_sig_handler and _prev_sig_handler is not signal.SIG_DFL:
+                _prev_sig_handler(signum, frame)
+
+        try:
+            _prev_sig_handler = signal.signal(signal.SIGWINCH, _clear_cache_on_sigwinch)
+        except ValueError:
+            pass  # e.g. "signal only works in main thread"
+        _cached_terminal_width, _ = _getdimensions()
+    return _cached_terminal_width
 
 
 class TerminalWriter(py.io.TerminalWriter):
@@ -78,25 +99,7 @@ class TerminalWriter(py.io.TerminalWriter):
     def fullwidth(self):
         if hasattr(self, "_terminal_width"):
             return self._terminal_width
-
-        if self._cached_terminal_width is None:
-            import signal
-
-            _prev_sig_handler = None
-
-            def _clear_cache_on_sigwinch(signum, frame):
-                self._cached_terminal_width = None
-                if _prev_sig_handler and _prev_sig_handler is not signal.SIG_DFL:
-                    _prev_sig_handler(signum, frame)
-
-            try:
-                _prev_sig_handler = signal.signal(
-                    signal.SIGWINCH, _clear_cache_on_sigwinch
-                )
-            except ValueError:
-                pass  # e.g. "signal only works in main thread"
-            self._cached_terminal_width = get_terminal_width()
-        return self._cached_terminal_width
+        return get_terminal_width()
 
     @fullwidth.setter
     def fullwidth(self, value):
