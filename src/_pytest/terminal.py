@@ -52,9 +52,9 @@ def _getdimensions():
             except (AttributeError, ValueError, OSError):
                 # fd is None, closed, detached, or not a terminal.
                 continue
-            if size.columns > 0:
+            if columns == 0 and size.columns > 0:
                 columns = size.columns
-            if size.lines > 0:
+            if lines == 0 and size.lines > 0:
                 lines = size.lines
             if columns == 0 or lines == 0:
                 # Might happen on Sourcehut's CI (both are 0, isatty() is True).
