@@ -38,9 +38,9 @@ def pytest_addoption(parser):
     )
     parser.addini(
         "capture_suspend_on_stdin",
-        "Suspend capturing when stdin is being read from.",
+        "Suspend capturing when stdin is being read from (default: 1).",
         type="bool",
-        default=False,
+        default=True,
     )
 
 
