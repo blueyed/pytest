@@ -45,14 +45,17 @@ def _getdimensions():
     except (KeyError, ValueError):
         lines = 0
     # only query if necessary
+    checked = []
     if columns <= 0 or lines <= 0:
         for check in [sys.__stdin__, sys.__stderr__, sys.__stdout__]:
             try:
                 size = os.get_terminal_size(check.fileno())
             except (AttributeError, ValueError, OSError):
+                checked.append((check, sys.exc_info()))
                 # fd is None, closed, detached, or not a terminal.
                 continue
             else:
+                checked.append((check, ("ok", size)))
                 break
         else:
             size = os.terminal_size(fallback)
@@ -60,6 +63,7 @@ def _getdimensions():
             columns = size.columns
         if lines <= 0:
             lines = size.lines
+    assert columns > 10, (columns, lines, checked)
     return columns, lines
 
 
