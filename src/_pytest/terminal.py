@@ -9,6 +9,7 @@ import platform
 import sys
 import time
 from functools import partial
+from pathlib import Path
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -1021,13 +1022,16 @@ def _get_pos(config, rep):
         return nodeid
 
     assert isinstance(testloc.path, str), testloc.path
-    testloc_path = py.path.local(testloc.path)
-    rel_testloc_path = config.invocation_dir.bestrelpath(testloc_path)
-    if rel_testloc_path == path:
+    testloc_path = Path(testloc.path)
+    try:
+        testloc_path = testloc_path.relative_to(config.invocation_dir)
+    except ValueError:
+        pass
+
+    if str(testloc_path) == path:
         return "%s:%d(%s)" % (path, testloc.lineno, testname)
 
-    assert 0, "hit"
-    return "%s (%s:%d)" % (nodeid, rel_testloc_path, testloc.lineno)
+    return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
 
 
 def _get_line_with_reprcrash_message(config, rep, termwidth):
