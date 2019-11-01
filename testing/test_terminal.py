@@ -1803,3 +1803,38 @@ def test_collecterror(testdir):
             "*= 1 error in *",
         ]
     )
+
+
+def test_getdimensions(monkeypatch):
+    from _pytest.terminal import _getdimensions, get_terminal_width
+
+    monkeypatch.setenv("COLUMNS", "30")
+    monkeypatch.setenv("LINES", "25")
+
+    assert _getdimensions() == (30, 25)
+    assert get_terminal_width() == 30
+
+    calls = []
+
+    def mocked_get_terminal_size(*args):
+        calls.append(args)
+        raise OSError()
+
+    monkeypatch.setattr(os, "get_terminal_size", mocked_get_terminal_size)
+
+    monkeypatch.delenv("COLUMNS")
+    monkeypatch.delenv("LINES")
+    assert _getdimensions() == (80, 24)
+    assert calls == [(0,), (2,), (1,)]
+
+    def mocked_get_terminal_size(fileno):
+        calls.append(fileno)
+        if fileno == 2:
+            return os.terminal_size((12, 34))
+        raise OSError()
+
+    monkeypatch.setattr(os, "get_terminal_size", mocked_get_terminal_size)
+
+    calls = []
+    assert _getdimensions() == (12, 34)
+    assert calls == [0, 2]

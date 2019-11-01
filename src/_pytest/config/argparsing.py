@@ -11,6 +11,7 @@ from typing import Tuple
 import py
 
 from _pytest.config.exceptions import UsageError
+from _pytest.terminal import get_terminal_width
 
 FILE_OR_DIR = "file_or_dir"
 
@@ -417,8 +418,7 @@ class DropShorterLongHelpFormatter(argparse.HelpFormatter):
 
     def __init__(self, *args, **kwargs):
         """Use more accurate terminal width via pylib."""
-        if "width" not in kwargs:
-            kwargs["width"] = py.io.get_terminal_width()
+        kwargs.setdefault("width", get_terminal_width())
         super().__init__(*args, **kwargs)
 
     def _format_action_invocation(self, action):

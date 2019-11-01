@@ -895,10 +895,12 @@ class FormattedExcinfo:
 
 class TerminalRepr:
     def __str__(self):
+        from _pytest.terminal import TerminalWriter
+
         # FYI this is called from pytest-xdist's serialization of exception
         # information.
         io = StringIO()
-        tw = py.io.TerminalWriter(file=io)
+        tw = TerminalWriter(file=io)
         self.toterminal(tw)
         return io.getvalue().strip()
 

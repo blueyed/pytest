@@ -5,6 +5,7 @@ This is a good source for looking at the various reporting hooks.
 import argparse
 import collections
 import datetime
+import os
 import platform
 import sys
 import time
@@ -28,6 +29,60 @@ from _pytest.compat import shell_quote
 from _pytest.main import ExitCode
 
 REPORT_COLLECTING_RESOLUTION = 0.5
+
+
+def _getdimensions():
+    # Improved version of shutil.get_terminal_size that looks at stdin,
+    # stderr, stdout.  Ref: https://bugs.python.org/issue14841.
+    fallback = (80, 24)
+    # columns, lines are the working values
+    try:
+        columns = int(os.environ["COLUMNS"])
+    except (KeyError, ValueError):
+        columns = 0
+    try:
+        lines = int(os.environ["LINES"])
+    except (KeyError, ValueError):
+        lines = 0
+    # only query if necessary
+    if columns <= 0 or lines <= 0:
+        try:
+            os_get_terminal_size = os.get_terminal_size
+        except AttributeError:
+            size = os.terminal_size(fallback)
+        else:
+            for check in [sys.__stdin__, sys.__stderr__, sys.__stdout__]:
+                try:
+                    size = os_get_terminal_size(check.fileno())
+                except (AttributeError, ValueError, OSError):
+                    # fd is None, closed, detached, or not a terminal.
+                    continue
+                else:
+                    break
+            else:
+                size = os.terminal_size(fallback)
+        if columns <= 0:
+            columns = size.columns
+        if lines <= 0:
+            lines = size.lines
+    return columns, lines
+
+
+def get_terminal_width():
+    width, _ = _getdimensions()
+    return width
+
+
+class TerminalWriter(py.io.TerminalWriter):
+    @property
+    def fullwidth(self):
+        if hasattr(self, "_terminal_width"):
+            return self._terminal_width
+        return get_terminal_width()
+
+    @fullwidth.setter
+    def fullwidth(self, value):
+        self._terminal_width = value
 
 
 class MoreQuietAction(argparse.Action):

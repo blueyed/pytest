@@ -66,13 +66,14 @@ def main(args=None, plugins=None) -> "Union[int, _pytest.main.ExitCode]":
                   initialization.
     """
     from _pytest.main import ExitCode
+    from _pytest.terminal import TerminalWriter
 
     try:
         try:
             config = _prepareconfig(args, plugins)
         except ConftestImportFailure as e:
             exc_info = ExceptionInfo(e.excinfo)
-            tw = py.io.TerminalWriter(sys.stderr)
+            tw = TerminalWriter(sys.stderr)
             tw.line(
                 "ImportError while loading conftest '{e.path}'.".format(e=e), red=True
             )
@@ -98,7 +99,7 @@ def main(args=None, plugins=None) -> "Union[int, _pytest.main.ExitCode]":
             finally:
                 config._ensure_unconfigure()
     except UsageError as e:
-        tw = py.io.TerminalWriter(sys.stderr)
+        tw = TerminalWriter(sys.stderr)
         for msg in e.args:
             tw.line("ERROR: {}\n".format(msg), red=True)
         return ExitCode.USAGE_ERROR
@@ -1128,7 +1129,9 @@ def create_terminal_writer(config, *args, **kwargs):
     in the config object. Every code which requires a TerminalWriter object
     and has access to a config object should use this function.
     """
-    tw = py.io.TerminalWriter(*args, **kwargs)
+    from _pytest.terminal import TerminalWriter
+
+    tw = TerminalWriter(*args, **kwargs)
     if config.option.color == "yes":
         tw.hasmarkup = True
     if config.option.color == "no":

@@ -404,7 +404,9 @@ def pytest_report_header(config):
 def cacheshow(config, session):
     from pprint import pformat
 
-    tw = py.io.TerminalWriter()
+    from _pytest.terminal import TerminalWriter
+
+    tw = TerminalWriter()
     tw.line("cachedir: " + str(config.cache._cachedir))
     if not config.cache._cachedir.is_dir():
         tw.line("cache is empty")
