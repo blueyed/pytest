@@ -105,8 +105,6 @@ def get_terminal_width():
 
 
 class TerminalWriter(py.io.TerminalWriter):
-    _cached_terminal_width = None
-
     @property
     def fullwidth(self):
         if hasattr(self, "_terminal_width"):
