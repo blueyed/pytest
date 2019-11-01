@@ -617,6 +617,11 @@ class TerminalReporter:
                     for desc, values in config._implicit_args
                 )
             )
+        if config.option.verbose > 1 and config.invocation_params.args:
+            result.append(
+                "explicit args: %s"
+                % " ".join([shell_quote(str(x)) for x in config.invocation_params.args])
+            )
 
         return result
 

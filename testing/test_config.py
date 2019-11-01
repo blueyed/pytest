@@ -1457,8 +1457,18 @@ def test_report_implicit_args(testdir, monkeypatch):
     result.stdout.fnmatch_lines(
         ["implicit args: \"-k 'foo and bar'\" (addopts config), '-v' (PYTEST_ADDOPTS)"]
     )
+    # Not displayed with verbosity < 2.
+    assert "explicit_args" not in result.stdout.str()
 
     ini.remove()
-    monkeypatch.setenv("PYTEST_ADDOPTS", "-v -k 'bar'")
-    result = testdir.runpytest(str(p))
-    result.stdout.fnmatch_lines(["implicit args: '-v -k bar' (PYTEST_ADDOPTS)"])
+    monkeypatch.setenv("PYTEST_ADDOPTS", "-vv -k 'bar'")
+    result = testdir.runpytest("-v", "-m", "foo and bar", str(p))
+    result.stdout.fnmatch_lines(
+        [
+            "implicit args: '-vv -k bar' (PYTEST_ADDOPTS)",
+            "explicit args: -v -m 'foo and bar' *test_report_implicit_args.py --basetemp=*",
+        ]
+    )
+    result = testdir.runpytest()
+    # Not displayed without any.
+    assert "explicit_args" not in result.stdout.str()
