@@ -142,8 +142,8 @@ class LsofFdLeakChecker:
 # used at least by pytest-xdist plugin
 
 
-@pytest.fixture
-def _pytest(request):
+@pytest.fixture(name="_pytest")
+def __pytest(request):
     """Return a helper which offers a gethookrecorder(hook) method which
     returns a HookRecorder instance which helps to make assertions about called
     hooks.
