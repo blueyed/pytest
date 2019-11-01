@@ -1873,6 +1873,7 @@ def test_sigwinch(testdir, monkeypatch):
 
         def test(monkeypatch):
             import signal
+            import _pytest.terminal
 
             assert signal.getsignal(signal.SIGWINCH) is not signal.SIG_DFL
 
@@ -1881,7 +1882,6 @@ def test_sigwinch(testdir, monkeypatch):
 
             signal.signal(signal.SIGWINCH, prev_handler)
 
-            import _pytest.terminal
             _pytest.terminal._cached_terminal_width = None
 
             tw = TerminalWriter()
@@ -1895,14 +1895,25 @@ def test_sigwinch(testdir, monkeypatch):
             print("waiting_for_sigwinch")
             assert input() == "sent_sigwinch"
             assert tw.fullwidth == 51
+
+            signal.signal(signal.SIGWINCH, signal.SIG_DFL)
+            print("waiting_for_sigwinch")
+            assert input() == "sent_sigwinch"
+            assert tw.fullwidth == 51
     """
     )
     cmdargs = [sys.executable, "-m", "pytest", "-s", "--full-trace", str(p1)]
     child = testdir.spawn(" ".join(cmdargs))
     child.sendline("step_1")
+
+    child.expect_exact("waiting_for_sigwinch")
+    child.kill(signal.SIGWINCH)
+    child.sendline("sent_sigwinch")
+    child.expect_exact("prev_handler_was_called")
+
     child.expect_exact("waiting_for_sigwinch")
     child.kill(signal.SIGWINCH)
     child.sendline("sent_sigwinch")
     rest = child.read().decode()
-    assert "prev_handler_was_called" in rest
+    assert "prev_handler_was_called" not in rest
     assert child.wait() == 0, rest
