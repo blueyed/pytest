@@ -165,6 +165,47 @@ class TestTracebackEntry:
         assert "assert False" in source[5]
 
 
+class TestTraceback:
+    def test_getsource(self):
+        try:
+            raise AssertionError(sys._getframe().f_lineno)
+        except AssertionError:
+            exci = _pytest._code.ExceptionInfo.from_current()
+
+        tb = exci.traceback
+        assert str(tb) == "\n".join(
+            [
+                '  File "{}", line {}, in test_getsource'.format(
+                    __file__, exci.value.args[0]
+                ),
+                "    raise AssertionError(sys._getframe().f_lineno)",
+            ]
+        )
+
+        # Same, but multiple source lines, and entries.
+        def inner():
+            raise AssertionError(sys._getframe().f_lineno)
+
+        try:
+            inner()
+        except AssertionError:
+            exci = _pytest._code.ExceptionInfo.from_current()
+        tb = exci.traceback
+        baselnum = exci.value.args[0]
+        assert str(tb) == "\n".join(
+            [
+                '  File "{}", line {}, in test_getsource'.format(
+                    __file__, baselnum + 3
+                ),
+                "    inner()",
+                '  File "{}", line {}, in inner'.format(__file__, baselnum),
+                "    raise AssertionError(",
+                "        sys._getframe().f_lineno",
+                "    )",
+            ]
+        )
+
+
 class TestReprFuncArgs:
     def test_not_raise_exception_with_mixed_encoding(self, tw_mock):
         from _pytest._code.code import ReprFuncArgs
