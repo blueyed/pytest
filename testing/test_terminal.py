@@ -1806,8 +1806,9 @@ def test_collecterror(testdir):
 
 
 def test_getdimensions(monkeypatch):
-    from _pytest.terminal import _getdimensions, get_terminal_width
     import _pytest.terminal
+    from _pytest.terminal import _getdimensions
+    from _pytest.terminal import get_terminal_width
 
     monkeypatch.setattr(_pytest.terminal, "_cached_terminal_width", None)
     monkeypatch.setenv("COLUMNS", "30")
