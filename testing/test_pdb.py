@@ -1347,7 +1347,11 @@ def test_pdb_in_thread_after_exit(testdir):
         evt = threading.Event()
         evt2 = threading.Event()
 
-        def test():
+        def test(monkeypatch):
+            import _pytest.terminal
+
+            # Invalidate cache, to test ValueError.
+            monkeypatch.setattr(_pytest.terminal, "_cached_terminal_width", None)
 
             def target():
                 print("target_" + "start")
@@ -1363,6 +1367,8 @@ def test_pdb_in_thread_after_exit(testdir):
 
             evt.wait()
             evt2.wait()
+
+            assert _pytest.terminal._cached_terminal_width is False
         """
     )
     child = testdir.spawn_pytest(str(p1) + " -s")
