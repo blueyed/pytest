@@ -1304,3 +1304,65 @@ def test_keyboardinterrupt_during_collection(testdir):
             "*= no tests ran in *=",
         ]
     )
+
+
+def test_collect_by_file_and_lineno(testdir):
+    p1 = testdir.makepyfile(
+        """
+        import pytest
+
+        def test_one():
+            pass
+
+        @pytest.mark.parametrize("param", ["sel1", "desel"])
+        def test_two(param):
+            pass
+    """
+    )
+    result = testdir.runpytest("--collect-only", "{}:1".format(p1))
+    result.stdout.fnmatch_lines(
+        ["collected 3 items / 3 deselected", "*= 3 deselected in *"]
+    )
+    assert result.ret == ExitCode.NO_TESTS_COLLECTED
+
+    result = testdir.runpytest("--collect-only", "{}:3".format(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "collected 3 items / 2 deselected / 1 selected",
+            "<Module test_collect_by_file_and_lineno.py>",
+            "  <Function test_one>",
+            "*= 2 deselected in *",
+        ]
+    )
+    assert result.ret == 0
+
+    result = testdir.runpytest("--collect-only", "-k", "not desel", "{}:6".format(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "collected 3 items / 2 deselected / 1 selected",
+            "<Module test_collect_by_file_and_lineno.py>",
+            "  <Function test_two[sel1]>",
+            "*= 2 deselected in *",
+        ]
+    )
+    assert result.ret == 0
+
+    p2 = testdir.makepyfile(
+        test_p2="""
+        def test_three():
+            pass
+    """
+    )
+    result = testdir.runpytest("--collect-only", "{}:99".format(p1))
+    assert result.ret == ExitCode.NO_TESTS_COLLECTED
+
+    result = testdir.runpytest("--collect-only", "{}:99".format(p1), "{}:3".format(p2))
+    result.stdout.fnmatch_lines(
+        [
+            "collected 4 items / 3 deselected / 1 selected",
+            "<Module test_p2.py>",
+            "  <Function test_three>",
+            "*= 3 deselected in *",
+        ]
+    )
+    assert result.ret == 0

@@ -497,22 +497,23 @@ class Session(nodes.FSCollector):
 
     def collect(self):
         for initialpart in self._initialparts:
-            arg = "::".join(map(str, initialpart))
+            arg = initialpart
             self.trace("processing argument", arg)
             self.trace.root.indent += 1
             try:
                 yield from self._collect(arg)
             except NoMatch:
+                report_arg = "::".join(map(str, initialpart))
                 # we are inside a make_report hook so
                 # we cannot directly pass through the exception
-                self._notfound.append((arg, sys.exc_info()[1]))
+                self._notfound.append((report_arg, sys.exc_info()[1]))
 
             self.trace.root.indent -= 1
 
     def _collect(self, arg):
         from _pytest.python import Package
 
-        names = self._parsearg(arg)
+        names = arg[:]
         argpath = names.pop(0)
 
         # Start with a Session root, and delve to argpath item (dir or file)
@@ -651,7 +652,13 @@ class Session(nodes.FSCollector):
         parts = str(arg).split("::")
         if self.config.option.pyargs:
             parts[0] = self._tryconvertpyarg(parts[0])
-        relpath = parts[0].replace("/", os.sep)
+        fname, _, lineno = parts[0].rpartition(":")  # TODO: windows
+        if fname:
+            lineno = int(lineno)
+        else:
+            fname = lineno
+            lineno = None
+        relpath = fname.replace("/", os.sep)
         path = self.config.invocation_dir.join(relpath, abs=True)
         if not path.check():
             if self.config.option.pyargs:
@@ -660,6 +667,7 @@ class Session(nodes.FSCollector):
                 )
             raise UsageError("file not found: " + arg)
         parts[0] = path.realpath()
+        parts[0].lineno = lineno
         return parts
 
     def matchnodes(self, matching, names):
@@ -720,5 +728,21 @@ class Session(nodes.FSCollector):
             rep = collect_one_node(node)
             if rep.passed:
                 for subnode in rep.result:
-                    yield from self.genitems(subnode)
+                    try:
+                        collect_lnum = node.fspath.lineno
+                    except AttributeError:
+                        collect_lnum = None
+                    if collect_lnum:
+                        import inspect
+
+                        for item in self.genitems(subnode):
+                            lines, lnum = inspect.getsourcelines(item.obj)
+                            if collect_lnum >= lnum and collect_lnum <= lnum + len(
+                                lines
+                            ):
+                                yield item
+                            else:
+                                node.ihook.pytest_deselected(items=[item])
+                    else:
+                        yield from self.genitems(subnode)
             node.ihook.pytest_collectreport(report=rep)
