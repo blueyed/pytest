@@ -148,8 +148,9 @@ def showhelp(config):
     )
     tw.line()
 
-    columns = tw.fullwidth  # costly call
+    columns = max(40, tw.fullwidth)  # costly call
     indent_len = 24  # based on argparse's max_help_position=24
+    wrap_width = columns - indent_len
     indent = " " * indent_len
     for name in config._parser._ininames:
         help, type, default = config._parser._inidict[name]
@@ -174,7 +175,7 @@ def showhelp(config):
         else:
             # Display help starting after the spec, following lines indented.
             tw.write(" " * (indent_len - spec_len - 2))
-            wrapped = textwrap.wrap(help, columns - indent_len, break_on_hyphens=False)
+            wrapped = textwrap.wrap(help, wrap_width, break_on_hyphens=False)
 
             tw.line(wrapped[0])
             for line in wrapped[1:]:
