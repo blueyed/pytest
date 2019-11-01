@@ -1875,6 +1875,9 @@ def test_sigwinch(testdir, monkeypatch):
 
             signal.signal(signal.SIGWINCH, prev_handler)
 
+            import _pytest.terminal
+            _pytest.terminal._cached_terminal_width = None
+
             tw = TerminalWriter()
             assert tw.fullwidth == 50
 
@@ -1896,4 +1899,4 @@ def test_sigwinch(testdir, monkeypatch):
     child.sendline("sent_sigwinch")
     rest = child.read().decode()
     assert "prev_handler_was_called" in rest
-    assert child.wait() == 0
+    assert child.wait() == 0, rest
