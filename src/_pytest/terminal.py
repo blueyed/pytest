@@ -1020,14 +1020,13 @@ def _get_pos(config, rep):
     except AttributeError:
         return nodeid
 
-    if isinstance(testloc.path, six.string_types):
-        testloc_path = py.path.local(testloc.path)
-    else:
-        testloc_path = testloc.path
+    assert isinstance(testloc.path, str), testloc.path
+    testloc_path = py.path.local(testloc.path)
     rel_testloc_path = config.invocation_dir.bestrelpath(testloc_path)
     if rel_testloc_path == path:
-        return "%s (line %d)" % (nodeid, testloc.lineno)
+        return "%s:%d(%s)" % (path, testloc.lineno, testname)
 
+    assert 0, "hit"
     return "%s (%s:%d)" % (nodeid, rel_testloc_path, testloc.lineno)
 
 
