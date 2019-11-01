@@ -537,13 +537,6 @@ class ExceptionInfo(Generic[_E]):
             the exception representation is returned (so 'AssertionError: ' is
             removed from the beginning)
         """
-        if (
-            tryshort
-            and isinstance(self.value, OutcomeException)
-            and self.value.short_msg
-        ):
-            return self.value.short_msg
-
         lines = format_exception_only(self.type, self.value)
         if isinstance(self.value, OutcomeException):
             # Remove module prefix.
@@ -566,7 +559,8 @@ class ExceptionInfo(Generic[_E]):
         exconly = self.exconly(tryshort=True)
         entry = self.traceback.getcrashentry()
         path, lineno = entry.frame.code.raw.co_filename, entry.lineno
-        return ReprFileLocation(path, lineno + 1, exconly)
+        short_msg = getattr(self.value, "short_msg", None)
+        return ReprFileLocation(path, lineno + 1, exconly, short_msg=short_msg)
 
     def getrepr(
         self,
@@ -1042,21 +1036,23 @@ class ReprEntry(TerminalRepr):
 
 
 class ReprFileLocation(TerminalRepr):
-    def __init__(self, path, lineno, message):
+    def __init__(self, path, lineno, message, *, short_msg=None):
         self.path = str(path)
         self.lineno = lineno
         self.message = message
+        if short_msg is None:
+            short_msg = message
+            i = short_msg.find("\n")
+            if i != -1:
+                short_msg = short_msg[:i]
+        self.short_msg = short_msg
 
     def toterminal(self, tw, style=None):
         # filename and lineno output for each entry,
         # using an output format that most editors unterstand
-        msg = self.message
-        i = msg.find("\n")
-        if i != -1:
-            msg = msg[:i]
         bold = style != "short"
         tw.write("%s" % self.path, bold=bold)
-        tw.line(":{}: {}".format(self.lineno, msg))
+        tw.line(":{}: {}".format(self.lineno, self.short_msg))
 
 
 class ReprLocals(TerminalRepr):

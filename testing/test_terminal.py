@@ -774,6 +774,13 @@ def test_fail_extra_reporting(testdir, monkeypatch):
     result = testdir.runpytest("-rf")
     result.stdout.fnmatch_lines(
         [
+            '>       LineMatcher(["1", "2", "3"]).fnmatch_lines(["2", "last_unmatched"])',
+            "E       Failed: nomatch: '2'",
+            "E           and: '1'",
+            "E       exact match: '2'",
+            "E       nomatch: 'last_unmatched'",
+            "E           and: '3'",
+            "E       remains unmatched: 'last_unmatched'",
             "*test summary*",
             "FAILED test_fail_extra_reporting.py:2(test_this) - AssertionError: this_faile...",
             "FAILED test_fail_extra_reporting.py:7(test_linematcher) - remains unmatched: ...",
@@ -1730,7 +1737,7 @@ def test_line_with_reprcrash(monkeypatch):
     def check(msg, width, expected):
         __tracebackhide__ = True
         if msg:
-            rep.longrepr.reprcrash.message = msg
+            rep.longrepr.reprcrash.short_msg = msg
         actual = _get_line_with_reprcrash_message(config, rep(), width)
 
         assert actual == expected

@@ -1099,7 +1099,7 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
         return line
 
     try:
-        msg = rep.longrepr.reprcrash.message
+        msg = rep.longrepr.reprcrash.short_msg
     except AttributeError:
         pass
     else:
