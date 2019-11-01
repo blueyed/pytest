@@ -1835,6 +1835,18 @@ def test_getdimensions(monkeypatch):
 
     monkeypatch.setattr(os, "get_terminal_size", mocked_get_terminal_size)
 
+    # Ignores sizes with columns or lines being 0.
     calls = []
     assert _getdimensions() == (12, 34)
     assert calls == [0, 2]
+
+    def mocked_get_terminal_size(fileno):
+        calls.append(fileno)
+        return os.terminal_size((0, 0))
+        raise OSError()
+
+    monkeypatch.setattr(os, "get_terminal_size", mocked_get_terminal_size)
+
+    calls = []
+    assert _getdimensions() == (80, 24)
+    assert calls == [0, 2, 1]
