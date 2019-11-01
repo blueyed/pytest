@@ -38,9 +38,9 @@ def pytest_addoption(parser):
     )
     parser.addini(
         "capture_suspend_on_stdin",
-        "Suspend capturing when stdin is being read from (default: 1).",
+        "Suspend capturing when stdin is being read from (default: 1 if connected to tty).",
         type="bool",
-        default=True,
+        default=None,
     )
 
 
@@ -53,6 +53,8 @@ def pytest_load_initial_conftests(early_config, parser, args):
     _readline_workaround()
     pluginmanager = early_config.pluginmanager
     suspend_on_stdin = early_config.getini("capture_suspend_on_stdin")
+    if suspend_on_stdin is None:
+        suspend_on_stdin = sys.stdin.isatty()
     capman = CaptureManager(ns.capture, suspend_on_stdin)
     pluginmanager.register(capman, "capturemanager")
 
