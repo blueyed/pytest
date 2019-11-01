@@ -17,6 +17,7 @@ from weakref import WeakKeyDictionary
 
 import py
 
+import _pytest.terminal
 import pytest
 from _pytest._code import Source
 from _pytest._io.saferepr import saferepr
@@ -493,6 +494,10 @@ class Testdir:
         mp.delenv("TOX_ENV_DIR", raising=False)
         # Discard outer pytest options.
         mp.delenv("PYTEST_ADDOPTS", raising=False)
+
+        # Use predictable terminal size.
+        mp.setenv("COLUMNS", "80")
+        mp.setattr(_pytest.terminal, "_cached_terminal_width", None)
 
         # Environment (updates) for inner runs.
         tmphome = str(self.tmpdir)
