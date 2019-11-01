@@ -1176,6 +1176,11 @@ def test_frame_leak_on_failing_test(testdir):
             assert 0
 
         def test2():
+            import sys
+
+            del sys.last_traceback
+            del sys.last_value
+
             gc.collect()
             assert ref() is None
     """

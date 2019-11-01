@@ -915,6 +915,10 @@ def test_store_except_info_on_error() -> None:
         nodeid = "item_that_raises"
         raise_error = True
 
+        def runtest(self):
+            if self.raise_error:
+                raise IndexError("TEST")
+
         class config:
             def getoption(name, default):
                 assert name == "usepdb"
@@ -922,8 +926,7 @@ def test_store_except_info_on_error() -> None:
 
         class ihook:
             def pytest_runtest_call(item):
-                if item.raise_error:
-                    raise IndexError("TEST")
+                runner.pytest_runtest_call(item)
 
     try:
         runner.call_runtest_hook(ItemMightRaise(), "call")
