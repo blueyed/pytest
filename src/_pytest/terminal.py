@@ -82,13 +82,21 @@ def get_terminal_width():
         import signal
 
         _prev_sig_handler = None
+        _in_sighandler = False
 
         def _clear_cache_on_sigwinch(signum, frame):
             global _cached_terminal_width
+            nonlocal _in_sighandler
 
-            _cached_terminal_width = None
-            if _prev_sig_handler and _prev_sig_handler is not signal.SIG_DFL:
-                _prev_sig_handler(signum, frame)
+            assert not _in_sighandler
+            _in_sighandler = True
+
+            try:
+                _cached_terminal_width = None
+                if _prev_sig_handler and _prev_sig_handler is not signal.SIG_DFL:
+                    _prev_sig_handler(signum, frame)
+            finally:
+                _in_sighandler = False
 
         try:
             _prev_sig_handler = signal.signal(signal.SIGWINCH, _clear_cache_on_sigwinch)
