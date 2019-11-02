@@ -209,6 +209,7 @@ class TestReport(BaseReport):
         sections=(),
         duration=0,
         user_properties=None,
+        excinfo=None,
         **extra
     ):
         #: normalized collection node id
@@ -245,11 +246,13 @@ class TestReport(BaseReport):
         #: time it took to run just the test
         self.duration = duration
 
+        self._excinfo = excinfo
+
         self.__dict__.update(extra)
 
     def __repr__(self):
-        return "<{} {!r} when={!r} outcome={!r}>".format(
-            self.__class__.__name__, self.nodeid, self.when, self.outcome
+        return "<{} {!r} when={!r} outcome={!r} excinfo={!r}>".format(
+            self.__class__.__name__, self.nodeid, self.when, self.outcome, self._excinfo
         )
 
     @classmethod
@@ -294,6 +297,7 @@ class TestReport(BaseReport):
             sections,
             duration,
             user_properties=item.user_properties,
+            excinfo=excinfo,
         )
 
 
