@@ -766,7 +766,7 @@ class FormattedExcinfo:
             else:
                 message = excinfo and excinfo.typename or ""
             path = self._makepath(entry.path)
-            filelocrepr = ReprFileLocation(path, entry.lineno + 1, message)
+            filelocrepr = ReprFileLocation(str(path), entry.lineno + 1, message)
             localsrepr = None
             if not short:
                 localsrepr = self.repr_locals(entry.locals)
