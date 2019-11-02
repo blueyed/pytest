@@ -13,6 +13,7 @@ environment:
 
 tasks:
   - check-skip: |
+      env
       if [[ -n "$GITHUB_REF" ]] && [[ "$GITHUB_REF" != refs/heads/my-master ]]; then
         echo "Skipping build for non-PR on $GITHUB_REF"
         complete-build
