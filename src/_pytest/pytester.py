@@ -496,7 +496,11 @@ class Testdir:
 
         # Environment (updates) for inner runs.
         tmphome = str(self.tmpdir)
-        self._env_run_update = {"HOME": tmphome, "USERPROFILE": tmphome}
+        self._env_run_update = {
+            "HOME": tmphome,
+            "USERPROFILE": tmphome,
+            "PY_COLORS": "0",
+        }
 
     def __repr__(self):
         return "<Testdir {!r}>".format(self.tmpdir)

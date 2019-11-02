@@ -257,7 +257,7 @@ class TestPDB:
         child.sendeof()
         rest = child.read().decode("utf8")
         assert "Exit: Quitting debugger" in rest
-        assert "= \x1b[31m\x1b[1m1 failed\x1b[0m\x1b[31m in" in rest
+        assert "= 1 failed in" in rest
         assert "def test_1" not in rest
         assert "get rekt" not in rest
         self.flush(child)
@@ -542,7 +542,7 @@ class TestPDB:
         rest = child.read().decode("utf8")
 
         assert "! _pytest.outcomes.Exit: Quitting debugger !" in rest
-        assert "= \x1b[33mno tests ran\x1b[0m\x1b[33m in" in rest
+        assert "= no tests ran in" in rest
         assert "BdbQuit" not in rest
         assert "UNEXPECTED EXCEPTION" not in rest
 
@@ -761,7 +761,7 @@ class TestPDB:
             assert "> PDB continue (IO-capturing resumed) >" in rest
         else:
             assert "> PDB continue >" in rest
-        assert "= \x1b[32m\x1b[1m1 passed\x1b[0m\x1b[32m in" in rest
+        assert "= 1 passed in" in rest
 
     def test_pdb_used_outside_test(self, testdir):
         p1 = testdir.makepyfile(
@@ -1081,7 +1081,7 @@ class TestTraceOption:
         child.sendline("q")
         child.expect_exact("Exit: Quitting debugger")
         rest = child.read().decode("utf8")
-        assert "= \x1b[32m\x1b[1m2 passed\x1b[0m\x1b[32m in" in rest
+        assert "= 2 passed in" in rest
         assert "reading from stdin while output" not in rest
         # Only printed once - not on stderr.
         assert "Exit: Quitting debugger" not in child.before.decode("utf8")
@@ -1126,7 +1126,7 @@ class TestTraceOption:
             child.sendline("c")
             child.expect_exact("> PDB continue (IO-capturing resumed) >")
         rest = child.read().decode("utf8")
-        assert "= \x1b[32m\x1b[1m6 passed\x1b[0m\x1b[32m in" in rest
+        assert "= 6 passed in" in rest
         assert "reading from stdin while output" not in rest
         # Only printed once - not on stderr.
         assert "Exit: Quitting debugger" not in child.before.decode("utf8")
@@ -1237,7 +1237,7 @@ def test_pdb_suspends_fixture_capturing(testdir, fixture):
 
     TestPDB.flush(child)
     assert child.exitstatus == 0
-    assert "= \x1b[32m\x1b[1m1 passed\x1b[0m\x1b[32m in" in rest
+    assert "= 1 passed in" in rest
     assert "> PDB continue (IO-capturing resumed for fixture %s) >" % (fixture) in rest
 
 
@@ -1376,9 +1376,7 @@ def test_pdb_in_thread_after_exit(testdir):
     child.expect("target_start")
     child.expect(r"\(Pdb")
     child.sendline("evt2.set()")
-    child.expect_exact(
-        "= \x1b[32m\x1b[1m1 passed\x1b[0m\x1b[32m in"
-    )  # main thread exited
+    child.expect_exact("= 1 passed in")  # main thread exited
     child.sendline("c")
     child.expect(r"\(Pdb")
     child.sendline("c")
