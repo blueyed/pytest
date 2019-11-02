@@ -191,7 +191,7 @@ class LFPlugin:
         if (report.when == "call" and report.passed) or report.skipped:
             self.lastfailed.pop(report.nodeid, None)
         elif report.failed:
-            self.lastfailed[report.nodeid] = True
+            self.lastfailed[report.nodeid] = repr(report)
 
     def pytest_collectreport(self, report):
         passed = report.outcome in ("passed", "skipped")
