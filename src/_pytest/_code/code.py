@@ -1035,17 +1035,16 @@ class ReprEntry(TerminalRepr):
         )
 
 
+@attr.s
 class ReprFileLocation(TerminalRepr):
-    def __init__(self, path, lineno, message, *, short_msg=None):
-        self.path = str(path)
-        self.lineno = lineno
-        self.message = message
-        self.short_msg = short_msg
+    path = attr.ib(type=str)
+    lineno = attr.ib(type=int)
+    message = attr.ib(type=str)
+    short_msg = attr.ib(type=Optional[str], default=None, kw_only=True)
 
     def _get_short_msg(self):
         if self.short_msg:
             return self.short_msg
-
         msg = self.message
         i = msg.find("\n")
         if i != -1:
