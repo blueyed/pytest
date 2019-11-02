@@ -137,12 +137,17 @@ class PdbBase(Generic[_P]):
                 pytestPDB_obj.config.pluginmanager.hook.pytest_enter_pdb(
                     config=config, pdb=self
                 )
+                # TODO: move into pytest_enter_pdb hook
+                capman = self._pytest_capman
+                capman.suspend(in_=True)
                 try:
                     return super().interaction(frame, traceback)
                 finally:
                     pytestPDB_obj.config.pluginmanager.hook.pytest_leave_pdb(
                         config=config, pdb=self
                     )
+                    # TODO: move into pytest_leave_pdb hook
+                    capman.resume()
 
             def do_debug(self, arg):
                 pytestPDB_obj._recursive_debug += 1
