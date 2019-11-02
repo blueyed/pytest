@@ -589,6 +589,11 @@ class TestLastFailed:
         testdir.runpytest("-q", "--lf")
         assert not os.path.exists(".pytest_cache/v/cache/lastfailed")
 
+        # --cache-readonly does not store results.
+        testdir.makepyfile(test_errored="def test_error():\n    assert False")
+        testdir.runpytest("-q", "--lf", "--cache-readonly")
+        assert not os.path.exists(".pytest_cache/v/cache/lastfailed")
+
         testdir.makepyfile(test_errored="def test_error():\n    assert False")
         testdir.runpytest("-q", "--lf")
         assert os.path.exists(".pytest_cache/v/cache/lastfailed")
