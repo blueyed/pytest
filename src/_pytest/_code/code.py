@@ -1042,6 +1042,9 @@ class ReprFileLocation(TerminalRepr):
     message = attr.ib(type=str)
     short_msg = attr.ib(type=Optional[str], default=None, kw_only=True)
 
+    def __attrs_post_init__(self):
+        assert type(self.path) == str
+
     def _get_short_msg(self):
         if self.short_msg:
             return self.short_msg
