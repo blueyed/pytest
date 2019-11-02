@@ -4,6 +4,7 @@ import fnmatch
 import functools
 import importlib
 import os
+import re
 import sys
 
 import attr
@@ -16,6 +17,8 @@ from _pytest.config import hookimpl
 from _pytest.config import UsageError
 from _pytest.outcomes import exit
 from _pytest.runner import collect_one_node
+
+RE_FNAME_LINENO = re.compile(r"^([^:].[^:]*):(\d+):?$")
 
 
 class ExitCode(enum.IntEnum):
@@ -647,17 +650,24 @@ class Session(nodes.FSCollector):
         else:
             return spec.origin
 
+    @staticmethod
+    def _parse_fname_lineno(arg):
+        fname = arg
+        lineno = None
+        if ":" in arg:
+            m = RE_FNAME_LINENO.match(arg)
+            if m:
+                fname, lineno = m[1], int(m[2])
+        return fname, lineno
+
     def _parsearg(self, arg):
         """ return (fspath, names) tuple after checking the file exists. """
         parts = str(arg).split("::")
         if self.config.option.pyargs:
             parts[0] = self._tryconvertpyarg(parts[0])
-        fname, _, lineno = parts[0].rpartition(":")  # TODO: windows
-        if fname:
-            lineno = int(lineno)
-        else:
-            fname = lineno
-            lineno = None
+
+        fname, lineno = self._parse_fname_lineno(arg)
+
         relpath = fname.replace("/", os.sep)
         path = self.config.invocation_dir.join(relpath, abs=True)
         if not path.check():
