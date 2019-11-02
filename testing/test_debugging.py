@@ -653,9 +653,8 @@ class TestPDB:
         child.expect(r"\n\(\(Pdb")
         child.sendline("c")
         child.expect("LEAVING RECURSIVE DEBUGGER")
-        assert b"PDB continue" not in child.before
         # No extra newline.
-        assert child.before.endswith(b"c\r\nprint_from_foo\r\n")
+        assert child.before.decode().splitlines() == [")) c", "print_from_foo"]
 
         # set_debug should not raise outcomes. Exit, if used recursively.
         child.sendline("debug 42")
