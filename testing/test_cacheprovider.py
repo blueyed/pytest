@@ -63,8 +63,12 @@ class TestNewAPI:
         )
         result = testdir.runpytest("-rw")
         assert result.ret == 1
-        # warnings from nodeids, lastfailed, and stepwise
-        result.stdout.fnmatch_lines(["*could not create cache path*", "*3 warnings*"])
+        result.stdout.fnmatch_lines(
+            [
+                "*could not create cache path*, setting readonly.",
+                "*= 1 failed, 1 warning in *",
+            ]
+        )
 
     def test_config_cache(self, testdir):
         testdir.makeconftest(

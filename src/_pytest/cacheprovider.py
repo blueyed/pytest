@@ -123,8 +123,13 @@ class Cache:
             else:
                 cache_dir_exists_already = self._cachedir.exists()
                 path.parent.mkdir(exist_ok=True, parents=True)
-        except (IOError, OSError):
-            self.warn("could not create cache path {path}", path=path)
+        except (IOError, OSError) as exc:
+            self.warn(
+                "could not create cache path {path} ({exc}), setting readonly.",
+                path=path,
+                exc=exc,
+            )
+            self._config.option.cache_readonly = True
             return
         if not cache_dir_exists_already:
             self._ensure_supporting_files()
