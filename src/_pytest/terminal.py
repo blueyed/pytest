@@ -71,35 +71,35 @@ def _getdimensions():
 
 
 _cached_terminal_width = None
+_cached_terminal_width_sighandler = None
 
 
 def get_terminal_width():
     global _cached_terminal_width
+    global _cached_terminal_width_sighandler
 
-    if not _cached_terminal_width:
-        if _cached_terminal_width is None:
-            import signal
+    if _cached_terminal_width_sighandler is None:
+        import signal
 
-            _prev_sig_handler = None
+        _prev_sig_handler = None
 
-            def _clear_cache_on_sigwinch(signum, frame):
-                global _cached_terminal_width
+        def _clear_cache_on_sigwinch(signum, frame):
+            global _cached_terminal_width
 
-                _cached_terminal_width = None
-                if _prev_sig_handler and _prev_sig_handler is not signal.SIG_DFL:
-                    _prev_sig_handler(signum, frame)
+            _cached_terminal_width = None
+            if _prev_sig_handler and _prev_sig_handler is not signal.SIG_DFL:
+                _prev_sig_handler(signum, frame)
 
-            try:
-                _prev_sig_handler = signal.signal(
-                    signal.SIGWINCH, _clear_cache_on_sigwinch
-                )
-                _cached_terminal_width = True
-            except ValueError:  # e.g. "signal only works in main thread"
-                _cached_terminal_width = False  # "cannot cache"
+        try:
+            _prev_sig_handler = signal.signal(signal.SIGWINCH, _clear_cache_on_sigwinch)
+            _cached_terminal_width_sighandler = _clear_cache_on_sigwinch
+        except ValueError:  # e.g. "signal only works in main thread"
+            _cached_terminal_width_sighandler = False
 
-        if _cached_terminal_width is False:
-            return _getdimensions()[0]
-    if _cached_terminal_width is True:
+    if _cached_terminal_width_sighandler is False:
+        return _getdimensions()[0]
+
+    if _cached_terminal_width is None:
         _cached_terminal_width, _ = _getdimensions()
     return _cached_terminal_width
 
