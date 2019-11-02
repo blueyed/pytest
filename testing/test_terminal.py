@@ -1798,6 +1798,7 @@ def test_line_with_reprcrash(monkeypatch):
     check("some\nmessage", 80, "FAILED some::nodeid - some...")
     check("some\r\nmessage", 80, "FAILED some::nodeid - some...")
     check("\r\nsome\r\nmessage", 80, "FAILED some::nodeid - ...")
+    check("\nsome\r\nmessage", 80, "FAILED some::nodeid - ...")
 
     # Test unicode safety.
     check("😄😄😄😄😄\n2nd line", 25, "FAILED some::nodeid - ...")

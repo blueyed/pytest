@@ -1040,21 +1040,26 @@ class ReprFileLocation(TerminalRepr):
         self.path = str(path)
         self.lineno = lineno
         self.message = message
-        if short_msg is None:
-            short_msg = message
-            i = short_msg.find("\n")
-            if i != -1:
-                if short_msg[i - 1] == "\r":
-                    i -= 1
-                short_msg = short_msg[:i] + "..."
         self.short_msg = short_msg
+
+    def _get_short_msg(self):
+        if self.short_msg:
+            return self.short_msg
+
+        msg = self.message
+        i = msg.find("\n")
+        if i != -1:
+            if msg[i - 1] == "\r":
+                i -= 1
+            msg = msg[:i] + "..."
+        return msg
 
     def toterminal(self, tw, style=None):
         # filename and lineno output for each entry,
         # using an output format that most editors unterstand
         bold = style != "short"
         tw.write("%s" % self.path, bold=bold)
-        tw.line(":{}: {}".format(self.lineno, self.short_msg))
+        tw.line(":{}: {}".format(self.lineno, self._get_short_msg()))
 
 
 class ReprLocals(TerminalRepr):
