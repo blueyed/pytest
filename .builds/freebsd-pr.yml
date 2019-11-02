@@ -1,11 +1,5 @@
 image: freebsd/12.x
 
-sources:
-  - https://github.com/blueyed/pytest
-
-packages:
-  - py36-tox
-
 environment:
   TOXENV: py36
   _PYTEST_TOX_COVERAGE_RUN: coverage run -m
@@ -18,6 +12,10 @@ tasks:
         echo "Skipping for non-PR."
         complete-build
       fi
+
+  - setup: |
+      git clone https://github.com/blueyed/pytest pytest
+      pkg install py36-tox
 
   - install: |
       cd pytest
