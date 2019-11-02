@@ -796,7 +796,8 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
     if use_CI or not tty:
         msgs = [
             "FAILED test_fail_extra_reporting.py:4(test_this) - AssertionError: "
-            + ("this_failed" * 8),
+            + ("this_failed" * 8)
+            + "...",
             "FAILED test_fail_extra_reporting.py:9(test_linematcher) - remains unmatched: 'last_unmatched'",
         ]
     else:
@@ -1743,8 +1744,10 @@ def test_skip_reasons_folding():
 
 
 def test_line_with_reprcrash(monkeypatch):
-    import _pytest.terminal
     from wcwidth import wcswidth
+
+    import _pytest.terminal
+    from _pytest._code.code import ReprFileLocation
 
     mocked_verbose_word = "FAILED"
 
@@ -1769,7 +1772,7 @@ def test_line_with_reprcrash(monkeypatch):
     def check(msg, width, expected):
         __tracebackhide__ = True
         if msg:
-            rep.longrepr.reprcrash.short_msg = msg
+            rep.longrepr.reprcrash = ReprFileLocation("path", "lineno", msg)
         actual = _get_line_with_reprcrash_message(config, rep(), width)
 
         assert actual == expected
@@ -1791,8 +1794,10 @@ def test_line_with_reprcrash(monkeypatch):
     check("some longer msg", 26, "FAILED some::nodeid - s...")
 
     check("some\nmessage", 25, "FAILED some::nodeid - ...")
-    check("some\nmessage", 26, "FAILED some::nodeid - some")
-    check("some\nmessage", 80, "FAILED some::nodeid - some")
+    check("some\nmessage", 26, "FAILED some::nodeid - s...")
+    check("some\nmessage", 80, "FAILED some::nodeid - some...")
+    check("some\r\nmessage", 80, "FAILED some::nodeid - some...")
+    check("\r\nsome\r\nmessage", 80, "FAILED some::nodeid - ...")
 
     # Test unicode safety.
     check("😄😄😄😄😄\n2nd line", 25, "FAILED some::nodeid - ...")
@@ -1807,7 +1812,7 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 40, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 41, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 42, "FAILED nodeid::😄::withunicode - 😄😄😄...")
-    check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄")
+    check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄...")
 
 
 @pytest.mark.parametrize(

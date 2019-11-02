@@ -1044,7 +1044,9 @@ class ReprFileLocation(TerminalRepr):
             short_msg = message
             i = short_msg.find("\n")
             if i != -1:
-                short_msg = short_msg[:i]
+                if short_msg[i - 1] == "\r":
+                    i -= 1
+                short_msg = short_msg[:i] + "..."
         self.short_msg = short_msg
 
     def toterminal(self, tw, style=None):

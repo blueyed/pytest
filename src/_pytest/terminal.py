@@ -1153,10 +1153,7 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
     except AttributeError:
         pass
     else:
-        # Only use the first line.
-        i = msg.find("\n")
-        if i != -1:
-            msg = msg[:i]
+        assert "\n" not in msg, repr(msg)
 
         # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
         implicit_prefix = verbose_word.lower() + ":"
