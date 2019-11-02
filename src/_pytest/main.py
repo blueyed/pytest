@@ -666,7 +666,7 @@ class Session(nodes.FSCollector):
         if self.config.option.pyargs:
             parts[0] = self._tryconvertpyarg(parts[0])
 
-        fname, lineno = self._parse_fname_lineno(arg)
+        fname, lineno = self._parse_fname_lineno(parts[0])
 
         relpath = fname.replace("/", os.sep)
         path = self.config.invocation_dir.join(relpath, abs=True)
