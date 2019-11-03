@@ -242,6 +242,17 @@ def pytest_addoption(parser):
         default="progress",
     )
 
+    # Experimental.
+    parser.addini(
+        "assert_truncate_level",
+        help=(
+            "Truncate explanations of assertion failures?  "
+            '("auto" (when verbosity < 2, and not running on CI), '
+            "or minimum verbosity level to trigger it (i.e. 0 for no truncation)."
+        ),
+        default="auto",
+    )
+
 
 def pytest_configure(config):
     reporter = TerminalReporter(config, sys.stdout)
@@ -1032,6 +1043,7 @@ class TerminalReporter:
         if not self.reportchars:
             return
 
+        # NOTE: there's also _pytest.assertion._running_on_ci.
         if os.environ.get("CI") == "true" or not self.isatty:
             termwidth = None
         else:

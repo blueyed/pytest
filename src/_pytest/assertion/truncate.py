@@ -24,8 +24,11 @@ def _should_truncate_item(item):
     """
     Whether or not this test item is eligible for truncation.
     """
+    level = item.config.getini("assert_truncate_level")
     verbose = item.config.option.verbose
-    return verbose < 2 and not _running_on_ci()
+    if level == "auto":
+        return verbose < 2 and not _running_on_ci()
+    return int(level) > verbose
 
 
 def _running_on_ci():
