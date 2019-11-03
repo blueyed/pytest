@@ -37,7 +37,7 @@ def monkeypatch():
 
 
 @pytest.fixture(scope="session")
-def monkeysession(request):
+def monkeypatch_session(request):
     """Experimental (https://github.com/pytest-dev/pytest/issues/363)."""
     from _pytest.monkeypatch import MonkeyPatch
 
