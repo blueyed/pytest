@@ -36,6 +36,16 @@ def monkeypatch():
     mpatch.undo()
 
 
+@pytest.fixture(scope="session")
+def monkeysession(request):
+    """Experimental (https://github.com/pytest-dev/pytest/issues/363)."""
+    from _pytest.monkeypatch import MonkeyPatch
+
+    mpatch = MonkeyPatch()
+    yield mpatch
+    mpatch.undo()
+
+
 def resolve(name):
     # simplified from zope.dottedname
     parts = name.split(".")
