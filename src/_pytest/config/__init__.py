@@ -515,6 +515,10 @@ class PytestPluginManager(PluginManager):
             if name in essential_plugins:
                 raise UsageError("plugin %s cannot be disabled" % name)
 
+            if name == "BUILTINS":
+                for p in builtin_plugins.difference(essential_plugins):
+                    self.set_blocked(p)
+
             # PR #4304 : remove stepwise if cacheprovider is blocked
             if name == "cacheprovider":
                 self.set_blocked("stepwise")
