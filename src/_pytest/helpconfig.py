@@ -139,17 +139,14 @@ def pytest_cmdline_main(config):
 
 def showhelp(config):
     import textwrap
+    from _pytest.terminal import get_terminal_width
 
-    reporter = config.pluginmanager.get_plugin("terminalreporter")
-    tw = reporter._tw
-    tw.write(config._parser.optparser.format_help())
-    tw.line()
-    tw.line(
-        "[pytest] ini-options in the first pytest.ini|tox.ini|setup.cfg file found:"
-    )
-    tw.line()
+    config._parser.optparser.print_help()
+    print()
+    print("[pytest] ini-options in the first pytest.ini|tox.ini|setup.cfg file found:")
+    print()
 
-    columns = max(40, tw.fullwidth)  # costly call
+    columns = max(40, get_terminal_width())
     indent_len = 24  # based on argparse's max_help_position=24
     wrap_width = columns - indent_len
     indent = " " * indent_len
@@ -158,11 +155,11 @@ def showhelp(config):
         if type is None:
             type = "string"
         spec = "{} ({}):".format(name, type)
-        tw.write("  %s" % spec)
+        print("  %s" % spec, end="")
         spec_len = len(spec)
         if spec_len > (indent_len - 3):
             # Display help starting at a new line.
-            tw.line()
+            print()
             helplines = textwrap.wrap(
                 help,
                 columns,
@@ -172,18 +169,18 @@ def showhelp(config):
             )
 
             for line in helplines:
-                tw.line(line)
+                print(line)
         else:
             # Display help starting after the spec, following lines indented.
-            tw.write(" " * (indent_len - spec_len - 2))
+            print(" " * (indent_len - spec_len - 2), end="")
             wrapped = textwrap.wrap(help, wrap_width, break_on_hyphens=False)
 
-            tw.line(wrapped[0])
+            print(wrapped[0])
             for line in wrapped[1:]:
-                tw.line(indent + line)
+                print(indent + line)
 
-    tw.line()
-    tw.line("environment variables:")
+    print()
+    print("environment variables:")
     vars = [
         ("PYTEST_ADDOPTS", "extra command line options"),
         ("PYTEST_PLUGINS", "comma-separated plugins to load during startup"),
@@ -191,21 +188,23 @@ def showhelp(config):
         ("PYTEST_DEBUG", "set to enable debug tracing of pytest's internals"),
     ]
     for name, help in vars:
-        tw.line("  {:<24} {}".format(name, help))
-    tw.line()
-    tw.line()
+        print("  {:<24} {}".format(name, help))
+    print()
+    print()
 
-    tw.line("to see available markers type: pytest --markers")
-    tw.line("to see available fixtures type: pytest --fixtures")
-    tw.line(
+    print("to see available markers type: pytest --markers")
+    print("to see available fixtures type: pytest --fixtures")
+    print(
         "(shown according to specified file_or_dir or current dir "
         "if not specified; fixtures with leading '_' are only shown "
         "with the '-v' option"
     )
 
-    for warningreport in reporter.stats.get("warnings", []):
-        tw.line("warning : " + warningreport.message, red=True)
-    return
+    reporter = config.pluginmanager.get_plugin("terminalreporter")
+    if reporter:
+        tw = reporter._tw
+        for warningreport in reporter.stats.get("warnings", []):
+            tw.line("warning : " + warningreport.message, red=True)
 
 
 conftest_options = [("pytest_plugins", "list of plugin names to load")]
