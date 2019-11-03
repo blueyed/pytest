@@ -892,6 +892,9 @@ class Testdir:
             stdin = sys.stdin
         Capture = functools.partial(SysCapture, stdin=stdin)
 
+        print("running (inline): pytest", *args)
+        print("              in:", py.path.local())
+
         capture = MultiCapture(Capture=Capture)
         capture.start_capturing()
         try:
