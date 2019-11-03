@@ -992,11 +992,7 @@ class Config:
             try:
                 value = self.inicfg[name]
             except KeyError:
-                if default is not notset:
-                    return default
-                if type is None:
-                    return ""
-                return []
+                return default
         if type == "pathlist":
             dp = py.path.local(self.inicfg.config.path).dirpath()
             values = []

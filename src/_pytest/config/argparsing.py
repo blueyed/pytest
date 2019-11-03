@@ -10,7 +10,6 @@ from typing import Tuple
 
 import py
 
-from _pytest.config import notset
 from _pytest.config.exceptions import UsageError
 from _pytest.terminal import get_terminal_width
 
@@ -129,7 +128,7 @@ class Parser:
         args = [str(x) if isinstance(x, py.path.local) else x for x in args]
         return optparser.parse_known_args(args, namespace=namespace)
 
-    def addini(self, name, help, type=None, default=notset):
+    def addini(self, name, help, type=None, *args, **kwargs):
         """ register an ini-file option.
 
         :name: name of the ini-variable
@@ -140,7 +139,15 @@ class Parser:
         The value of ini-variables can be retrieved via a call to
         :py:func:`config.getini(name) <_pytest.config.Config.getini>`.
         """
-        assert type in (None, "pathlist", "args", "linelist", "bool")
+        if type not in (None, "pathlist", "args", "linelist", "bool"):
+            raise TypeError("invalid type: {!r}".format(type))
+
+        if len(args) == 1:
+            default, = args
+        elif "default" in kwargs:
+            default = kwargs.pop("default")
+        else:
+            default = kwargs.pop("default", "" if type is None else [])
         self._inidict[name] = (help, type, default)
         self._ininames.append(name)
 

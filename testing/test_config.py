@@ -264,10 +264,25 @@ class TestConfigAPI:
         assert pl[1] == somepath
 
     def test_addini(self, testdir):
+        from _pytest.config import notset
+
         testdir.makeconftest(
             """
             def pytest_addoption(parser):
+                from _pytest.config import notset
+
                 parser.addini("myname", "my new ini value")
+
+                parser.addini("d_arg_type_none", "", None, None)
+                parser.addini("d_arg_type_args", "", "args", None)
+                parser.addini("d_kwarg_type_none", "", default=None)
+                parser.addini("d_kwarg_type_args", "", default=None)
+
+                parser.addini("d_unset_type_none", "")
+                parser.addini("d_unset_type_args", "", "args")
+
+                parser.addini("d_notset_arg", "", None, notset)
+                parser.addini("d_notset_kwarg", "", None, default=notset)
         """
         )
         testdir.makeini(
@@ -279,6 +294,17 @@ class TestConfigAPI:
         config = testdir.parseconfig()
         val = config.getini("myname")
         assert val == "hello"
+
+        assert config.getini("d_arg_type_none") is None
+        assert config.getini("d_arg_type_args") is None
+        assert config.getini("d_kwarg_type_none") is None
+        assert config.getini("d_kwarg_type_args") is None
+        assert config.getini("d_unset_type_none") == ""
+        assert config.getini("d_unset_type_args") == []
+
+        assert config.getini("d_notset_arg") is notset
+        assert config.getini("d_notset_kwarg") is notset
+
         pytest.raises(ValueError, config.getini, "other")
 
     def test_addini_pathlist(self, testdir):
