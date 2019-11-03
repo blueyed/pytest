@@ -5,6 +5,7 @@ import importlib
 import os
 import platform
 import re
+import shlex
 import subprocess
 import sys
 import time
@@ -451,6 +452,12 @@ class SysPathsSnapshot:
         sys.path[:], sys.meta_path[:] = self.__saved
 
 
+def _display_running(header, *args):
+    args_str = " ".join([shlex.quote(str(x)) for x in args])
+    indent = " " * (len(header) - 2)
+    print("{}: {}\n{}in: {}".format(header, args_str, indent, py.path.local()))
+
+
 class Testdir:
     """Temporary test directory with tools to test/run pytest itself.
 
@@ -892,9 +899,7 @@ class Testdir:
             stdin = sys.stdin
         Capture = functools.partial(SysCapture, stdin=stdin)
 
-        print("running (inline): pytest", *args)
-        print("              in:", py.path.local())
-
+        _display_running("=== running (inline)", "pytest", *args)
         capture = MultiCapture(Capture=Capture)
         capture.start_capturing()
         try:
@@ -1118,8 +1123,7 @@ class Testdir:
         )
         p1 = self.tmpdir.join("stdout")
         p2 = self.tmpdir.join("stderr")
-        print("running:", *cmdargs)
-        print("     in:", py.path.local())
+        _display_running("=== running", *cmdargs)
         f1 = open(str(p1), "w", encoding="utf8")
         f2 = open(str(p2), "w", encoding="utf8")
         try:
