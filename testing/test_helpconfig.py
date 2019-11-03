@@ -14,17 +14,19 @@ def test_version(testdir, pytestconfig):
 
 
 def test_help(testdir):
-    result = testdir.runpytest("--help")
+    result = testdir.runpytest("--help", "-p", "no:BUILTINS")
     assert result.ret == 0
     result.stdout.fnmatch_lines(
         """
-        *-v*verbose*
+        reporting:
+          --durations=N *
         *setup.cfg*
         *minversion*
         *to see*markers*pytest --markers*
         *to see*fixtures*pytest --fixtures*
     """
     )
+    result.stdout.no_fnmatch_line("logging:")
 
 
 def test_hookvalidation_unknown(testdir):
