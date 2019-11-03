@@ -890,7 +890,6 @@ class Config:
 
         self._checkversion()
         self._consider_importhook(args)
-        self.pluginmanager.consider_preparse(args)
         if not os.environ.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"):
             # Don't autoload from setuptools entry point. Only explicitly specified
             # plugins are going to be loaded.
