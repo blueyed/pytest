@@ -180,13 +180,12 @@ def get_config(args=None, plugins=None):
     pluginmanager = PytestPluginManager()
     # XXX: storing it on the instance is required to make it available in
     # is_blocked, which is the callback used with load_entrypoint_plugins.
-    pluginmanager.config = Config(
+    pluginmanager.config = config = Config(
         pluginmanager,
         invocation_params=Config.InvocationParams(
             args=args or (), plugins=plugins, dir=Path().resolve()
         ),
     )
-    pluginmanager.config = Config(pluginmanager)
 
     if args is not None:
         # Handle any "-p no:plugin" args.
@@ -194,7 +193,7 @@ def get_config(args=None, plugins=None):
 
     for spec in default_plugins:
         pluginmanager.import_plugin(spec)
-    return pluginmanager.config
+    return config
 
 
 def get_plugin_manager():
