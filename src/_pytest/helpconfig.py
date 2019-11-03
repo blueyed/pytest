@@ -201,8 +201,9 @@ def showhelp(config):
 
     reporter = config.pluginmanager.get_plugin("terminalreporter")
     if reporter:
+        tw = reporter._tw
         for warningreport in reporter.stats.get("warnings", []):
-            print("warning : " + warningreport.message, red=True)
+            tw.line("warning : " + warningreport.message, red=True)
 
 
 conftest_options = [("pytest_plugins", "list of plugin names to load")]
