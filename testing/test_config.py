@@ -269,6 +269,7 @@ class TestConfigAPI:
         testdir.makeconftest(
             """
             def pytest_addoption(parser):
+                import pytest
                 from _pytest.config import notset
 
                 parser.addini("myname", "my new ini value")
@@ -283,6 +284,9 @@ class TestConfigAPI:
 
                 parser.addini("d_notset_arg", "", None, notset)
                 parser.addini("d_notset_kwarg", "", None, default=notset)
+
+                with pytest.raises(TypeError):
+                    parser.addini("invalid_type", "", "invalid")
         """
         )
         testdir.makeini(
