@@ -1523,6 +1523,7 @@ def test_suspend_on_read_from_stdin(testdir):
         import sys
 
         def test():
+            print("out_stderr", file=sys.stderr)
             print("prompt_1")
             assert input() == "input_1"
 
@@ -1542,6 +1543,12 @@ def test_suspend_on_read_from_stdin(testdir):
     )
     child = testdir.spawn_pytest("-o capture_suspend_on_stdin=1 %s" % p1)
     child.expect("prompt_1")
+    assert child.before.decode().splitlines()[-4:] == [
+        "test_suspend_on_read_from_stdin.py === Suspending capturing due to stdin being read from ===",
+        "=== stderr ===",
+        "out_stderr",
+        "=== stdout ===",
+    ]
     child.sendline("input_1")
 
     child.expect("prompt_2")
@@ -1560,7 +1567,7 @@ def test_suspend_on_read_from_stdin(testdir):
     child.expect("after_input: OK")
     rest = child.read().decode("utf8")
     assert "is_atty: 1" in rest
-    assert "\x1b[32m\x1b[1m1 passed\x1b[0m\x1b[32m in" in rest
+    assert "= 1 passed in " in rest
 
 
 @pytest.mark.parametrize("method", ("fd", "sys"))

@@ -760,7 +760,7 @@ class SysStdinCapture(CaptureIO):
 
         # self.multicapture.pop_outerr_to_orig()
         self.multicapture.out.writeorg(
-            "=== Suspending capturing due to stdin being read ===\n"
+            "=== Suspending capturing due to stdin being read from ===\n"
         )
         out, err = self.multicapture.readouterr()
         if err:
