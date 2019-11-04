@@ -76,7 +76,13 @@ class Node:
     Collector subclasses have children, Items are terminal nodes."""
 
     def __init__(
-        self, name, parent=None, config=None, session=None, fspath=None, nodeid=None
+        self,
+        name,
+        parent=None,
+        config=None,
+        session: Optional[Session] = None,
+        fspath=None,
+        nodeid=None,
     ):
         #: a unique name within the scope of the parent node
         self.name = name
@@ -88,7 +94,7 @@ class Node:
         self.config = config or parent.config
 
         #: the session this node is part of
-        self.session = session or parent.session  # type: Session
+        self.session = session or parent.session
 
         #: filesystem path where this node was collected from (can be None)
         self.fspath = fspath or getattr(parent, "fspath", None)
