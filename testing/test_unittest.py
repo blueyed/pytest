@@ -568,7 +568,7 @@ class TestTrialUnittest:
                     assert 0, "hellopdb"
         """
         )
-        child = testdir.spawn_pytest(p)
+        child = testdir.spawn_pytest(str(p))
         child.expect("hellopdb")
         child.sendeof()
 
