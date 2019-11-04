@@ -83,7 +83,7 @@ class Node:
         session: Optional["Session"] = None,
         fspath=None,
         nodeid=None,
-    ):
+    ) -> None:
         #: a unique name within the scope of the parent node
         self.name = name
 

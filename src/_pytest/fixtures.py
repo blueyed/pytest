@@ -33,8 +33,9 @@ from _pytest.outcomes import fail
 from _pytest.outcomes import TEST_OUTCOME
 
 if False:  # TYPE_CHECKING
-    from _pytest import nodes
     from typing import Type
+
+    from _pytest import nodes
 
 
 @attr.s(frozen=True)
