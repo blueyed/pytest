@@ -16,6 +16,9 @@ from _pytest._code.code import ExceptionChainRepr
 from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprExceptionInfo
 from _pytest.compat import getfslineno
+from _pytest.fixtures import FixtureDef
+from _pytest.fixtures import FixtureLookupError
+from _pytest.fixtures import FixtureLookupErrorRepr
 from _pytest.mark.structures import Mark
 from _pytest.mark.structures import MarkDecorator
 from _pytest.mark.structures import NodeKeywords
@@ -23,10 +26,7 @@ from _pytest.outcomes import Failed
 
 if False:  # TYPE_CHECKING
     # Imported here due to circular import.
-    from _pytest.fixtures import FixtureDef
-    from _pytest.fixtures import FixtureLookupError
-    from _pytest.fixtures import FixtureLookupErrorRepr  # noqa: F401
-    from _pytest.main import Session
+    from _pytest.main import Session  # noqa: F401
 
 SEP = "/"
 
@@ -80,7 +80,7 @@ class Node:
         name,
         parent=None,
         config=None,
-        session: Optional[Session] = None,
+        session: Optional["Session"] = None,
         fspath=None,
         nodeid=None,
     ):
@@ -94,7 +94,11 @@ class Node:
         self.config = config or parent.config
 
         #: the session this node is part of
-        self.session = session or parent.session
+        if session is None:
+            assert parent.session is not None
+            self.session = parent.session
+        else:
+            self.session = session
 
         #: filesystem path where this node was collected from (can be None)
         self.fspath = fspath or getattr(parent, "fspath", None)
@@ -273,8 +277,8 @@ class Node:
         pass
 
     def _repr_failure_py(
-        self, excinfo: ExceptionInfo[Union[Failed, "FixtureLookupError"]], style=None
-    ) -> Union[str, ReprExceptionInfo, ExceptionChainRepr, "FixtureLookupErrorRepr"]:
+        self, excinfo: ExceptionInfo[Union[Failed, FixtureLookupError]], style=None
+    ) -> Union[str, ReprExceptionInfo, ExceptionChainRepr, FixtureLookupErrorRepr]:
         if isinstance(excinfo.value, Failed):
             if not excinfo.value.pytrace:
                 return str(excinfo.value)
@@ -315,7 +319,7 @@ class Node:
 
     def repr_failure(
         self, excinfo, style=None
-    ) -> Union[str, ReprExceptionInfo, ExceptionChainRepr, "FixtureLookupErrorRepr"]:
+    ) -> Union[str, ReprExceptionInfo, ExceptionChainRepr, FixtureLookupErrorRepr]:
         return self._repr_failure_py(excinfo, style)
 
 

@@ -14,7 +14,6 @@ import attr
 import py
 
 import _pytest
-from _pytest import nodes
 from _pytest._code.code import FormattedExcinfo
 from _pytest._code.code import TerminalRepr
 from _pytest.compat import _format_args
@@ -34,6 +33,7 @@ from _pytest.outcomes import fail
 from _pytest.outcomes import TEST_OUTCOME
 
 if False:  # TYPE_CHECKING
+    from _pytest import nodes
     from typing import Type
 
 
@@ -1284,6 +1284,8 @@ class FixtureManager:
         except AttributeError:
             pass
         else:
+            from _pytest import nodes
+
             # construct the base nodeid which is later used to check
             # what fixtures are visible for particular tests (as denoted
             # by their test id)
@@ -1460,6 +1462,8 @@ class FixtureManager:
         return tuple(self._matchfactories(fixturedefs, nodeid))
 
     def _matchfactories(self, fixturedefs, nodeid):
+        from _pytest import nodes
+
         for fixturedef in fixturedefs:
             if nodes.ischildnode(fixturedef.baseid, nodeid):
                 yield fixturedef
