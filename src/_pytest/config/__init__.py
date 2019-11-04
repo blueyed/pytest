@@ -178,8 +178,6 @@ builtin_plugins.add("pytester")
 def get_config(args=None, plugins=None):
     # subsequent calls to main will create a fresh instance
     pluginmanager = PytestPluginManager()
-    # XXX: storing it on the instance is required to make it available in
-    # is_blocked, which is the callback used with load_entrypoint_plugins.
     pluginmanager.config = config = Config(
         pluginmanager,
         invocation_params=Config.InvocationParams(
