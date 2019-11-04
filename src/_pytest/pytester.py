@@ -1275,6 +1275,7 @@ class Testdir:
             env.update(self._get_env_run_update())
             kwargs["env"] = env
 
+        _display_running("=== running (spawn)", *args)
         child = pexpect.spawn(args[0], list(args[1:]), **kwargs)
         return child
 
