@@ -292,19 +292,15 @@ class PytestPluginManager(PluginManager):
     def is_blocked(self, name):
         ret = super(PytestPluginManager, self).is_blocked(name)
         if not ret:
+            config = self.config
             try:
-                config = self.config
-            except AttributeError:  # XXX: not necessary?
-                pass
-            else:
-                try:
-                    load_entrypoint_plugins = config.getini("load_entrypoint_plugins")
-                except AttributeError:  # 'Config' object has no attribute 'inicfg'
-                    assert not hasattr(config, "inicfg")
-                    return False
-                if load_entrypoint_plugins is not notset:
-                    if name not in load_entrypoint_plugins:
-                        return True
+                load_entrypoint_plugins = config.getini("load_entrypoint_plugins")
+            except AttributeError:  # 'Config' object has no attribute 'inicfg'
+                assert not hasattr(config, "inicfg")
+                return False
+            if load_entrypoint_plugins is not notset:
+                if name not in load_entrypoint_plugins:
+                    return True
         return ret
 
     def parse_hookimpl_opts(self, plugin, name):
