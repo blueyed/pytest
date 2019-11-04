@@ -447,9 +447,10 @@ class Item(Node):
         except AttributeError:
             location = self.reportinfo()
             fspath = self.session._node_location_to_relpath(location[0])
+            assert type(location[2]) is str
             self._location = (
                 fspath,
                 location[1],
-                str(location[2]),
+                location[2],
             )  # type: Tuple[str, Optional[int], str]
             return self._location
