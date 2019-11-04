@@ -364,8 +364,8 @@ class Failed(Exception):
 class _bestrelpath_cache(dict):
     path = attr.ib()
 
-    def __missing__(self, path):
-        r = self.path.bestrelpath(path)
+    def __missing__(self, path: str) -> str:
+        r = self.path.bestrelpath(path)  # type: str
         self[path] = r
         return r
 
