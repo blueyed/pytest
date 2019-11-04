@@ -1,6 +1,8 @@
 from io import StringIO
 from pprint import pprint
+from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 import py
@@ -34,13 +36,16 @@ def getslaveinfoline(node):
 class BaseReport:
     when = None  # type: Optional[str]
     location = None
+    longrepr = None
+    sections = []  # type: List[Tuple[str, str]]
+    nodeid = None  # type: str
 
     def __init__(self, **kw):
         self.__dict__.update(kw)
 
-    def toterminal(self, out):
+    def toterminal(self, out) -> None:
         if hasattr(self, "node"):
-            out.line(getslaveinfoline(self.node))
+            out.line(getslaveinfoline(self.node))  # type: ignore
 
         longrepr = self.longrepr
         if longrepr is None:
@@ -304,7 +309,7 @@ class CollectReport(BaseReport):
         self.nodeid = nodeid
         self.outcome = outcome
         self.longrepr = longrepr
-        self.result = result or []
+        self.result = result or []  # type: List
         self.sections = list(sections)
         self.__dict__.update(extra)
 
@@ -322,7 +327,7 @@ class CollectErrorRepr(TerminalRepr):
     def __init__(self, msg):
         self.longrepr = msg
 
-    def toterminal(self, out):
+    def toterminal(self, out) -> None:
         out.line(self.longrepr, red=True)
 
 
@@ -472,7 +477,9 @@ def _report_kwargs_from_json(reportdict):
                         description,
                     )
                 )
-            exception_info = ExceptionChainRepr(chain)
+            exception_info = ExceptionChainRepr(
+                chain
+            )  # type: Union[ExceptionChainRepr,ReprExceptionInfo]
         else:
             exception_info = ReprExceptionInfo(reprtraceback, reprcrash)
 
