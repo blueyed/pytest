@@ -14,7 +14,7 @@ def test_version(testdir, pytestconfig):
 
 
 def test_help(testdir):
-    result = testdir.runpytest("--help", "-p", "no:BUILTINS")
+    result = testdir.runpytest("--help", "-p", "no:[defaults]")
     assert result.ret == 0
     result.stdout.fnmatch_lines(
         """

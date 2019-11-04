@@ -59,7 +59,7 @@ def pytest_addoption(parser):
         help="early-load given plugin module name or entry point (multi-allowed). "
         "To avoid loading of plugins, use the `no:` prefix, e.g. "
         "`no:doctest`.  "
-        "`no:BUILTINS` disables all non-essential default plugins.",
+        "`no:[defaults]` disables all non-essential default plugins.",
     )
     group.addoption(
         "--traceconfig",

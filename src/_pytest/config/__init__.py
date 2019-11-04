@@ -515,7 +515,7 @@ class PytestPluginManager(PluginManager):
             if name in essential_plugins:
                 raise UsageError("plugin %s cannot be disabled" % name)
 
-            if name == "BUILTINS":
+            if name == "[defaults]":
                 for p in builtin_plugins.difference(essential_plugins):
                     self.set_blocked(p)
 
