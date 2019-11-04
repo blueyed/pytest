@@ -408,7 +408,7 @@ class Session(nodes.FSCollector):
             self.testscollected,
         )
 
-    def _node_location_to_relpath(self, node_path) -> str:
+    def _node_location_to_relpath(self, node_path: str) -> str:
         # bestrelpath is a quite slow function
         return self._bestrelpathcache[node_path]
 
