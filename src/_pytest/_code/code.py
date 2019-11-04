@@ -841,19 +841,19 @@ class FormattedExcinfo:
 
         return traceback, extraline
 
-    def repr_excinfo(self, excinfo: Optional[ExceptionInfo]) -> "ExceptionChainRepr":
+    def repr_excinfo(self, excinfo: ExceptionInfo) -> "ExceptionChainRepr":
         repr_chain = (
             []
         )  # type: List[Tuple[ReprTraceback, Optional[ReprFileLocation], Optional[str]]]
-        assert excinfo is not None
         e = excinfo.value
+        excinfo_ = excinfo  # type: Optional[ExceptionInfo]
         descr = None
         seen = set()  # type: Set[int]
         while e is not None and id(e) not in seen:
             seen.add(id(e))
-            if excinfo:
-                reprtraceback = self.repr_traceback(excinfo)
-                reprcrash = excinfo._getreprcrash()  # type: Optional[ReprFileLocation]
+            if excinfo_:
+                reprtraceback = self.repr_traceback(excinfo_)
+                reprcrash = excinfo_._getreprcrash()  # type: Optional[ReprFileLocation]
             else:
                 # fallback to native repr if the exception doesn't have a traceback:
                 # ExceptionInfo objects require a full traceback to work
@@ -865,7 +865,7 @@ class FormattedExcinfo:
             repr_chain += [(reprtraceback, reprcrash, descr)]
             if e.__cause__ is not None and self.chain:
                 e = e.__cause__
-                excinfo = (
+                excinfo_ = (
                     ExceptionInfo((type(e), e, e.__traceback__))
                     if e.__traceback__
                     else None
@@ -875,7 +875,7 @@ class FormattedExcinfo:
                 e.__context__ is not None and not e.__suppress_context__ and self.chain
             ):
                 e = e.__context__
-                excinfo = (
+                excinfo_ = (
                     ExceptionInfo((type(e), e, e.__traceback__))
                     if e.__traceback__
                     else None
