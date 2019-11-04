@@ -1221,40 +1221,55 @@ class Testdir:
         args = self._getpytestargs() + args
         return self.run(*args, timeout=timeout)
 
-    def spawn_pytest(self, string, expect_timeout=5.0):
+    def spawn_pytest(self, *args, **kwargs):
         """Run pytest using pexpect.
 
         This makes sure to use the right pytest and sets up the temporary
         directory locations.
 
         The pexpect child is returned.
-
         """
         basetemp = self.tmpdir.mkdir("temp-pexpect")
-        invoke = " ".join(map(str, self._getpytestargs()))
-        cmd = "{} --basetemp={} {}".format(invoke, basetemp, string)
-        return self.spawn(cmd, expect_timeout=expect_timeout)
 
-    def spawn(self, cmd, expect_timeout=5.0):
+        # Support old API (string command).
+        if len(args) < 1:
+            raise TypeError("missing args")
+        if len(args) == 1:
+            if type(args[0]) == str:
+                args = tuple(shlex.split(args[0]))
+
+        args = self._getpytestargs() + ("--basetemp={}".format(basetemp),) + args
+
+        return self.spawn(args[0], *args[1:], **kwargs)
+
+    def spawn(self, *args: str, **kwargs):
         """Run a command using pexpect.
 
         The pexpect child is returned.
-
         """
         pexpect = pytest.importorskip("pexpect", "3.0")
         if hasattr(sys, "pypy_version_info") and "64" in platform.machine():
             pytest.skip("pypy-64 bit not supported")
         if not hasattr(pexpect, "spawn"):
             pytest.skip("pexpect.spawn not available")
-        logfile = self.tmpdir.join("spawn.out").open("wb")
+
+        # Support old API (string command).
+        if len(args) < 1:
+            raise TypeError("missing args")
+        if len(args) == 1:
+            if type(args[0]) == str:
+                args = tuple(shlex.split(args[0]))
+
+        # Handle old expect_timeout kwarg.
+        kwargs.setdefault("timeout", kwargs.pop("expect_timeout", 5.0))
 
         # Do not load user config.
-        env = os.environ.copy()
-        env.update(self._get_env_run_update())
+        if "env" not in kwargs:
+            env = os.environ.copy()
+            env.update(self._get_env_run_update())
+            kwargs["env"] = env
 
-        child = pexpect.spawn(cmd, logfile=logfile, env=env)
-        self.request.addfinalizer(logfile.close)
-        child.timeout = expect_timeout
+        child = pexpect.spawn(args[0], list(args[1:]), **kwargs)
         return child
 
     def _get_env_run_update(self):
