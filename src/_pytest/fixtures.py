@@ -7,6 +7,7 @@ from collections import defaultdict
 from collections import deque
 from collections import OrderedDict
 from typing import Dict
+from typing import List
 from typing import Tuple
 
 import attr
@@ -689,8 +690,8 @@ class FixtureLookupError(LookupError):
         self.fixturestack = request._get_fixturestack()
         self.msg = msg
 
-    def formatrepr(self):
-        tblines = []
+    def formatrepr(self) -> "FixtureLookupErrorRepr":
+        tblines = []  # type: List[str]
         addline = tblines.append
         stack = [self.request._pyfuncitem.obj]
         stack.extend(map(lambda x: x.func, self.fixturestack))

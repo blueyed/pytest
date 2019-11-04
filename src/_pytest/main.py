@@ -6,6 +6,7 @@ import importlib
 import os
 import re
 import sys
+from typing import Dict
 
 import attr
 import py
@@ -17,6 +18,7 @@ from _pytest.config import hookimpl
 from _pytest.config import UsageError
 from _pytest.outcomes import exit
 from _pytest.runner import collect_one_node
+from _pytest.runner import SetupState
 
 RE_FNAME_LINENO = re.compile(r"^([^:].[^:]*):(\d+):?$")
 
@@ -371,6 +373,7 @@ class _bestrelpath_cache(dict):
 class Session(nodes.FSCollector):
     Interrupted = Interrupted
     Failed = Failed
+    _setupstate = None  # type: SetupState
 
     def __init__(self, config):
         nodes.FSCollector.__init__(
@@ -386,7 +389,9 @@ class Session(nodes.FSCollector):
         self._initialpaths = frozenset()
         # Keep track of any collected nodes in here, so we don't duplicate fixtures
         self._node_cache = {}
-        self._bestrelpathcache = _bestrelpath_cache(config.rootdir)
+        self._bestrelpathcache = _bestrelpath_cache(
+            config.rootdir
+        )  # type: Dict[str, str]
         # Dirnames of pkgs with dunder-init files.
         self._pkg_roots = {}
 
@@ -403,7 +408,7 @@ class Session(nodes.FSCollector):
             self.testscollected,
         )
 
-    def _node_location_to_relpath(self, node_path):
+    def _node_location_to_relpath(self, node_path) -> str:
         # bestrelpath is a quite slow function
         return self._bestrelpathcache[node_path]
 

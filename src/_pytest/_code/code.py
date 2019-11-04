@@ -571,7 +571,7 @@ class ExceptionInfo(Generic[_E]):
         funcargs: bool = False,
         truncate_locals: bool = True,
         chain: bool = True,
-    ):
+    ) -> Union["ReprExceptionInfo", "ExceptionChainRepr"]:
         """
         Return str()able representation of this exception info.
 
@@ -841,11 +841,11 @@ class FormattedExcinfo:
 
         return traceback, extraline
 
-    def repr_excinfo(self, excinfo):
-
+    def repr_excinfo(self, excinfo: Optional[ExceptionInfo]) -> "ExceptionChainRepr":
         repr_chain = (
             []
         )  # type: List[Tuple[ReprTraceback, Optional[ReprFileLocation], Optional[str]]]
+        assert excinfo is not None
         e = excinfo.value
         descr = None
         seen = set()  # type: Set[int]
@@ -853,7 +853,7 @@ class FormattedExcinfo:
             seen.add(id(e))
             if excinfo:
                 reprtraceback = self.repr_traceback(excinfo)
-                reprcrash = excinfo._getreprcrash()
+                reprcrash = excinfo._getreprcrash()  # type: Optional[ReprFileLocation]
             else:
                 # fallback to native repr if the exception doesn't have a traceback:
                 # ExceptionInfo objects require a full traceback to work
@@ -900,6 +900,9 @@ class TerminalRepr:
 
     def __repr__(self):
         return "<{} instance at {:0x}>".format(self.__class__, id(self))
+
+    def toterminal(self, tw):
+        raise NotImplementedError()
 
 
 class ExceptionRepr(TerminalRepr):

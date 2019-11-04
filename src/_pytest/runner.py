@@ -6,6 +6,7 @@ from time import time
 from typing import Callable
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import attr
@@ -207,8 +208,7 @@ class CallInfo:
     """ Result/Exception info a function invocation. """
 
     _result = attr.ib()
-    # Optional[ExceptionInfo]
-    excinfo = attr.ib()
+    excinfo = attr.ib(type=Optional[ExceptionInfo])
     start = attr.ib()
     stop = attr.ib()
     when = attr.ib()
