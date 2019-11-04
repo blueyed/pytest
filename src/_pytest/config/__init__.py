@@ -294,7 +294,7 @@ class PytestPluginManager(PluginManager):
         if not ret:
             try:
                 config = self.config
-            except AttributeError:
+            except AttributeError:  # XXX: not necessary?
                 pass
             else:
                 load_entrypoint_plugins = config.getini("load_entrypoint_plugins")
