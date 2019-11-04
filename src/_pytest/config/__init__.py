@@ -297,7 +297,11 @@ class PytestPluginManager(PluginManager):
             except AttributeError:  # XXX: not necessary?
                 pass
             else:
-                load_entrypoint_plugins = config.getini("load_entrypoint_plugins")
+                try:
+                    load_entrypoint_plugins = config.getini("load_entrypoint_plugins")
+                except AttributeError:  # 'Config' object has no attribute 'inicfg'
+                    assert not hasattr(config, "inicfg")
+                    return False
                 if load_entrypoint_plugins is not notset:
                     if name not in load_entrypoint_plugins:
                         return True
