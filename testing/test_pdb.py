@@ -80,15 +80,13 @@ def custom_debugger_hook():
 
 class TestPDB:
     @pytest.fixture
-    def pdblist(self, request):
-        monkeypatch = request.getfixturevalue("monkeypatch")
+    def pdblist(self, monkeypatch):
         pdblist = []
 
-        def mypdb(*args):
+        def mypdb(self, *args):
             pdblist.append(args)
 
-        plugin = request.config.pluginmanager.getplugin("debugging")
-        monkeypatch.setattr(plugin, "post_mortem", mypdb)
+        monkeypatch.setattr(_pytest.debugging.PdbBase, "post_mortem", mypdb)
         return pdblist
 
     def test_pdb_on_fail(self, testdir, pdblist):
@@ -763,7 +761,7 @@ class TestPDB:
             assert "> PDB continue >" in rest
         assert "= 1 passed in" in rest
 
-    def test_pdb_used_outside_test(self, testdir):
+    def test_pytest_set_trace_used_outside_of_test(self, testdir):
         p1 = testdir.makepyfile(
             """
             import pytest

@@ -9,7 +9,7 @@ from _pytest.config import hookimpl
 from _pytest.config import hookspec
 from _pytest.config import main
 from _pytest.config import UsageError
-from _pytest.debugging import pytestPDB as __pytestPDB
+from _pytest.debugging import set_trace
 from _pytest.fixtures import fillfixtures as _fillfuncargs
 from _pytest.fixtures import fixture
 from _pytest.fixtures import yield_fixture
@@ -45,8 +45,6 @@ from _pytest.warning_types import PytestUnhandledCoroutineWarning
 from _pytest.warning_types import PytestUnknownMarkWarning
 from _pytest.warning_types import PytestWarning
 
-
-set_trace = __pytestPDB.set_trace
 
 __all__ = [
     "__version__",
