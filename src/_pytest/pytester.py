@@ -508,6 +508,7 @@ class Testdir:
             "USERPROFILE": tmphome,
             "PY_COLORS": "0",
             "COLUMNS": "80",
+            "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
         }
 
     def __repr__(self):
