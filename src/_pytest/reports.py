@@ -17,6 +17,7 @@ from _pytest._code.code import ReprFuncArgs
 from _pytest._code.code import ReprLocals
 from _pytest._code.code import ReprTraceback
 from _pytest._code.code import TerminalRepr
+from _pytest.nodes import Node
 from _pytest.outcomes import skip
 from _pytest.pathlib import Path
 
@@ -305,11 +306,13 @@ class TestReport(BaseReport):
 class CollectReport(BaseReport):
     when = "collect"
 
-    def __init__(self, nodeid, outcome, longrepr, result, sections=(), **extra):
+    def __init__(
+        self, nodeid: str, outcome, longrepr, result: List[Node], sections=(), **extra
+    ) -> None:
         self.nodeid = nodeid
         self.outcome = outcome
         self.longrepr = longrepr
-        self.result = result or []  # type: List
+        self.result = result or []
         self.sections = list(sections)
         self.__dict__.update(extra)
 
