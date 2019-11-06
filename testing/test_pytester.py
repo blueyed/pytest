@@ -772,13 +772,18 @@ def test_spawn_uses_tmphome(testdir):
     assert child.wait() == 0, out.decode("utf8")
 
 
-def test_spawn(testdir, monkeypatch):
-    with pytest.raises(TypeError, match="^missing args$"):
-        testdir.spawn()
+@pytest.mark.parametrize("method", ("spawn", "spawn_pytest"))
+def test_spawn_interface(method, testdir, monkeypatch):
+    monkeypatch.setattr("pexpect.spawn", RuntimeError)
 
     with pytest.raises(TypeError, match="^missing args$"):
-        testdir.spawn_pytest()
+        getattr(testdir, method)()
 
+    with pytest.raises(TypeError, match="^invalid type for arg: list$"):
+        getattr(testdir, method)(["cmd"], env={})
+
+
+def test_spawn_calls(testdir, monkeypatch):
     calls = []
 
     def check_calls(*args, **kwargs):

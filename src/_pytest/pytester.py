@@ -1229,17 +1229,19 @@ class Testdir:
 
         The pexpect child is returned.
         """
-        basetemp = self.tmpdir.mkdir("temp-pexpect")
-
         # Support old API (string command).
         if len(args) < 1:
             raise TypeError("missing args")
         if len(args) == 1:
             if type(args[0]) == str:
                 args = tuple(shlex.split(args[0]))
+            else:
+                raise TypeError(
+                    "invalid type for arg: {}".format(type(args[0]).__name__)
+                )
 
+        basetemp = self.tmpdir.mkdir("temp-pexpect")
         args = self._getpytestargs() + ("--basetemp={}".format(basetemp),) + args
-
         return self.spawn(args[0], *args[1:], **kwargs)
 
     def spawn(self, *args: str, **kwargs):
@@ -1259,6 +1261,10 @@ class Testdir:
         if len(args) == 1:
             if type(args[0]) == str:
                 args = tuple(shlex.split(args[0]))
+            else:
+                raise TypeError(
+                    "invalid type for arg: {}".format(type(args[0]).__name__)
+                )
 
         # Handle old expect_timeout kwarg.
         kwargs.setdefault("timeout", kwargs.pop("expect_timeout", 5.0))
