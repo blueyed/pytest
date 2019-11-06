@@ -772,6 +772,34 @@ def test_spawn_uses_tmphome(testdir):
     assert child.wait() == 0, out.decode("utf8")
 
 
+def test_spawn(testdir, monkeypatch):
+    with pytest.raises(TypeError, match="^missing args$"):
+        testdir.spawn()
+
+    with pytest.raises(TypeError, match="^missing args$"):
+        testdir.spawn_pytest()
+
+    calls = []
+
+    def check_calls(*args, **kwargs):
+        calls.append([args, kwargs])
+
+    monkeypatch.setattr("pexpect.spawn", check_calls)
+
+    testdir.spawn("cmd arg1 'arg2 with spaces'")
+    assert len(calls) == 1
+    assert calls[0][0] == ("cmd", ["arg1", "arg2 with spaces"])
+    expected_env = os.environ.copy()
+    expected_env.update(testdir._get_env_run_update())
+    assert calls[0][1] == {"timeout": 5.0, "env": expected_env}
+
+    calls.clear()
+    testdir.spawn("cmd", "arg1", "arg2 with spaces", env={})
+    assert calls == [
+        [("cmd", ["arg1", "arg2 with spaces"]), {"env": {}, "timeout": 5.0}]
+    ]
+
+
 def test_run_result_repr():
     outlines = ["some", "normal", "output"]
     errlines = ["some", "nasty", "errors", "happened"]
