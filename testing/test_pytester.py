@@ -774,8 +774,6 @@ def test_spawn_uses_tmphome(testdir):
 
 @pytest.mark.parametrize("method", ("spawn", "spawn_pytest"))
 def test_spawn_interface(method, testdir, monkeypatch):
-    monkeypatch.setattr("pexpect.spawn", RuntimeError)
-
     with pytest.raises(TypeError, match="^missing args$"):
         getattr(testdir, method)()
 
@@ -789,7 +787,17 @@ def test_spawn_calls(testdir, monkeypatch):
     def check_calls(*args, **kwargs):
         calls.append([args, kwargs])
 
-    monkeypatch.setattr("pexpect.spawn", check_calls)
+    try:
+        monkeypatch.setattr("pexpect.spawn", check_calls)
+    except ImportError:
+
+        class fake_pexpect:
+            __version__ = "3.0"
+
+            def spawn(*args, **kwargs):
+                check_calls(*args, **kwargs)
+
+        sys.modules["pexpect"] = fake_pexpect
 
     testdir.spawn("cmd arg1 'arg2 with spaces'")
     assert len(calls) == 1
