@@ -400,11 +400,11 @@ class cached_property(Generic[_S, _T], property):
     def __get__(
         self, instance: None, owner: Optional["Type[_S]"] = ...
     ) -> "cached_property[_S, _T]":
-        pass
+        raise NotImplementedError()
 
     @overload  # noqa: F811
     def __get__(self, instance: _S, owner: Optional["Type[_S]"] = ...) -> _T:
-        pass
+        raise NotImplementedError()
 
     def __get__(self, instance, owner=None):  # noqa: F811
         if instance is None:
