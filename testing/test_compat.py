@@ -178,3 +178,21 @@ def test_safe_isclass():
             assert False, "Should be ignored"
 
     assert safe_isclass(CrappyClass()) is False
+
+
+def test_cached_property():
+    from _pytest.compat import cached_property
+
+    class C:
+        calls = []
+        _ret = None
+
+        @cached_property
+        def prop(self):
+            self.calls.append([])
+            return self._ret
+
+    obj = C()
+    assert obj.prop is None
+    assert obj.prop is None
+    assert len(obj.calls) == 1

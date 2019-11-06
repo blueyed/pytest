@@ -389,28 +389,72 @@ else:
 
 # Replace with functools.cached_property once we only support
 # Python 3.8.
-class cached_property(Generic[_S, _T], property):
-    __slots__ = ("func", "__doc__")
+if sys.version_info > (3, 8):
+    from functools import cached_property
+else:
+    from threading import RLock
 
-    def __init__(self, func: Callable[[_S], _T]) -> None:
-        self.func = func
-        self.__doc__ = func.__doc__
+    _NOT_FOUND = object()
 
-    @overload
-    def __get__(
-        self, instance: None, owner: Optional["Type[_S]"] = ...
-    ) -> "cached_property[_S, _T]":
-        raise NotImplementedError()
+    class cached_property(Generic[_S, _T], property):
+        __slots__ = ("func", "__doc__", "attrname", "lock")
 
-    @overload  # noqa: F811
-    def __get__(self, instance: _S, owner: Optional["Type[_S]"] = ...) -> _T:
-        raise NotImplementedError()
+        def __init__(self, func: Callable[[_S], _T]) -> None:
+            self.func = func
+            self.attrname = None
+            self.__doc__ = func.__doc__
+            self.lock = RLock()
 
-    def __get__(self, instance, owner=None):  # noqa: F811
-        if instance is None:
-            return self
-        value = instance.__dict__[self.func.__name__] = self.func(instance)
-        return value
+        def __set_name__(self, owner, name):
+            if self.attrname is None:
+                self.attrname = name
+            elif name != self.attrname:
+                raise TypeError(
+                    "Cannot assign the same cached_property to two different names "
+                    f"({self.attrname!r} and {name!r})."
+                )
+
+        @overload
+        def __get__(
+            self, instance: None, owner: Optional["Type[_S]"] = ...
+        ) -> "cached_property[_S, _T]":
+            raise NotImplementedError()
+
+        @overload  # noqa: F811
+        def __get__(self, instance: _S, owner: Optional["Type[_S]"] = ...) -> _T:
+            raise NotImplementedError()
+
+        def __get__(self, instance, owner=None):  # noqa: F811
+            if instance is None:
+                return self
+            if self.attrname is None:
+                raise TypeError(
+                    "Cannot use cached_property instance without calling __set_name__ on it."
+                )
+            try:
+                cache = instance.__dict__
+            except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+                msg = (
+                    f"No '__dict__' attribute on {type(instance).__name__!r} "
+                    f"instance to cache {self.attrname!r} property."
+                )
+                raise TypeError(msg) from None
+            val = cache.get(self.attrname, _NOT_FOUND)
+            if val is _NOT_FOUND:
+                with self.lock:
+                    # check if another thread filled cache while we awaited lock
+                    val = cache.get(self.attrname, _NOT_FOUND)
+                    if val is _NOT_FOUND:
+                        val = self.func(instance)
+                        try:
+                            cache[self.attrname] = val
+                        except TypeError:
+                            msg = (
+                                f"The '__dict__' attribute on {type(instance).__name__!r} instance "
+                                f"does not support item assignment for caching {self.attrname!r} property."
+                            )
+                            raise TypeError(msg) from None
+            return val
 
 
 if sys.version_info < (3,):
