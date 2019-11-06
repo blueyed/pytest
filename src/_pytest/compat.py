@@ -10,7 +10,11 @@ import sys
 from contextlib import contextmanager
 from inspect import Parameter
 from inspect import signature
+from typing import Callable
+from typing import Generic
+from typing import Optional
 from typing import overload
+from typing import TypeVar
 
 import attr
 import py
@@ -19,6 +23,13 @@ import _pytest
 from _pytest._io.saferepr import saferepr
 from _pytest.outcomes import fail
 from _pytest.outcomes import TEST_OUTCOME
+
+if False:  # TYPE_CHECKING
+    from typing import Type  # noqa:
+
+
+_T = TypeVar("_T")
+_S = TypeVar("_S")
 
 
 NOTSET = object()
@@ -374,6 +385,32 @@ if getattr(attr, "__version_info__", ()) >= (19, 2):
     ATTRS_EQ_FIELD = "eq"
 else:
     ATTRS_EQ_FIELD = "cmp"
+
+
+# Replace with functools.cached_property once we only support
+# Python 3.8.
+class cached_property(Generic[_S, _T], property):
+    __slots__ = ("func", "__doc__")
+
+    def __init__(self, func: Callable[[_S], _T]) -> None:
+        self.func = func
+        self.__doc__ = func.__doc__
+
+    @overload
+    def __get__(
+        self, instance: None, owner: Optional["Type[_S]"] = ...
+    ) -> "cached_property[_S, _T]":
+        pass
+
+    @overload  # noqa: F811
+    def __get__(self, instance: _S, owner: Optional["Type[_S]"] = ...) -> _T:
+        pass
+
+    def __get__(self, instance, owner=None):  # noqa: F811
+        if instance is None:
+            return self
+        value = instance.__dict__[self.func.__name__] = self.func(instance)
+        return value
 
 
 if sys.version_info < (3,):
