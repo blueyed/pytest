@@ -812,6 +812,19 @@ def test_spawn_calls(testdir, monkeypatch):
         [("cmd", ["arg1", "arg2 with spaces"]), {"env": {}, "timeout": 5.0}]
     ]
 
+    calls.clear()
+    testdir.spawn_pytest("arg1", "arg2 with spaces", env={})
+    basetemp = str(testdir.tmpdir.join("temp-pexpect"))
+    assert calls == [
+        [
+            (
+                sys.executable,
+                ["-mpytest", "--basetemp=" + basetemp, "arg1", "arg2 with spaces"],
+            ),
+            {"env": {}, "timeout": 5.0},
+        ]
+    ]
+
 
 def test_run_result_repr():
     outlines = ["some", "normal", "output"]
