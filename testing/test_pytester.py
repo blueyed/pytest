@@ -583,8 +583,6 @@ def test_testdir_respects_monkeypatch(method, testdir, monkeypatch):
         monkeypatch.setenv("COLUMNS", "12")
     else:
         assert method == "delenv"
-        with pytest.raises(KeyError):
-            monkeypatch.delenv("COLUMNS")
         monkeypatch.delenv("COLUMNS", raising=False)
     assert "COLUMNS" not in testdir._get_env_run_update()
 
