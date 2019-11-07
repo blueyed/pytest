@@ -48,7 +48,7 @@ before_script:
     fi
   - tox --notest -vv
 
-script: tox -vv
+script: env COLUMNS=120 tox -vv
 
 after_success:
   - |
