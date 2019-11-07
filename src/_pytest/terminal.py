@@ -113,6 +113,10 @@ def get_terminal_width():
     return _cached_terminal_width
 
 
+def _running_on_ci():
+    return os.environ.get("CI") == "true" or "BUILD_NUMBER" in os.environ
+
+
 class TerminalWriter(py.io.TerminalWriter):
     @property
     def fullwidth(self):
@@ -1048,8 +1052,7 @@ class TerminalReporter:
         if not self.reportchars:
             return
 
-        # NOTE: there's also _pytest.assertion._running_on_ci.
-        if os.environ.get("CI") == "true" or not self.isatty:
+        if not self.isatty or _running_on_ci():
             termwidth = None
         else:
             termwidth = self._tw.fullwidth
