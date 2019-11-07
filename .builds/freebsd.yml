@@ -14,6 +14,7 @@ environment:
   PYTEST_REORDER_TESTS: 0
   _PYTEST_TOX_COVERAGE_RUN: coverage run -m
   _PYTEST_TOX_EXTRA_DEP: coverage-enable-subprocess
+  COLUMNS: 120
 
 tasks:
   - check-skip: |
