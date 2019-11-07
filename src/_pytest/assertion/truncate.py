@@ -4,6 +4,7 @@ Utilities for truncating assertion output.
 Current default behaviour is to truncate assertion explanations at
 ~8 terminal lines, unless running in "-vv" mode or running on CI.
 """
+from _pytest.assertion.util import _running_on_ci
 
 
 DEFAULT_MAX_LINES = 8
@@ -27,8 +28,6 @@ def _should_truncate_item(item):
     level = item.config.getini("assert_truncate_level")
     verbose = item.config.option.verbose
     if level == "auto":
-        from _pytest.terminal import _running_on_ci
-
         return verbose < 2 and not _running_on_ci()
     return int(level) > verbose
 

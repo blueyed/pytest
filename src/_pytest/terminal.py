@@ -26,6 +26,7 @@ from more_itertools import collapse
 
 import pytest
 from _pytest import nodes
+from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
 from _pytest.main import ExitCode
 
@@ -111,10 +112,6 @@ def get_terminal_width():
     if _cached_terminal_width is None:
         _cached_terminal_width, _ = _getdimensions()
     return _cached_terminal_width
-
-
-def _running_on_ci():
-    return os.environ.get("CI") == "true" or "BUILD_NUMBER" in os.environ
 
 
 class TerminalWriter(py.io.TerminalWriter):
