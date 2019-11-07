@@ -2,19 +2,27 @@
 import argparse
 import functools
 import sys
+from typing import Generic
 from typing import Optional
+from typing import Tuple
+from typing import TypeVar
 
 from _pytest import outcomes
 from _pytest.config import Config
 from _pytest.config import hookimpl
 from _pytest.config.exceptions import UsageError
 
-
 if False:  # TYPE_CHECKING
-    import pdb
+    from typing import Type
+
+    import pdb as pdb_for_typing  # noqa: F401
+
+    from _pytest.capture import CaptureManager
+
+_P = TypeVar("_P", bound="pdb_for_typing.Pdb")
 
 
-def _validate_usepdb_cls(value):
+def _validate_usepdb_cls(value) -> Tuple[str, str]:
     """Validate syntax of --pdbcls option."""
     try:
         modname, classname = value.split(":")
@@ -62,12 +70,11 @@ def pytest_configure(config: Config):
         config.pluginmanager.register(PdbInvoke(config), "pdbinvoke")
 
 
-
-class PdbBase:
+class PdbBase(Generic[_P]):
     def __init__(self, config: Config) -> None:
         self.config = config
         self._recursive_debug = 0
-        self._wrapped_pdb_cls = None
+        self._wrapped_pdb_cls = None  # type: Optional[Tuple[Tuple[str, str], Type[_P]]]
 
     @classmethod
     def _is_capturing(cls, capman):
@@ -75,14 +82,8 @@ class PdbBase:
             return capman.is_capturing()
         return False
 
-    def _import_pdb_cls(self):
-        if not self.config:
-            import pdb
-
-            # Happens when using pytest.set_trace outside of a test.
-            return pdb.Pdb
-
-        usepdb_cls = self.config.getvalue("usepdb_cls")
+    def _import_pdb_cls(self) -> "Type[_P]":
+        usepdb_cls = self.config.getvalue("usepdb_cls")  # type: Tuple[str, str]
 
         if self._wrapped_pdb_cls and self._wrapped_pdb_cls[0] == usepdb_cls:
             return self._wrapped_pdb_cls[1]
@@ -113,13 +114,15 @@ class PdbBase:
         self._wrapped_pdb_cls = (usepdb_cls, wrapped_cls)
         return wrapped_cls
 
-    def _get_pdb_wrapper_class(self, pdb_cls) -> "pdb.Pdb":
+    def _get_pdb_wrapper_class(self, pdb_cls: "Type[_P]") -> "Type[_P]":
         import _pytest.config
 
         pytestPDB_obj = self
-        capman = self.config.pluginmanager.getplugin("capturemanager")  # type: Optional[CaptureManager]
+        capman = self.config.pluginmanager.getplugin(
+            "capturemanager"
+        )  # type: Optional[CaptureManager]
 
-        class PytestPdbWrapper(pdb_cls):
+        class PytestPdbWrapper(pdb_cls):  # type: ignore
             _pytest_capman = capman
             _continued = False
 
@@ -146,10 +149,13 @@ class PdbBase:
                                 "PDB continue (IO-capturing resumed for %s)"
                                 % capturing,
                             )
+                        assert capman
                         capman.resume()
                     else:
                         tw.sep(">", "PDB continue")
-                pytestPDB_obj.config.pluginmanager.hook.pytest_leave_pdb(config=pytestPDB_obj.config, pdb=self)
+                pytestPDB_obj.config.pluginmanager.hook.pytest_leave_pdb(
+                    config=pytestPDB_obj.config, pdb=self
+                )
                 self._continued = True
                 return ret
 
@@ -201,36 +207,33 @@ class PdbBase:
         """ Initialize PDB debugging, dropping any IO capturing. """
         import _pytest.config
 
-        if self.config:
-            capman = self.config.pluginmanager.getplugin("capturemanager")
-            if capman:
-                capman.suspend(in_=True)
+        capman = self.config.pluginmanager.getplugin("capturemanager")
+        if capman:
+            capman.suspend(in_=True)
 
-            tw = _pytest.config.create_terminal_writer(self.config)
-            tw.line()
+        tw = _pytest.config.create_terminal_writer(self.config)
+        tw.line()
 
-            if self._recursive_debug == 0:
-                # Handle header similar to pdb.set_trace in py37+.
-                header = kwargs.pop("header", None)
-                if header is not None:
-                    tw.sep(">", header)
+        if self._recursive_debug == 0:
+            # Handle header similar to pdb.set_trace in py37+.
+            header = kwargs.pop("header", None)
+            if header is not None:
+                tw.sep(">", header)
+            else:
+                capturing = self._is_capturing(capman)
+                if capturing == "global":
+                    tw.sep(">", "PDB {} (IO-capturing turned off)".format(method))
+                elif capturing:
+                    tw.sep(
+                        ">",
+                        "PDB %s (IO-capturing turned off for %s)" % (method, capturing),
+                    )
                 else:
-                    capturing = self._is_capturing(capman)
-                    if capturing == "global":
-                        tw.sep(">", "PDB {} (IO-capturing turned off)".format(method))
-                    elif capturing:
-                        tw.sep(
-                            ">",
-                            "PDB %s (IO-capturing turned off for %s)"
-                            % (method, capturing),
-                        )
-                    else:
-                        tw.sep(">", "PDB {}".format(method))
+                    tw.sep(">", "PDB {}".format(method))
 
         _pdb = self._import_pdb_cls()(**kwargs)
 
-        if self.config:
-            self.config.pluginmanager.hook.pytest_enter_pdb(config=self.config, pdb=_pdb)
+        self.config.pluginmanager.hook.pytest_enter_pdb(config=self.config, pdb=_pdb)
         return _pdb
 
     def post_mortem(self, t):
@@ -252,7 +255,7 @@ class pytestPDB(PdbBase):
 
     def pytest_unconfigure(self, config):
         pdb, set_trace = self._saved_pdb_set_trace
-        pdb.set_trace = set_trace
+        pdb.set_trace = set_trace  # type: ignore
 
     def set_trace(self, *args, **kwargs):
         """Invoke debugging via ``Pdb.set_trace``, dropping any IO capturing."""
@@ -261,11 +264,15 @@ class pytestPDB(PdbBase):
         _pdb.set_trace(frame)
 
 
-def set_trace(*args, **kwargs):
-    """Invoke debugging via ``pdb.set_trace``, dropping any IO capturing."""
-    frame = sys._getframe().f_back
-    _pdb = pytestPDB(config=None)._init_pdb("set_trace **", *args, **kwargs)
-    _pdb.set_trace(frame)
+def set_trace(*, header=None):
+    """Placeholder for when there is no config (yet)."""
+    import pdb
+    import sys
+
+    pdb_ = pdb.Pdb()
+    if header is not None:
+        pdb_.message(header)  # type: ignore
+    pdb_.set_trace(sys._getframe().f_back)
 
 
 class PdbInvoke(PdbBase):
