@@ -674,7 +674,7 @@ class TestPDB:
     def test_pdb_continue_with_recursive_debug(self, capture_arg, testdir):
         """Full coverage for do_debug without capturing.
 
-        This is very similar to test_pdb_interaction_continue_recursive in general,
+        This is very similar to test_pdb_with_injected_do_debug in general,
         but mocks out ``pdb.set_trace`` for providing more coverage.
         """
         p1 = testdir.makepyfile(
