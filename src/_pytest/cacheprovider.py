@@ -281,14 +281,15 @@ class NFPlugin:
         self.config = config
         self.active = config.option.newfirst
         self.cached_nodeids = config.cache.get("cache/nodeids", [])
-        self.cached_fspaths = config.cache.get("cache/fspaths", {})
+        self.cached_fspaths = config.cache.get(
+            "cache/fspaths", {}
+        )  # type: Dict[str, Dict]
         self.rootdir = Path(self.config.rootdir)
 
     def pytest_collection_modifyitems(
         self, session: Session, config: Config, items: List[nodes.Item]
     ) -> None:
         new_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
-        update_fspath = {}  # type: Dict[str, Dict]
         if self.active:
             other_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
             for item in items:
@@ -297,10 +298,6 @@ class NFPlugin:
                 else:
                     other_items[item.nodeid] = item
 
-                relfspath = str(Path(item.fspath).relative_to(self.rootdir))
-                if relfspath not in update_fspath:
-                    update_fspath[relfspath] = {"mtime": item.fspath.mtime()}
-
             items[:] = self._get_increasing_order(
                 new_items.values()
             ) + self._get_increasing_order(other_items.values())
@@ -308,10 +305,7 @@ class NFPlugin:
             for item in items:
                 if item.nodeid not in self.cached_nodeids:
                     new_items[item.nodeid] = item
-                    relfspath = str(Path(item.fspath).relative_to(self.rootdir))
-                    if relfspath not in update_fspath:
-                        update_fspath[relfspath] = {"mtime": item.fspath.mtime()}
-        self.cached_fspaths.update(update_fspath)
+
         self.cached_nodeids.extend(new_items)
 
         keyword = config.option.nodeid_keyword.lstrip()
@@ -330,7 +324,10 @@ class NFPlugin:
         if ppath.is_dir():
             return
 
-        relpath = str(ppath.relative_to(self.rootdir))
+        try:
+            relpath = str(ppath.relative_to(self.rootdir))
+        except ValueError:
+            relpath = str(ppath)
 
         if relpath not in self.cached_fspaths:
             # unknown/new: collect, but set mtime
