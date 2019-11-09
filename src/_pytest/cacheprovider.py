@@ -298,10 +298,8 @@ class NFPlugin:
                     other_items[item.nodeid] = item
 
                 relfspath = str(Path(item.fspath).relative_to(self.rootdir))
-                assert item.fspath.mtime() == self.cached_fspaths[relfspath]["mtime"], (
-                    item,
-                    relfspath,
-                )
+                if relfspath not in update_fspath:
+                    update_fspath[relfspath] = {"mtime": item.fspath.mtime()}
 
             items[:] = self._get_increasing_order(
                 new_items.values()
@@ -311,9 +309,8 @@ class NFPlugin:
                 if item.nodeid not in self.cached_nodeids:
                     new_items[item.nodeid] = item
                     relfspath = str(Path(item.fspath).relative_to(self.rootdir))
-                    assert (
-                        item.fspath.mtime() == self.cached_fspaths[relfspath]["mtime"]
-                    ), (item, relfspath)
+                    if relfspath not in update_fspath:
+                        update_fspath[relfspath] = {"mtime": item.fspath.mtime()}
         self.cached_fspaths.update(update_fspath)
         self.cached_nodeids.extend(new_items)
 
