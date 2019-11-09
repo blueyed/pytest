@@ -189,7 +189,9 @@ class ParsedCall:
     def __repr__(self):
         d = self.__dict__.copy()
         del d["_name"]
-        return "<ParsedCall {!r}(**{!r})>".format(self._name, d)
+        return "<ParsedCall {}({})".format(
+            self._name, ", ".join(("{}={!r}".format(k, v)) for k, v in d.items())
+        )
 
     if False:  # TYPE_CHECKING
         # The class has undetermined attributes, this tells mypy about it.
