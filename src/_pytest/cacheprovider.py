@@ -329,10 +329,6 @@ class NFPlugin:
         )
 
     def pytest_ignore_collect(self, path, config):
-        keyword = config.option.nodeid_keyword.lstrip()
-        if not keyword:
-            return
-
         ppath = Path(path)
         if ppath.is_dir():
             return
@@ -347,6 +343,10 @@ class NFPlugin:
         mtime = path.mtime()
         if mtime != self.cached_fspaths[relpath]["mtime"]:
             self.cached_fspaths[relpath]["mtime"] = mtime
+            return
+
+        keyword = config.option.nodeid_keyword.lstrip()
+        if not keyword:
             return
 
         try:
