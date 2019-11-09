@@ -963,7 +963,7 @@ def test_mark_fixture(testdir):
         def test_2():
             pass
 
-        @pytest.mark.registered
+        @pytest.mark.regged
         def test_3():
             pass
     """
@@ -974,9 +974,7 @@ def test_mark_fixture(testdir):
     assert reprec.countoutcomes() == [2, 0, 0]
     reprec = testdir.inline_run("--mark-fixture", "fix", "-m", "fix")
     assert reprec.countoutcomes() == [1, 0, 0]
-    reprec = testdir.inline_run(
-        "--mark-fixture", "fix:registered", "-m", "registered or FOO"
-    )
+    reprec = testdir.inline_run("--mark-fixture", "fix:regged", "-m", "regged or FOO")
     assert reprec.countoutcomes() == [3, 0, 0]
 
 
