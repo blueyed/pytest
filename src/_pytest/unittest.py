@@ -198,7 +198,8 @@ class TestCaseFunction(Function):
             """Helper exception to get out of unittests's testPartExecutor."""
 
         unittest = sys.modules.get("unittest")
-        reraise = (KeyboardInterrupt, SystemExit, unittest.SkipTest)
+
+        reraise = ()
         if unittest:
             reraise += (unittest.SkipTest,)
 
@@ -208,7 +209,7 @@ class TestCaseFunction(Function):
                 self.ihook.pytest_pyfunc_call(pyfuncitem=self)
             except reraise:
                 raise
-            except BaseException as exc:
+            except Exception as exc:
                 expecting_failure_method = getattr(
                     testMethod, "__unittest_expecting_failure__", False
                 )
