@@ -28,7 +28,6 @@ from _pytest.compat import getlocation
 from _pytest.compat import is_generator
 from _pytest.compat import NOTSET
 from _pytest.compat import safe_getattr
-from _pytest.config import hookimpl
 from _pytest.deprecated import FIXTURE_POSITIONAL_ARGUMENTS
 from _pytest.outcomes import fail
 from _pytest.outcomes import TEST_OUTCOME
@@ -1196,11 +1195,6 @@ def pytest_addoption(parser):
         default=[],
         help="list of default fixtures to be used with this project",
     )
-    parser.addoption(
-        "--only-using-fixture",
-        action="store",
-        help=("Run tests using a specific fixture only."),
-    )
 
 
 class FixtureManager:
@@ -1394,24 +1388,7 @@ class FixtureManager:
             else:
                 continue  # will raise FixtureLookupError at setup time
 
-    @hookimpl(hookwrapper=True)
-    def pytest_collection_modifyitems(self, config, items):
-
-        yield
-
-        only_using_fixture = config.getoption("--only-using-fixture")
-        if only_using_fixture:
-            new_items = []
-            for item in items:
-                try:
-                    fixturenames = item.fixturenames
-                except AttributeError:
-                    # DoctestItem
-                    continue
-                if only_using_fixture in fixturenames:
-                    new_items.append(item)
-            items[:] = new_items
-
+    def pytest_collection_modifyitems(self, items):
         # separate parametrized setups
         items[:] = reorder_items(items)
 

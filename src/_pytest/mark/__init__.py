@@ -66,6 +66,14 @@ def pytest_addoption(parser):
     )
 
     group.addoption(
+        "--mark-fixture",
+        action="store",
+        help=(
+            "Add mark to tests using given fixture.  Format: fixture[:mark] ('mark' defaults to the fixture name)."
+        ),
+    )
+
+    group.addoption(
         "--markers",
         action="store_true",
         help="show markers (builtin, plugin and per-project ones).",
@@ -139,6 +147,22 @@ def deselect_by_mark(items, config):
 
 
 def pytest_collection_modifyitems(items, config):
+    mark_fixture = config.getoption("--mark-fixture")
+    if mark_fixture:
+        fixture, _, mark = mark_fixture.partition(":")
+        if not mark:
+            mark = fixture
+        if mark not in MARK_GEN._markers:
+            MARK_GEN._markers.add(mark)
+        for item in items:
+            try:
+                fixturenames = item.fixturenames
+            except AttributeError:
+                # DoctestItem
+                continue
+            if fixture in fixturenames:
+                item.add_marker(mark)
+
     deselect_by_keyword(items, config)
     deselect_by_mark(items, config)
 
