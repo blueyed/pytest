@@ -941,6 +941,13 @@ def test_mark_expressions_no_smear(testdir):
 
 
 def test_mark_fixture(testdir):
+    testdir.makeini(
+        """
+        [pytest]
+        markers =
+            regged: registered
+    """
+    )
     testdir.makepyfile(
         """
         import pytest
@@ -955,6 +962,10 @@ def test_mark_fixture(testdir):
         @pytest.mark.FOO
         def test_2():
             pass
+
+        @pytest.mark.registered
+        def test_3():
+            pass
     """
     )
     reprec = testdir.inline_run("--mark-fixture", "fix:mymark", "-m", "mymark")
@@ -963,6 +974,10 @@ def test_mark_fixture(testdir):
     assert reprec.countoutcomes() == [2, 0, 0]
     reprec = testdir.inline_run("--mark-fixture", "fix", "-m", "fix")
     assert reprec.countoutcomes() == [1, 0, 0]
+    reprec = testdir.inline_run(
+        "--mark-fixture", "fix:registered", "-m", "registered or FOO"
+    )
+    assert reprec.countoutcomes() == [3, 0, 0]
 
 
 def test_addmarker_order():
