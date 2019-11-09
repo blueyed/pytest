@@ -1103,11 +1103,14 @@ def test_exit_outcome(testdir):
 
 
 def test_trace(testdir, monkeypatch):
+    from _pytest.debugging import PdbTrace
+
     calls = []
 
     def check_call(*args, **kwargs):
         calls.append((args, kwargs))
-        assert args == ("runcall",)
+        isinstance(args[0], PdbTrace)
+        assert args[1:] == ("runcall",)
 
         class _pdb:
             def runcall(*args, **kwargs):
