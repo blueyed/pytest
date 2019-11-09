@@ -940,6 +940,31 @@ def test_mark_expressions_no_smear(testdir):
     # assert skipped_k == failed_k == 0
 
 
+def test_mark_fixture(testdir):
+    testdir.makepyfile(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fix():
+            pass
+
+        def test_1(fix):
+            pass
+
+        @pytest.mark.FOO
+        def test_2():
+            pass
+    """
+    )
+    reprec = testdir.inline_run("--mark-fixture", "fix:mymark", "-m", "mymark")
+    assert reprec.countoutcomes() == [1, 0, 0]
+    reprec = testdir.inline_run("--mark-fixture", "fix:FOO", "-m", "FOO")
+    assert reprec.countoutcomes() == [2, 0, 0]
+    reprec = testdir.inline_run("--mark-fixture", "fix", "-m", "fix")
+    assert reprec.countoutcomes() == [1, 0, 0]
+
+
 def test_addmarker_order():
     node = Node("Test", config=mock.Mock(), session=mock.Mock(), nodeid="Test")
     node.add_marker("foo")
