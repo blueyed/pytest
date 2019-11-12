@@ -262,7 +262,7 @@ class CallInfo:
             item._current_callinfo = call
         try:
             call._result = func()
-        except:  # noqa
+        except BaseException:
             call.stop = time()
             excinfo = call.excinfo = ExceptionInfo.from_current()
             if reraise is not None and excinfo.errisinstance(reraise):
