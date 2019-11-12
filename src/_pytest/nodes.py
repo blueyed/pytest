@@ -29,11 +29,11 @@ from _pytest.mark.structures import MarkDecorator
 from _pytest.mark.structures import NodeKeywords
 from _pytest.outcomes import fail
 from _pytest.outcomes import Failed
-from _pytest.runner import CallInfo
 
 if TYPE_CHECKING:
     # Imported here due to circular import.
     from _pytest.main import Session  # noqa: F401
+    from _pytest.runner import CallInfo  # noqa: F401
 
     from _pytest._code.code import _TracebackStyle  # noqa: F401
 
