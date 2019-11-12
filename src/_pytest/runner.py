@@ -262,8 +262,6 @@ class CallInfo:
             item._current_callinfo = call
         try:
             call._result = func()
-        except (KeyboardInterrupt, SystemExit):
-            raise
         except BaseException:
             call.stop = time()
             excinfo = call.excinfo = ExceptionInfo.from_current()
