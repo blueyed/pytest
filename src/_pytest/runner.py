@@ -184,14 +184,27 @@ def pytest_report_teststatus(report):
 
 def call_and_report(
     item, when: "Literal['setup', 'call', 'teardown']", log=True, **kwds
-):
+) -> TestReport:
     call = call_runtest_hook(item, when, **kwds)
+    if not call._report:
+        call._report = _report_for_call(item, call, log)
+    return call._report
+
+
+def _report_for_call(
+    item, call: "Optional[CallInfo]" = None, log: bool = True
+) -> TestReport:
+    if not call:
+        call = item._current_callinfo
+    assert call
+    assert not call._report, call._report
     hook = item.ihook
-    report = hook.pytest_runtest_makereport(item=item, call=call)
+    report = hook.pytest_runtest_makereport(item=item, call=call)  # type: TestReport
     if log:
         hook.pytest_runtest_logreport(report=report)
     if check_interactive_exception(call, report):
         hook.pytest_exception_interact(node=item, call=call, report=report)
+    call._report = report
     return report
 
 
@@ -203,7 +216,7 @@ def check_interactive_exception(call, report):
     )
 
 
-def call_runtest_hook(item, when: "Literal['setup', 'call', 'teardown']", **kwds):
+def call_runtest_hook(item, when: "Literal['setup', 'call', 'teardown']", **kwds) -> "CallInfo":
     if when == "setup":
         ihook = item.ihook.pytest_runtest_setup
     elif when == "call":
@@ -216,7 +229,7 @@ def call_runtest_hook(item, when: "Literal['setup', 'call', 'teardown']", **kwds
     if not item.config.getoption("usepdb", False):
         reraise += (KeyboardInterrupt,)
     return CallInfo.from_call(
-        lambda: ihook(item=item, **kwds), when=when, reraise=reraise
+        lambda: ihook(item=item, **kwds), when=when, reraise=reraise, item=item
     )
 
 
@@ -229,6 +242,8 @@ class CallInfo:
     start = attr.ib()
     stop = attr.ib()
     when = attr.ib()
+    item = attr.ib(type=Optional[Node])
+    _report = attr.ib(type=Optional[TestReport], default=None)
 
     @property
     def result(self):
@@ -237,20 +252,27 @@ class CallInfo:
         return self._result
 
     @classmethod
-    def from_call(cls, func, when, reraise=None) -> "CallInfo":
+    def from_call(cls, func, when, item=None, reraise=None) -> "CallInfo":
         #: context of invocation: one of "setup", "call",
         #: "teardown", "memocollect"
-        start = time()
-        excinfo = None
+        call = cls(
+            start=time(), stop=None, when=when, item=item, result=None, excinfo=None
+        )
+        if item:
+            item._current_callinfo = call
         try:
-            result = func()
+            call._result = func()
         except:  # noqa
-            excinfo = ExceptionInfo.from_current()
+            call.stop = time()
+            excinfo = call.excinfo = ExceptionInfo.from_current()
             if reraise is not None and excinfo.errisinstance(reraise):
                 raise
-            result = None
-        stop = time()
-        return cls(start=start, stop=stop, when=when, result=result, excinfo=excinfo)
+            call._result = None
+        finally:
+            if item:
+                del item._current_callinfo
+        call.stop = time()
+        return call
 
     def __repr__(self):
         if self.excinfo is None:

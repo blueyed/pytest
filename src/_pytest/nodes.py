@@ -29,6 +29,7 @@ from _pytest.mark.structures import MarkDecorator
 from _pytest.mark.structures import NodeKeywords
 from _pytest.outcomes import fail
 from _pytest.outcomes import Failed
+from _pytest.runner import CallInfo
 
 if TYPE_CHECKING:
     # Imported here due to circular import.
@@ -147,6 +148,8 @@ class Node(metaclass=NodeMeta):
             self._nodeid = self.parent.nodeid
             if self.name != "()":
                 self._nodeid += "::" + self.name
+
+        self._current_callinfo = None  # type: Optional[CallInfo]
 
     @classmethod
     def from_parent(cls, parent: "Node", **kw):
