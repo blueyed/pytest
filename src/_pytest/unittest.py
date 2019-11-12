@@ -218,6 +218,8 @@ class TestCaseFunction(Function):
             except Exception:
                 from _pytest.runner import _report_for_call
 
+                self._addexcinfo(sys.exc_info())
+
                 assert self._current_callinfo
                 _report_for_call(self)
 
