@@ -20,7 +20,16 @@ def pytest_addoption(parser):
 
 @pytest.hookimpl
 def pytest_configure(config):
-    config.pluginmanager.register(StepwisePlugin(config), "stepwiseplugin")
+    if config.getvalue("stepwise"):
+        config.pluginmanager.register(StepwisePlugin(config), "stepwiseplugin")
+
+
+@pytest.hookimpl
+def pytest_sessionfinish(session):
+    """Clear the list of failing tests if the plugin is not active."""
+    config = session.config
+    if not config.getvalue("stepwise"):
+        config.cache.set("cache/stepwise", [])
 
 
 class StepwisePlugin:
@@ -30,16 +39,10 @@ class StepwisePlugin:
         self.session = None
         self.report_status = ""
 
-        if self.active:
-            self.lastfailed = config.cache.get("cache/stepwise", None)
-            self.skip = config.getvalue("stepwise_skip")
-
     def pytest_sessionstart(self, session):
         self.session = session
 
     def pytest_collection_modifyitems(self, session, config, items):
-        if not self.active:
-            return
         if not self.lastfailed:
             self.report_status = "no previously failed tests, not skipping."
             return
@@ -71,9 +74,6 @@ class StepwisePlugin:
         config.hook.pytest_deselected(items=already_passed)
 
     def pytest_runtest_logreport(self, report):
-        if not self.active:
-            return
-
         if report.failed:
             if self.skip:
                 # Remove test from the failed ones (if it exists) and unset the skip option
@@ -97,12 +97,8 @@ class StepwisePlugin:
                     self.lastfailed = None
 
     def pytest_report_collectionfinish(self):
-        if self.active and self.config.getoption("verbose") >= 0 and self.report_status:
+        if self.config.getoption("verbose") >= 0 and self.report_status:
             return "stepwise: %s" % self.report_status
 
     def pytest_sessionfinish(self, session):
-        if self.active:
-            self.config.cache.set("cache/stepwise", self.lastfailed)
-        else:
-            # Clear the list of failing tests if the plugin is not active.
-            self.config.cache.set("cache/stepwise", [])
+        self.config.cache.set("cache/stepwise", self.lastfailed)
