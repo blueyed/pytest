@@ -9,6 +9,7 @@ from _pytest.compat import getimfunc
 from _pytest.config import hookimpl
 from _pytest.outcomes import exit
 from _pytest.outcomes import fail
+from _pytest.outcomes import OutcomeException
 from _pytest.outcomes import skip
 from _pytest.outcomes import xfail
 from _pytest.python import Class
@@ -213,7 +214,7 @@ class TestCaseFunction(Function):
             features can have a chance to kick in (notably --pdb)"""
             try:
                 self.ihook.pytest_pyfunc_call(pyfuncitem=self)
-            except unittest.SkipTest:
+            except (unittest.SkipTest, OutcomeException, exit.Exception):
                 raise
             except Exception:
                 from _pytest.runner import _report_for_call
