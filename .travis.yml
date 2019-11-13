@@ -27,10 +27,8 @@ jobs:
     - env: TOXENV=py38-xdist PYTEST_COVERAGE=1
       python: '3.8'
 
-    # Python 3.6 for coverage on master builds (no Sourcehut).
     - env: TOXENV=py36-xdist PYTEST_COVERAGE=1 PYTEST_REORDER_TESTS=0
       python: '3.6.9'
-      if: type = "push" AND branch = my-master
 
     - env: TOXENV=linting,docs,doctesting PYTEST_COVERAGE=1
       cache:
