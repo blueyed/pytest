@@ -5,7 +5,7 @@ cache: false
 
 env:
   global:
-    - PYTEST_ADDOPTS=-vv --showlocals --durations=100 --exitfirst
+    - PYTEST_ADDOPTS="-vv --showlocals --durations=100 --exitfirst"
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
@@ -21,7 +21,6 @@ jobs:
     # - numpy
     # - verbose=0
     # - test_sys_breakpoint_interception (via pexpect).
-    # Empty PYTEST_ADDOPTS to run this non-verbose.
     - stage: baseline
       env: TOXENV=py37-numpy-pexpect-twisted PYTEST_COVERAGE=1
 
