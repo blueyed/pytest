@@ -12,7 +12,7 @@ git:
   depth: false
 
 install:
-  - python -m pip install --upgrade --pre tox
+  - python -m pip install git+https://github.com/blueyed/tox@master
 
 jobs:
   include:
@@ -48,9 +48,9 @@ before_script:
       export _PYTEST_TOX_COVERAGE_RUN="coverage run -m"
       export _PYTEST_TOX_EXTRA_DEP=coverage-enable-subprocess
     fi
-  - tox --notest -vv
+  - tox --notest -v --durations
 
-script: env COLUMNS=120 tox -vv
+script: env COLUMNS=120 tox -v --durations
 
 after_success:
   - |
