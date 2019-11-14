@@ -26,7 +26,9 @@ def pytest_configure(config):
 
 @pytest.hookimpl
 def pytest_sessionfinish(session):
-    """Clear the list of failing tests if the plugin is not active."""
+    """Clear the list of failing tests if the plugin is not active.
+
+    This might not be sensible, but has been like that, so keep it."""
     config = session.config
     if not config.getvalue("stepwise"):
         config.cache.set("cache/stepwise", [])
@@ -35,9 +37,10 @@ def pytest_sessionfinish(session):
 class StepwisePlugin:
     def __init__(self, config):
         self.config = config
-        self.active = config.getvalue("stepwise")
         self.session = None
         self.report_status = ""
+        self.lastfailed = config.cache.get("cache/stepwise", None)
+        self.skip = config.getvalue("stepwise_skip")
 
     def pytest_sessionstart(self, session):
         self.session = session
