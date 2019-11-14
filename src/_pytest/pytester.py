@@ -866,6 +866,8 @@ class Testdir:
             mp_run = MonkeyPatch()
             for k, v in self._get_env_run_update().items():
                 mp_run.setenv(k, v)
+            tw_width = os.environ.get("COLUMNS", 80)  # might come via mp already.
+            mp_run.setattr("_pytest.terminal._cached_terminal_width", int(tw_width))
             finalizers.append(mp_run.undo)
 
             # Any sys.module or sys.path changes done while running pytest
