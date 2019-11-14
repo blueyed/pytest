@@ -48,9 +48,9 @@ before_script:
       export _PYTEST_TOX_COVERAGE_RUN="coverage run -m"
       export _PYTEST_TOX_EXTRA_DEP=coverage-enable-subprocess
     fi
-  - tox --notest -v --durations
+  - python -m tox --notest -v --durations
 
-script: env COLUMNS=120 tox -v --durations
+script: env COLUMNS=120 python -m tox -v --durations
 
 after_success:
   - |
