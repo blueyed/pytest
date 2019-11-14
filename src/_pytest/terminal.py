@@ -719,7 +719,9 @@ class TerminalReporter:
         line = "rootdir: %s" % _shorten_path(Path(config.rootdir))
 
         if config.inifile:
-            line += ", inifile: {}".format(_shorten_path(Path(config.inifile)))
+            line += ", inifile: {}".format(
+                _shorten_path(Path(config.rootdir.bestrelpath(config.inifile)))
+            )
 
         testpaths = config.getini("testpaths")
         if testpaths and config.args == testpaths:
