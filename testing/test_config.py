@@ -533,6 +533,7 @@ class TestConfigFromdictargs:
         assert config.inicfg.get("should_not_be_set") is None
 
 
+@pytest.mark.integration
 @pytest.mark.slow
 def test_options_on_small_file_do_not_blow_up(testdir):
     def runfiletest(opts):
