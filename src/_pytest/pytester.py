@@ -499,9 +499,20 @@ class SysPathsSnapshot:
 
 
 def _display_running(header, *args):
-    args_str = " ".join([shlex.quote(str(x)) for x in args])
+    from _pytest.pathlib import _shorten_path
+
+    cwd = Path.cwd()
+
+    def try_rel(arg: Path) -> Path:
+        try:
+            return arg.relative_to(cwd)
+        except ValueError:
+            return arg
+
+    cmd = _shorten_path(try_rel(Path(args[0])))
+    args_str = " ".join([shlex.quote(str(x)) for x in (cmd,) + args])
     indent = " " * (len(header) - 2)
-    print("{}: {}\n{}in: {}".format(header, args_str, indent, py.path.local()))
+    print("{}: {}\n{}in: {}".format(header, args_str, indent, cwd))
 
 
 class Testdir:

@@ -365,3 +365,30 @@ def fnmatch_ex(pattern: str, path) -> bool:
 def parts(s: str) -> Set[str]:
     parts = s.split(sep)
     return {sep.join(parts[: i + 1]) or sep for i in range(len(parts))}
+
+
+def _shorten_path(path: Path, real_home: bool = True) -> Path:
+    if not isinstance(path, Path):
+        path = Path(path)
+    if not path.is_absolute():
+        return path
+
+    if real_home:
+        import pwd
+
+        try:
+            homedir = pwd.getpwuid(os.getuid()).pw_dir
+        except KeyError:
+            # User not in password database.
+            home = Path.home()
+        else:
+            home = Path(homedir)
+    else:
+        home = Path.home()
+
+    try:
+        rel = path.relative_to(home)
+    except ValueError:
+        return path
+    else:
+        return "~" / rel

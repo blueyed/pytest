@@ -32,6 +32,7 @@ from _pytest.compat import shell_quote
 from _pytest.config import Config
 from _pytest.main import ExitCode
 from _pytest.main import Session
+from _pytest.pathlib import _shorten_path
 from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
@@ -702,7 +703,7 @@ class TerminalReporter:
             or self.config.option.debug
             or getattr(self.config.option, "pastebin", None)
         ):
-            msg += " -- " + str(sys.executable)
+            msg += " -- {}".format(_shorten_path(Path(sys.executable)))
         self.write_line(msg)
         lines = self.config.hook.pytest_report_header(
             config=self.config, startdir=self.startdir
@@ -715,14 +716,14 @@ class TerminalReporter:
             self.write_line(line)
 
     def pytest_report_header(self, config):
-        line = "rootdir: %s" % config.rootdir
+        line = "rootdir: %s" % _shorten_path(Path(config.rootdir))
 
         if config.inifile:
-            line += ", inifile: " + config.rootdir.bestrelpath(config.inifile)
+            line += ", inifile: {}".format(_shorten_path(Path(config.inifile)))
 
         testpaths = config.getini("testpaths")
         if testpaths and config.args == testpaths:
-            rel_paths = [config.rootdir.bestrelpath(x) for x in testpaths]
+            rel_paths = [str(_shorten_path(x)) for x in testpaths]
             line += ", testpaths: {}".format(", ".join(rel_paths))
         result = [line]
 
