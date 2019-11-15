@@ -31,6 +31,9 @@ jobs:
     - env: TOXENV=py36-xdist PYTEST_COVERAGE=1 PYTEST_REORDER_TESTS=0
       python: '3.6.9'
 
+    - env: TOXENV=py35-xdist PYTEST_COVERAGE=1 PYTEST_REORDER_TESTS=0
+      python: '3.5.9'
+
     - env: TOXENV=linting,docs,doctesting PYTEST_COVERAGE=1
       cache:
         directories:
