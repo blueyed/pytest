@@ -266,6 +266,27 @@ class MonkeyPatch:
         """
         self.delitem(os.environ, name, raising=raising)
 
+    def mock_importerror(self, mocked_imports, raise_exc=ImportError):
+        if not hasattr(self, "_mocked_imports"):
+            orig_import = __import__
+
+            def import_mock(name, *args):
+                if name in self._mocked_imports:
+                    raise self._mocked_imports[name]
+                return orig_import(name, *args)
+
+            if sys.version_info >= (3,):
+                self.setattr("builtins.__import__", import_mock)
+            else:
+                self.setattr("__builtin__.__import__", import_mock)
+
+            self._mocked_imports = {}
+
+        if isinstance(mocked_imports, str):
+            mocked_imports = (mocked_imports,)
+        for name in mocked_imports:
+            self._mocked_imports[name] = raise_exc
+
     def syspath_prepend(self, path):
         """ Prepend ``path`` to ``sys.path`` list of import locations. """
         from pkg_resources import fixup_namespace_packages

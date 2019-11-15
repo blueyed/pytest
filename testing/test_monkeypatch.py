@@ -459,3 +459,20 @@ def test_syspath_prepend_with_namespace_packages(testdir, monkeypatch):
     monkeypatch.syspath_prepend(str(modules_tmpdir))
     modules_tmpdir.join("main_app.py").write("app = True")
     from main_app import app  # noqa: F401
+
+
+def test_mock_importerror(monkeypatch):
+    monkeypatch.mock_importerror(("os.foo",), TypeError)
+    with pytest.raises(TypeError):
+        import os.foo  # noqa: F401
+
+    monkeypatch.mock_importerror("another", TypeError)
+    with pytest.raises(TypeError):
+        import another  # noqa: F401
+
+    monkeypatch.mock_importerror("os")
+    with pytest.raises(ImportError):
+        import os  # noqa: F401
+
+    with pytest.raises(TypeError):
+        import another  # noqa: F401,F811
