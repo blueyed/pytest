@@ -10,7 +10,6 @@ import platform
 import sys
 import time
 from functools import partial
-from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -33,6 +32,7 @@ from _pytest.config import Config
 from _pytest.main import ExitCode
 from _pytest.main import Session
 from _pytest.pathlib import _shorten_path
+from _pytest.pathlib import Path
 from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
