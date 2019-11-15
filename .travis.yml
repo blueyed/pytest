@@ -28,7 +28,7 @@ jobs:
 
     - stage: tests
       env: TOXENV=py37-numpy-pexpect-twisted
-      python: '3.7'
+      python: '3.7.4'
 
     - env: TOXENV=py36-xdist PYTEST_REORDER_TESTS=0
       python: '3.6.9'
