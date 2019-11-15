@@ -162,6 +162,7 @@ class LFPlugin:
         active_keys = "lf", "failedfirst"
         self.active = any(config.getoption(key) for key in active_keys)
         self.lastfailed = config.cache.get("cache/lastfailed", {})
+        self._initial_lastfailed = self.lastfailed.copy()
         self._previously_failed_count = None
         self._report_status = None
         self._skipped_files = 0  # count skipped files during collection due to --lf
@@ -262,9 +263,13 @@ class LFPlugin:
             else:
                 self._report_status += "not deselecting items."
 
-    def pytest_sessionfinish(self, session):
+    def pytest_sessionfinish(self, exitstatus, session):
         config = self.config
         if config.getoption("cacheshow") or hasattr(config, "slaveinput"):
+            return
+
+        # Do not update lastfailed if there are still any failures.
+        if self.active and self._initial_lastfailed and exitstatus != 0:
             return
 
         saved_lastfailed = config.cache.get("cache/lastfailed", {})
