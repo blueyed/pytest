@@ -143,7 +143,7 @@ class Parser:
             raise TypeError("invalid type: {!r}".format(type))
 
         if len(args) == 1:
-            default, = args
+            (default,) = args
         elif "default" in kwargs:
             default = kwargs.pop("default")
         else:
