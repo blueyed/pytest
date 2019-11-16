@@ -492,3 +492,12 @@ def test_mockimport_callable(monkeypatch):
     assert calls == [
         (("os.foo", globals()), {"level": 42}),
     ]
+
+
+def test_mockimport_importlib(monkeypatch):
+    """importlib.import_module is not patched"""
+    import importlib
+
+    monkeypatch.mockimport("os.foo", ValueError)
+    with pytest.raises(ImportError):
+        importlib.import_module("os.foo")
