@@ -461,18 +461,34 @@ def test_syspath_prepend_with_namespace_packages(testdir, monkeypatch):
     from main_app import app  # noqa: F401
 
 
-def test_mock_importerror(monkeypatch):
-    monkeypatch.mock_importerror(("os.foo",), TypeError)
+def test_mockimport(monkeypatch):
+    monkeypatch.mockimport(("os.foo",), TypeError)
     with pytest.raises(TypeError):
         import os.foo  # noqa: F401
 
-    monkeypatch.mock_importerror("another", TypeError)
+    monkeypatch.mockimport("another", TypeError)
     with pytest.raises(TypeError):
         import another  # noqa: F401
 
-    monkeypatch.mock_importerror("os")
+    monkeypatch.mockimport("os")
     with pytest.raises(ImportError):
         import os  # noqa: F401
 
     with pytest.raises(TypeError):
         import another  # noqa: F401,F811
+
+
+def test_mockimport_callable(monkeypatch):
+    calls = []
+
+    def mockedimport(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise monkeypatch._orig_import(*args, **kwargs)
+
+    monkeypatch.mockimport(("os.foo",), mockedimport)
+    with pytest.raises(ImportError):
+        __import__("os.foo", globals(), level=42)
+
+    assert calls == [
+        (("os.foo", globals()), {"level": 42}),
+    ]

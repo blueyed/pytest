@@ -266,14 +266,19 @@ class MonkeyPatch:
         """
         self.delitem(os.environ, name, raising=raising)
 
-    def mock_importerror(self, mocked_imports, raise_exc=ImportError):
-        if not hasattr(self, "_mocked_imports"):
-            orig_import = __import__
+    def mockimport(self, mocked_imports, err=ImportError):
+        import inspect
 
-            def import_mock(name, *args):
+        if not hasattr(self, "_mocked_imports"):
+            self._orig_import = __import__
+
+            def import_mock(name, *args, **kwargs):
                 if name in self._mocked_imports:
-                    raise self._mocked_imports[name]
-                return orig_import(name, *args)
+                    err = self._mocked_imports[name]
+                    if inspect.isfunction(err):
+                        return err(name, *args, **kwargs)
+                    raise err
+                return self._orig_import(name, *args)
 
             if sys.version_info >= (3,):
                 self.setattr("builtins.__import__", import_mock)
@@ -285,7 +290,7 @@ class MonkeyPatch:
         if isinstance(mocked_imports, str):
             mocked_imports = (mocked_imports,)
         for name in mocked_imports:
-            self._mocked_imports[name] = raise_exc
+            self._mocked_imports[name] = err
 
     def syspath_prepend(self, path):
         """ Prepend ``path`` to ``sys.path`` list of import locations. """
