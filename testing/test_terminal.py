@@ -794,15 +794,15 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
 
     if use_CI or not tty:
         msgs = [
-            "FAILED test_fail_extra_reporting.py:4(test_this) - AssertionError: "
+            "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: "
             + ("this_failed" * 8)
             + "...",
-            "FAILED test_fail_extra_reporting.py:9(test_linematcher) - remains unmatched: 'last_unmatched'",
+            "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: 'last_unmatched'",
         ]
     else:
         msgs = [
-            "FAILED test_fail_extra_reporting.py:4(test_this) - AssertionError: this_faile...",
-            "FAILED test_fail_extra_reporting.py:9(test_linematcher) - remains unmatched: ...",
+            "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: this_faile...",
+            "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: ...",
         ]
 
     lm.fnmatch_lines(

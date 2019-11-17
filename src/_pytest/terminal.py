@@ -1161,7 +1161,7 @@ def _get_pos(config, rep):
         pass
 
     if str(testloc_path) == path:
-        return "%s:%d(%s)" % (path, testloc.lineno, testname)
+        return "%s:%d::%s" % (path, testloc.lineno, testname)
 
     return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
 

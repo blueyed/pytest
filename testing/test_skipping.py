@@ -1177,8 +1177,8 @@ def test_summary_list_after_errors(testdir):
         [
             "=* FAILURES *=",
             "*= short test summary info =*",
-            "FAILED test_summary_list_after_errors.py:3(test_fail) - assert 0",
-            "FAILED test_summary_list_after_errors.py:6(test_pytest_fail) - fail exc",
+            "FAILED test_summary_list_after_errors.py:3::test_fail - assert 0",
+            "FAILED test_summary_list_after_errors.py:6::test_pytest_fail - fail exc",
         ]
     )
 
