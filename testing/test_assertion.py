@@ -72,10 +72,11 @@ class TestImportHookInstallation:
         result = testdir.runpytest_subprocess()
         result.stdout.fnmatch_lines(
             [
-                "E * AssertionError: ([[][]], [[][]], [[]<TestReport *>[]])*",
-                "E * assert"
-                " {'failed': 1, 'passed': 0, 'skipped': 0} =="
-                " {'failed': 0, 'passed': 1, 'skipped': 0}",
+                ">       r.assertoutcome(passed=1)",
+                "E       AssertionError: ([],",
+                "E          [],",
+                "E          [<TestReport 'test_dummy_failure.py::test' when='call' outcome='failed'>])",
+                "E       assert {'failed': 1, 'passed': 0, 'skipped': 0} == {'failed': 0, 'passed': 1, 'skipped': 0}",
             ]
         )
 
