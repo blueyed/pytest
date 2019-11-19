@@ -120,17 +120,7 @@ def pytest_cmdline_main(config):
         return 0
 
 
-def _validate_parametrize_spelling(metafunc):
-    """Raise a specific error for common misspellings of "parametrize"."""
-    for mark_name in ["parameterize", "parametrise", "parameterise"]:
-        if metafunc.definition.get_closest_marker(mark_name):
-            msg = "{0} has '{1}' mark, spelling should be 'parametrize'"
-            fail(msg.format(metafunc.function.__name__, mark_name), pytrace=False)
-
-
 def pytest_generate_tests(metafunc):
-    _validate_parametrize_spelling(metafunc)
-
     for marker in metafunc.definition.iter_markers(name="parametrize"):
         metafunc.parametrize(*marker.args, **marker.kwargs)
 
@@ -241,10 +231,6 @@ def pytest_pycollect_makeitem(collector, name, obj):
             outcome.force_result(res)
 
 
-def pytest_make_parametrize_id(config, val, argname=None):
-    return None
-
-
 class PyobjContext:
     module = pyobj_property("Module")
     cls = pyobj_property("Class")
@@ -291,8 +277,7 @@ class PyobjMixin(PyobjContext):
                     break
             parts.append(name)
         parts.reverse()
-        s = ".".join(parts)
-        return s.replace(".[", "[")
+        return ".".join(parts)
 
     def reportinfo(self) -> Tuple[str, int, str]:
         # XXX caching?
