@@ -67,7 +67,7 @@ class Cache:
                 rm_rf(d)
 
     @staticmethod
-    def cache_dir_from_config(config):
+    def cache_dir_from_config(config: Config) -> Path:
         return resolve_from_str(config.getini("cache_dir"), config.rootdir)
 
     def warn(self, fmt, **args):

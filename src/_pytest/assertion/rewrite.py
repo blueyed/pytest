@@ -56,6 +56,13 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         self._marked_for_rewrite_cache = {}  # type: Dict[str, bool]
         self._session_paths_checked = False
 
+        if sys.version_info >= (3, 8) and sys.pycache_prefix:
+            self._pycache_prefix = sys.pycache_prefix
+        else:
+            from _pytest.cacheprovider import Cache
+
+            self._pycache_prefix = Cache.cache_dir_from_config(config) / "__pycache__"
+
     def set_session(self, session):
         self.session = session
         self._session_paths_checked = False
@@ -118,7 +125,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         # cached pyc is always a complete, valid pyc. Operations on it must be
         # atomic. POSIX's atomic rename comes in handy.
         write = not sys.dont_write_bytecode
-        cache_dir = get_cache_dir(fn)
+        cache_dir = get_cache_dir(fn, self._pycache_prefix)
         if write:
             ok = try_makedirs(cache_dir)
             if not ok:
@@ -1042,15 +1049,15 @@ def try_makedirs(cache_dir) -> bool:
     return True
 
 
-def get_cache_dir(file_path: Path) -> Path:
+def get_cache_dir(file_path: Path, prefix: Path) -> Path:
     """Returns the cache directory to write .pyc files for the given .py file path"""
-    if sys.version_info >= (3, 8) and sys.pycache_prefix:
+    if prefix:
         # given:
         #   prefix = '/tmp/pycs'
         #   path = '/home/user/proj/test_app.py'
         # we want:
         #   '/tmp/pycs/home/user/proj'
-        return Path(sys.pycache_prefix) / Path(*file_path.parts[1:-1])
+        return prefix / Path(*file_path.parts[1:-1])
     else:
         # classic pycache directory
         return file_path.parent / "__pycache__"
