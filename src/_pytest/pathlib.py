@@ -367,11 +367,21 @@ def parts(s: str) -> Set[str]:
     return {sep.join(parts[: i + 1]) or sep for i in range(len(parts))}
 
 
-def _shorten_path(path: Path) -> Path:
+def _shorten_path(path: Path, relative_to: Path = None) -> Path:
     if not isinstance(path, Path):
         path = Path(path)
     if not path.is_absolute():
         return path
+
+    if relative_to:
+        try:
+            path = path.relative_to(relative_to)
+        except ValueError:
+            pass
+        else:
+            if not path.is_absolute():
+                return path
+
     try:
         rel = path.relative_to(Path.home())
     except ValueError:
