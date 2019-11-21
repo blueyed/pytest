@@ -134,7 +134,7 @@ def pytest_generate_tests(metafunc):
             msg = "{0} has '{1}' mark, spelling should be 'parametrize'"
             fail(msg.format(metafunc.function.__name__, mark_name), pytrace=False)
     for marker in metafunc.definition.iter_markers(name="parametrize"):
-        metafunc.parametrize(*marker.args, **marker.kwargs)
+        metafunc.parametrize(*marker.args, _param_mark=marker, **marker.kwargs)
 
 
 def pytest_configure(config):
@@ -955,7 +955,15 @@ class Metafunc(fixtures.FuncargnamesCompatAttr):
         self._ids = set()
         self._arg2fixturedefs = fixtureinfo.name2fixturedefs
 
-    def parametrize(self, argnames, argvalues, indirect=False, ids=None, scope=None):
+    def parametrize(
+        self,
+        argnames,
+        argvalues,
+        indirect=False,
+        ids=None,
+        scope=None,
+        _param_mark=None,
+    ):
         """ Add new invocations to the underlying test function using the list
         of argvalues for the given argnames.  Parametrization is performed
         during the collection phase.  If you need to setup expensive resources
@@ -978,13 +986,22 @@ class Metafunc(fixtures.FuncargnamesCompatAttr):
             function so that it can perform more expensive setups during the
             setup phase of a test rather than at collection time.
 
-        :arg ids: list of string ids, or a callable.
-            If strings, each is corresponding to the argvalues so that they are
-            part of the test id. If None is given as id of specific test, the
-            automatically generated id for that argument will be used.
-            If callable, it should take one argument (a single argvalue) and return
-            a string or return None. If None, the automatically generated id for that
-            argument will be used.
+        :arg ids: sequence of (or generator for) ids for ``argvalues``,
+              or a callable to return part of the id for each argvalue.
+
+            With sequences (and generators like ``itertools.count()``) the
+            returned ids should be of type ``string``, ``int``, ``float``,
+            ``bool``, or ``None``.
+            They are mapped to the corresponding index in ``argvalues``.
+            ``None`` means to use the auto-generated id.
+
+            If it is a callable it will be called for each entry in
+            ``argvalues``, and the return value is used as part of the
+            auto-generated id for the whole set (where parts are joined with
+            dashes ("-")).
+            This is useful to provide more specific ids for certain items, e.g.
+            dates.  Returning ``None`` will use an auto-generated id.
+
             If no ids are provided they will be generated automatically from
             the argvalues.
 
@@ -1012,7 +1029,17 @@ class Metafunc(fixtures.FuncargnamesCompatAttr):
 
         arg_values_types = self._resolve_arg_value_types(argnames, indirect)
 
+        # Use any already (possibly) generated ids with parametrize Marks.
+        if _param_mark and _param_mark._param_ids_from:
+            generated_ids = _param_mark._param_ids_from._param_ids_generated
+            if generated_ids is not None:
+                ids = generated_ids
+
         ids = self._resolve_arg_ids(argnames, ids, parameters, item=self.definition)
+
+        # Store used (possibly generated) ids with parametrize Marks.
+        if _param_mark and _param_mark._param_ids_from and generated_ids is None:
+            object.__setattr__(_param_mark._param_ids_from, "_param_ids_generated", ids)
 
         scopenum = scope2index(
             scope, descr="parametrize() call in {}".format(self.function.__name__)
@@ -1048,26 +1075,47 @@ class Metafunc(fixtures.FuncargnamesCompatAttr):
         :rtype: List[str]
         :return: the list of ids for each argname given
         """
-        from _pytest._io.saferepr import saferepr
-
         idfn = None
         if callable(ids):
             idfn = ids
             ids = None
         if ids:
             func_name = self.function.__name__
-            if len(ids) != len(parameters):
-                msg = "In {}: {} parameter sets specified, with different number of ids: {}"
-                fail(msg.format(func_name, len(parameters), len(ids)), pytrace=False)
-            for id_value in ids:
-                if id_value is not None and not isinstance(id_value, six.string_types):
-                    msg = "In {}: ids must be list of strings, found: {} (type: {!r})"
-                    fail(
-                        msg.format(func_name, saferepr(id_value), type(id_value)),
-                        pytrace=False,
-                    )
+            ids = self._validate_ids(ids, parameters, func_name)
         ids = idmaker(argnames, parameters, idfn, ids, self.config, item=item)
         return ids
+
+    def _validate_ids(self, ids, parameters, func_name):
+        try:
+            len(ids)
+        except TypeError:
+            try:
+                it = iter(ids)
+            except TypeError:
+                raise TypeError("ids must be a callable, sequence or generator")
+            else:
+                import itertools
+
+                new_ids = list(itertools.islice(it, len(parameters)))
+        else:
+            new_ids = list(ids)
+
+        if len(new_ids) != len(parameters):
+            msg = "In {}: {} parameter sets specified, with different number of ids: {}"
+            fail(msg.format(func_name, len(parameters), len(ids)), pytrace=False)
+        for idx, id_value in enumerate(new_ids):
+            if id_value is not None:
+                if isinstance(id_value, (float, int, bool)):
+                    new_ids[idx] = str(id_value)
+                elif not isinstance(id_value, six.string_types):
+                    from _pytest._io.saferepr import saferepr
+
+                    msg = "In {}: ids must be list of string/float/int/bool, found: {} (type: {!r}) at index {}"
+                    fail(
+                        msg.format(func_name, saferepr(id_value), type(id_value), idx),
+                        pytrace=False,
+                    )
+        return new_ids
 
     def _resolve_arg_value_types(self, argnames, indirect):
         """Resolves if each parametrized argument must be considered a parameter to a fixture or a "funcarg"
