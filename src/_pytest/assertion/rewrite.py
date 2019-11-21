@@ -1051,13 +1051,9 @@ def try_makedirs(cache_dir) -> bool:
 
 def get_cache_dir(file_path: Path, prefix: Path) -> Path:
     """Returns the cache directory to write .pyc files for the given .py file path"""
-    if prefix:
-        # given:
-        #   prefix = '/tmp/pycs'
-        #   path = '/home/user/proj/test_app.py'
-        # we want:
-        #   '/tmp/pycs/home/user/proj'
-        return prefix / Path(*file_path.parts[1:-1])
-    else:
-        # classic pycache directory
-        return file_path.parent / "__pycache__"
+    # given:
+    #   prefix = '/tmp/pycs'
+    #   path = '/home/user/proj/test_app.py'
+    # we want:
+    #   '/tmp/pycs/home/user/proj'
+    return prefix / Path(*file_path.parts[1:-1])

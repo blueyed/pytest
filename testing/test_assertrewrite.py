@@ -1648,7 +1648,11 @@ class TestPyCacheDir:
         assert test_foo_pyc.is_file()
 
         # normal file: not touched by pytest, normal cache tag
+        if sys.version_info >= (3, 8) and sys.pycache_prefix:
+            prefix = sys.pycache_prefix
+        else:
+            prefix = bar_init.parent / "__pycache__"
         bar_init_pyc = get_cache_dir(
-            bar_init, None
+            bar_init, prefix
         ) / "__init__.{cache_tag}.pyc".format(cache_tag=sys.implementation.cache_tag)
         assert bar_init_pyc.is_file()
