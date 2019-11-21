@@ -779,7 +779,7 @@ def test_spawn_interface(method, testdir, monkeypatch):
         getattr(testdir, method)(["cmd"], env={})
 
 
-def test_spawn_calls(testdir, monkeypatch):
+def test_spawn_calls(testdir, monkeypatch, capsys):
     calls = []
 
     def check_calls(*args, **kwargs):
@@ -803,6 +803,13 @@ def test_spawn_calls(testdir, monkeypatch):
     expected_env = os.environ.copy()
     expected_env.update(testdir._get_env_run_update())
     assert calls[0][1] == {"timeout": 5.0, "env": expected_env}
+
+    out, err = capsys.readouterr()
+    assert out == (
+        "=== running (spawn): cmd arg1 'arg2 with spaces'\n"
+        "                 in: {}\n".format(testdir.tmpdir)
+    )
+    assert err == ""
 
     calls.clear()
     testdir.spawn("cmd", "arg1", "arg2 with spaces", env={})
