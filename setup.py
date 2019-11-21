@@ -24,7 +24,7 @@ def main():
     setup(
         use_scm_version={
             "write_to": "src/_pytest/_version.py",
-            "git_describe_command": "git describe --dirty --tags --long --match *.* --first-parent",
+            "git_describe_command": "git describe --dirty --tags --long --match 4.6.*",
         },
         setup_requires=["setuptools-scm", "setuptools>=40.0"],
         package_dir={"": "src"},
