@@ -7,6 +7,8 @@ import attr
 import pytest
 from _pytest import fixtures
 from _pytest import python
+from _pytest.outcomes import fail
+from _pytest.python import _idval
 
 
 class TestMetafunc:
@@ -58,6 +60,39 @@ class TestMetafunc:
         metafunc.parametrize("y", [1, 2])
         pytest.raises(ValueError, lambda: metafunc.parametrize("y", [5, 6]))
         pytest.raises(ValueError, lambda: metafunc.parametrize("y", [5, 6]))
+
+        with pytest.raises(
+            TypeError, match="^ids must be a callable, sequence or generator$"
+        ):
+            metafunc.parametrize("y", [5, 6], ids=42)
+
+    def test_parametrize_error_iterator(self):
+        def func(x):
+            raise NotImplementedError()
+
+        class Exc(Exception):
+            def __repr__(self):
+                return "Exc(from_gen)"
+
+        def gen():
+            yield 0
+            yield None
+            yield Exc()
+
+        metafunc = self.Metafunc(func)
+        metafunc.parametrize("x", [1, 2], ids=gen())
+        assert [(x.funcargs, x.id) for x in metafunc._calls] == [
+            ({"x": 1}, "0"),
+            ({"x": 2}, "2"),
+        ]
+        with pytest.raises(
+            fail.Exception,
+            match=(
+                r"In func: ids must be list of string/float/int/bool, found:"
+                r" Exc\(from_gen\) \(type: <class .*Exc'>\) at index 2"
+            ),
+        ):
+            metafunc.parametrize("x", [1, 2, 3], ids=gen())
 
     def test_parametrize_bad_scope(self, testdir):
         def func(x):
@@ -165,6 +200,26 @@ class TestMetafunc:
                 ("x", "y"), [("abc", "def"), ("ghi", "jkl")], ids=["one"]
             )
 
+    def test_parametrize_ids_iterator_without_mark(self):
+        import itertools
+
+        def func(x, y):
+            pass
+
+        it = itertools.count()
+
+        metafunc = self.Metafunc(func)
+        metafunc.parametrize("x", [1, 2], ids=it)
+        metafunc.parametrize("y", [3, 4], ids=it)
+        ids = [x.id for x in metafunc._calls]
+        assert ids == ["0-2", "0-3", "1-2", "1-3"]
+
+        metafunc = self.Metafunc(func)
+        metafunc.parametrize("x", [1, 2], ids=it)
+        metafunc.parametrize("y", [3, 4], ids=it)
+        ids = [x.id for x in metafunc._calls]
+        assert ids == ["4-6", "4-7", "5-6", "5-7"]
+
     def test_parametrize_empty_list(self):
         """#510"""
 
@@ -208,8 +263,6 @@ class TestMetafunc:
         escapes if they're not.
 
         """
-        from _pytest.python import _idval
-
         values = [
             ("", ""),
             ("ascii", "ascii"),
@@ -229,7 +282,6 @@ class TestMetafunc:
         disable_test_id_escaping_and_forfeit_all_rights_to_community_support
         option. (#5294)
         """
-        from _pytest.python import _idval
 
         class MockConfig:
             def __init__(self, config):
@@ -261,8 +313,6 @@ class TestMetafunc:
         "binary escape", where any byte < 127 is escaped into its hex form.
         - python3: bytes objects are always escaped using "binary escape".
         """
-        from _pytest.python import _idval
-
         values = [
             (b"", ""),
             (b"\xc3\xb4\xff\xe4", "\\xc3\\xb4\\xff\\xe4"),
@@ -276,7 +326,6 @@ class TestMetafunc:
         """unittest for the expected behavior to obtain ids for parametrized
         values that are classes or functions: their __name__.
         """
-        from _pytest.python import _idval
 
         class TestClass:
             pass
@@ -521,9 +570,22 @@ class TestMetafunc:
             @pytest.mark.parametrize("arg", ({1: 2}, {3, 4}), ids=ids)
             def test(arg):
                 assert arg
+
+            @pytest.mark.parametrize("arg", (1, 2.0, True), ids=ids)
+            def test_int(arg):
+                assert arg
             """
         )
-        assert testdir.runpytest().ret == 0
+        result = testdir.runpytest("-vv", "-s")
+        result.stdout.fnmatch_lines(
+            [
+                "test_parametrize_ids_returns_non_string.py::test[arg0] PASSED",
+                "test_parametrize_ids_returns_non_string.py::test[arg1] PASSED",
+                "test_parametrize_ids_returns_non_string.py::test_int[1] PASSED",
+                "test_parametrize_ids_returns_non_string.py::test_int[2.0] PASSED",
+                "test_parametrize_ids_returns_non_string.py::test_int[True] PASSED",
+            ]
+        )
 
     def test_idmaker_with_ids(self):
         from _pytest.python import idmaker
@@ -1173,12 +1235,12 @@ class TestMetafuncFunctional:
         result.stdout.fnmatch_lines(["* 1 skipped *"])
 
     def test_parametrized_ids_invalid_type(self, testdir):
-        """Tests parametrized with ids as non-strings (#1857)."""
+        """Test error with non-strings/non-ints, without generator (#1857)."""
         testdir.makepyfile(
             """
             import pytest
 
-            @pytest.mark.parametrize("x, expected", [(10, 20), (40, 80)], ids=(None, 2))
+            @pytest.mark.parametrize("x, expected", [(1, 2), (3, 4), (5, 6)], ids=(None, 2, type))
             def test_ids_numbers(x,expected):
                 assert x * 2 == expected
         """
@@ -1186,7 +1248,8 @@ class TestMetafuncFunctional:
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(
             [
-                "*In test_ids_numbers: ids must be list of strings, found: 2 (type: *'int'>)*"
+                "In test_ids_numbers: ids must be list of string/float/int/bool,"
+                " found: <class 'type'> (type: <class 'type'>) at index 2"
             ]
         )
 
@@ -1803,3 +1866,39 @@ class TestMarkersWithParametrization:
         )
         result = testdir.runpytest()
         result.assert_outcomes(passed=1)
+
+    def test_parametrize_iterator(self, testdir):
+        testdir.makepyfile(
+            """
+            import itertools
+            import pytest
+
+            id_parametrize = pytest.mark.parametrize(
+                ids=("param%d" % i for i in itertools.count())
+            )
+
+            @id_parametrize('y', ['a', 'b'])
+            def test1(y):
+                pass
+
+            @id_parametrize('y', ['a', 'b'])
+            def test2(y):
+                pass
+
+            @pytest.mark.parametrize("a, b", [(1, 2), (3, 4)], ids=itertools.count())
+            def test_converted_to_str(a, b):
+                pass
+        """
+        )
+        result = testdir.runpytest("-vv", "-s")
+        result.stdout.fnmatch_lines(
+            [
+                "test_parametrize_iterator.py::test1[param0] PASSED",
+                "test_parametrize_iterator.py::test1[param1] PASSED",
+                "test_parametrize_iterator.py::test2[param0] PASSED",
+                "test_parametrize_iterator.py::test2[param1] PASSED",
+                "test_parametrize_iterator.py::test_converted_to_str[0] PASSED",
+                "test_parametrize_iterator.py::test_converted_to_str[1] PASSED",
+                "*= 6 passed in *",
+            ]
+        )
