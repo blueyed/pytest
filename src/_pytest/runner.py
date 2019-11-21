@@ -41,7 +41,6 @@ def pytest_addoption(parser):
 
 def pytest_terminal_summary(terminalreporter):
     durations = terminalreporter.config.option.durations
-    verbose = terminalreporter.config.getvalue("verbose")
     if durations is None:
         return
     tr = terminalreporter
@@ -60,6 +59,7 @@ def pytest_terminal_summary(terminalreporter):
         tr.write_sep("=", "slowest %s test durations" % durations)
         dlist = dlist[:durations]
 
+    verbose = terminalreporter.config.getvalue("verbose")
     for rep in dlist:
         if verbose < 2 and rep.duration < 0.005:
             tr.write_line("")
