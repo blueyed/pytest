@@ -134,7 +134,7 @@ def pytest_generate_tests(metafunc):
             msg = "{0} has '{1}' mark, spelling should be 'parametrize'"
             fail(msg.format(metafunc.function.__name__, mark_name), pytrace=False)
     for marker in metafunc.definition.iter_markers(name="parametrize"):
-        metafunc.parametrize(*marker.args, **marker.kwargs, _param_mark=marker)
+        metafunc.parametrize(*marker.args, _param_mark=marker, **marker.kwargs)
 
 
 def pytest_configure(config):

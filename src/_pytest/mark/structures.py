@@ -172,7 +172,7 @@ class Mark(object):
     def _has_param_ids(self):
         return "ids" in self.kwargs or len(self.args) >= 4
 
-    def combined_with(self, other: "Mark") -> "Mark":
+    def combined_with(self, other):
         """
         :param other: the mark to combine with
         :type other: Mark
