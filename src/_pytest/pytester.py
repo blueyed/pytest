@@ -517,7 +517,7 @@ def _display_running(header, *args):
             return arg
 
     cmd = _shorten_path(try_rel(Path(args[0])))
-    args_str = " ".join([shlex.quote(str(x)) for x in (cmd,) + args])
+    args_str = " ".join([shlex.quote(str(x)) for x in (cmd,) + args[1:]])
     indent = " " * (len(header) - 2)
     print("{}: {}\n{}in: {}".format(header, args_str, indent, cwd))
 
