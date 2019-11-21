@@ -1234,7 +1234,7 @@ class TestMetafuncFunctional(object):
         result.stdout.fnmatch_lines(
             [
                 "In test_ids_numbers: ids must be list of string/float/int/bool,"
-                " found: <class 'type'> (type: <class 'type'>) at index 2"
+                " found: <* 'type'> (type: <* 'type'>) at index 2"
             ]
         )
 
