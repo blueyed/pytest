@@ -19,19 +19,20 @@ def test_parse_fname_lineno(given, expected):
     assert Session._parse_fname_lineno(given) == expected
 
 
-@pytest.mark.parametrize("returncode", (None, 42))
-def test_wrap_session_notify_exception(returncode, testdir):
+@pytest.mark.parametrize("ret_exc", ((None, ValueError), (42, SystemExit)))
+def test_wrap_session_notify_exception(ret_exc, testdir):
+    returncode, exc = ret_exc
     c1 = testdir.makeconftest(
         """
         import pytest
 
         def pytest_sessionstart():
-            raise ValueError("boom")
+            raise {exc}("boom")
 
         def pytest_internalerror(excrepr, excinfo):
             pytest.exit("exiting after %s..." % excinfo.typename, returncode={returncode!r})
     """.format(
-            returncode=returncode
+            returncode=returncode, exc=exc.__name__
         )
     )
     result = testdir.runpytest()
@@ -45,4 +46,4 @@ def test_wrap_session_notify_exception(returncode, testdir):
         "INTERNALERROR>     raise ValueError",
         "INTERNALERROR> ValueError: boom",
     ]
-    assert result.stderr.lines == ["Exit: exiting after ValueError..."]
+    assert result.stderr.lines == ["Exit: exiting after {}...".format(exc.__name__)]
