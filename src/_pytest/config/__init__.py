@@ -881,13 +881,13 @@ class Config:
         return args
 
     def _preparse(self, args: List[str], addopts: bool = True) -> None:
-        self._implicit_args = []
+        self._implicit_args = []  # type: List[Tuple[str, List[str]]]
         if addopts:
             env_addopts = os.environ.get("PYTEST_ADDOPTS", "")
             if len(env_addopts):
-                env_addopts = shlex.split(env_addopts)
-                args[:] = self._validate_args(env_addopts, "via PYTEST_ADDOPTS") + args
-                self._implicit_args.append(("PYTEST_ADDOPTS", env_addopts))
+                env_addopts_ = shlex.split(env_addopts)
+                args[:] = self._validate_args(env_addopts_, "via PYTEST_ADDOPTS") + args
+                self._implicit_args.append(("PYTEST_ADDOPTS", env_addopts_))
         self._initini(args)
         if addopts:
             ini_addopts = self.getini("addopts")
