@@ -387,4 +387,4 @@ def _shorten_path(path: Path, relative_to: Path = None) -> Path:
     except ValueError:
         return path
     else:
-        return "~" / rel
+        return Path("~") / rel
