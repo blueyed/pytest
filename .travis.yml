@@ -23,7 +23,7 @@ jobs:
     # - verbose=0
     # - test_sys_breakpoint_interception (via pexpect).
     - stage: baseline
-      env: TOXENV=py38-xdist
+      env: TOXENV=py38-parallel
       python: '3.8'
 
     - stage: tests
