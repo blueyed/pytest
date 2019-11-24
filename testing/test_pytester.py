@@ -571,20 +571,9 @@ def test_pytester_addopts_before_testdir(request, monkeypatch):
     testdir = request.getfixturevalue("testdir")
     assert "PYTEST_ADDOPTS" not in os.environ
     testdir.finalize()
+    assert os.environ.get("PYTEST_ADDOPTS") == "--orig-unused"
+    monkeypatch.undo()
     assert os.environ.get("PYTEST_ADDOPTS") == orig
-
-
-@pytest.mark.parametrize("method", ("setenv", "delenv"))
-def test_testdir_respects_monkeypatch(method, testdir, monkeypatch):
-    assert monkeypatch is testdir.monkeypatch
-    assert testdir._env_run_update["COLUMNS"] == "80"
-    assert testdir._get_env_run_update()["COLUMNS"] == "80"
-    if method == "setenv":
-        monkeypatch.setenv("COLUMNS", "12")
-    else:
-        assert method == "delenv"
-        monkeypatch.delenv("COLUMNS", raising=False)
-    assert "COLUMNS" not in testdir._get_env_run_update()
 
 
 def test_run_stdin(testdir):
@@ -745,14 +734,10 @@ def test_popen_default_stdin_stderr_and_stdin_None(testdir):
 
 
 def test_spawn_uses_tmphome(testdir):
-    import os
-
     tmphome = str(testdir.tmpdir)
+    assert os.environ.get("HOME") == tmphome
 
-    # Does use HOME only during run.
-    assert os.environ.get("HOME") != tmphome
-
-    testdir._env_run_update["CUSTOMENV"] = "42"
+    testdir.monkeypatch.setenv("CUSTOMENV", "42")
 
     p1 = testdir.makepyfile(
         """
@@ -800,9 +785,7 @@ def test_spawn_calls(testdir, monkeypatch, capsys):
     testdir.spawn("cmd arg1 'arg2 with spaces'")
     assert len(calls) == 1
     assert calls[0][0] == ("cmd", ["arg1", "arg2 with spaces"])
-    expected_env = os.environ.copy()
-    expected_env.update(testdir._get_env_run_update())
-    assert calls[0][1] == {"timeout": 5.0, "env": expected_env}
+    assert calls[0][1] == {"timeout": 5.0}
 
     out, err = capsys.readouterr()
     assert out == (

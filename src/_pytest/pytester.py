@@ -559,7 +559,7 @@ class Testdir:
         self.request.addfinalizer(self.finalize)
         self._method = self.request.config.getoption("--runpytest")
 
-        mp = self.monkeypatch = self.request.getfixturevalue("monkeypatch")
+        mp = self.monkeypatch = MonkeyPatch()
         mp.setenv("PYTEST_DEBUG_TEMPROOT", str(self.test_tmproot))
         # Ensure no unexpected caching via tox.
         mp.delenv("TOX_ENV_DIR", raising=False)
@@ -568,12 +568,11 @@ class Testdir:
 
         # Environment (updates) for inner runs.
         tmphome = str(self.tmpdir)
-        self._env_run_update = {
-            "HOME": tmphome,
-            "USERPROFILE": tmphome,
-            "PY_COLORS": "0",
-            "COLUMNS": "80",
-        }
+        mp.setenv("HOME", tmphome)
+        mp.setenv("USERPROFILE", tmphome)
+        mp.setenv("PY_COLORS", "0")
+        mp.setenv("COLUMNS", "80")
+        mp.setattr("_pytest.terminal._cached_terminal_width", 80)
 
     def __repr__(self):
         return "<Testdir {!r}>".format(self.tmpdir)
@@ -769,7 +768,7 @@ class Testdir:
         :param arg: a :py:class:`py.path.local` instance of the file
 
         """
-        session = Session(config)
+        session = Session.from_config(config)
         assert "::" not in str(arg)
         p = py.path.local(arg)
         config.hook.pytest_sessionstart(session=session)
@@ -787,7 +786,7 @@ class Testdir:
 
         """
         config = self.parseconfigure(path)
-        session = Session(config)
+        session = Session.from_config(config)
         x = session.fspath.bestrelpath(path)
         config.hook.pytest_sessionstart(session=session)
         res = session.perform_collect([x], genitems=False)[0]
@@ -879,14 +878,6 @@ class Testdir:
         plugins = list(plugins)
         finalizers = []
         try:
-            # Do not load user config (during runs only).
-            mp_run = MonkeyPatch()
-            for k, v in self._get_env_run_update().items():
-                mp_run.setenv(k, v)
-            tw_width = os.environ.get("COLUMNS", 80)  # might come via mp already.
-            mp_run.setattr("_pytest.terminal._cached_terminal_width", int(tw_width))
-            finalizers.append(mp_run.undo)
-
             # Any sys.module or sys.path changes done while running pytest
             # inline should be reverted after the test run completes to avoid
             # clashing with later inline tests run within the same pytest test,
@@ -1145,7 +1136,6 @@ class Testdir:
         env["PYTHONPATH"] = os.pathsep.join(
             filter(None, [os.getcwd(), env.get("PYTHONPATH", "")])
         )
-        env.update(self._get_env_run_update())
         kw["env"] = env
 
         if stdin is Testdir.CLOSE_STDIN:
@@ -1335,19 +1325,9 @@ class Testdir:
         # Handle old expect_timeout kwarg.
         kwargs.setdefault("timeout", kwargs.pop("expect_timeout", 5.0))
 
-        # Do not load user config.
-        if "env" not in kwargs:
-            env = os.environ.copy()
-            env.update(self._get_env_run_update())
-            kwargs["env"] = env
-
         _display_running("=== running (spawn)", *args)
         child = pexpect.spawn(args[0], list(args[1:]), **kwargs)
         return child
-
-    def _get_env_run_update(self):
-        outer = {item[1] for item in self.monkeypatch._setitem if item[0] is os.environ}
-        return {k: v for k, v in self._env_run_update.items() if k not in outer}
 
 
 def getdecoded(out):
