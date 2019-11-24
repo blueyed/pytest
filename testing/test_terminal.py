@@ -1961,7 +1961,7 @@ def test_getdimensions(monkeypatch):
 
     # Simulate SIGWINCH not being available.
     calls = []
-    _pytest.terminal._cached_terminal_width_sighandler = False
+    monkeypatch.setattr("_pytest.terminal._cached_terminal_width_sighandler", False)
     assert get_terminal_width() == 80
     assert calls == [0, 2, 1]
 
