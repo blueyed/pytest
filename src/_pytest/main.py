@@ -187,7 +187,7 @@ def pytest_addoption(parser):
 
 def wrap_session(config, doit):
     """Skeleton command line program"""
-    session = Session(config)
+    session = Session.from_config(config)
     session.exitstatus = ExitCode.OK
     initstate = 0
     try:
@@ -215,11 +215,17 @@ def wrap_session(config, doit):
             config.hook.pytest_keyboard_interrupt(excinfo=excinfo)
             session.exitstatus = exitstatus
         except:  # noqa
-            excinfo = _pytest._code.ExceptionInfo.from_current()
-            config.notify_exception(excinfo, config.option)
             session.exitstatus = ExitCode.INTERNAL_ERROR
-            if excinfo.errisinstance(SystemExit):
-                sys.stderr.write("mainloop: caught unexpected SystemExit!\n")
+            excinfo = _pytest._code.ExceptionInfo.from_current()
+            try:
+                config.notify_exception(excinfo, config.option)
+            except exit.Exception as exc:
+                if exc.returncode is not None:
+                    session.exitstatus = exc.returncode
+                sys.stderr.write("{}: {}\n".format(type(exc).__name__, exc))
+            else:
+                if excinfo.errisinstance(SystemExit):
+                    sys.stderr.write("mainloop: caught unexpected SystemExit!\n")
 
     finally:
         excinfo = None  # Explicitly break reference cycle.
@@ -399,6 +405,10 @@ class Session(nodes.FSCollector):
         self.config.pluginmanager.register(self, name="session")
 
         self._deselected = []
+
+    @classmethod
+    def from_config(cls, config):
+        return cls._create(config)
 
     def __repr__(self):
         return "<%s %s exitstatus=%r testsfailed=%d testscollected=%d>" % (

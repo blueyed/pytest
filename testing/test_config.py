@@ -1236,7 +1236,7 @@ def test_help_formatter_uses_py_get_terminal_width(testdir, monkeypatch):
     formatter = DropShorterLongHelpFormatter("prog")
     assert formatter._width == 90
 
-    monkeypatch.setattr("_pytest.config.argparsing.get_terminal_width", lambda: 160)
+    monkeypatch.setattr(_pytest.terminal, "_cached_terminal_width", 160)
     formatter = DropShorterLongHelpFormatter("prog")
     assert formatter._width == 160
 
