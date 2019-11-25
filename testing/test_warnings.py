@@ -767,10 +767,8 @@ class TestStackLevel:
         # with stacklevel=3 the warning originates from one stacklevel above
         # _issue_warning_captured in cacheprovider.Cache.set and is thrown
         # when there are errors during cache folder creation
-
-        # set is called twice (in module stepwise and in cacheprovider) so emits
-        # two warnings when there are errors during cache folder creation. (is this intentional?)
-        assert len(capwarn.captured) == 2
+        # NOTE: cache is set readonly after first failure/warning.
+        assert len(capwarn.captured) == 1
         warning, location = capwarn.captured.pop()
         file, lineno, func = location
 
