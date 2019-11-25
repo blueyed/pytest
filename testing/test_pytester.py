@@ -576,6 +576,30 @@ def test_pytester_addopts_before_testdir(request, monkeypatch):
     assert os.environ.get("PYTEST_ADDOPTS") == orig
 
 
+def test_testdir_terminal_width(request, monkeypatch):
+    """testdir does not set COLUMNS, but _cached_terminal_width."""
+    from _pytest.terminal import get_terminal_width
+
+    orig_width = get_terminal_width()
+    orig_env = os.environ.get("COLUMNS", None)
+
+    monkeypatch.setattr("_pytest.terminal._cached_terminal_width", None)
+    monkeypatch.setenv("COLUMNS", "1234")
+    assert get_terminal_width() == 1234
+    monkeypatch.delenv("COLUMNS")
+
+    testdir = request.getfixturevalue("testdir")
+    assert get_terminal_width() == 80
+    assert "COLUMNS" not in os.environ
+    testdir.finalize()
+    assert get_terminal_width() == 1234
+    assert "COLUMNS" not in os.environ
+
+    monkeypatch.undo()
+    assert os.environ.get("COLUMNS") == orig_env
+    assert get_terminal_width() == orig_width
+
+
 def test_run_stdin(testdir):
     with pytest.raises(testdir.TimeoutExpired):
         testdir.run(

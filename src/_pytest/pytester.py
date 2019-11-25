@@ -571,7 +571,6 @@ class Testdir:
         mp.setenv("HOME", tmphome)
         mp.setenv("USERPROFILE", tmphome)
         mp.setenv("PY_COLORS", "0")
-        mp.setenv("COLUMNS", "80")
         mp.setattr("_pytest.terminal._cached_terminal_width", 80)
 
     def __repr__(self):
