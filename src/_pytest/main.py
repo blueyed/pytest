@@ -7,6 +7,8 @@ import os
 import re
 import sys
 from typing import Dict
+from typing import Optional
+from typing import Tuple
 
 import attr
 import py
@@ -20,7 +22,7 @@ from _pytest.outcomes import exit
 from _pytest.runner import collect_one_node
 from _pytest.runner import SetupState
 
-RE_FNAME_LINENO = re.compile(r"^([^:].[^:]*):(\d+):?$")
+RE_FNAME_LINENO = re.compile(r"^([^:].[^:]*):(\d+)?(-?)(\d+)?:?$")
 
 
 class ExitCode(enum.IntEnum):
@@ -665,14 +667,25 @@ class Session(nodes.FSCollector):
             return spec.origin
 
     @staticmethod
-    def _parse_fname_lineno(arg):
+    def _parse_fname_lineno(
+        arg: str,
+    ) -> Tuple[str, Tuple[Optional[int], Optional[int]]]:
         fname = arg
-        lineno = None
+        start, end = None, None
         if ":" in arg:
             m = RE_FNAME_LINENO.match(arg)
             if m:
-                fname, lineno = m.group(1), int(m.group(2))
-        return fname, lineno
+                fname = m.group(1)
+                is_range = m.group(3)
+                start_ = m.group(2)
+                if start_:
+                    start = int(start_)
+                end_ = m.group(4)
+                if end_:
+                    end = int(end_)
+                elif not is_range:
+                    end = start
+        return fname, (start, end)
 
     def _parsearg(self, arg):
         """ return (fspath, names) tuple after checking the file exists. """
@@ -756,13 +769,16 @@ class Session(nodes.FSCollector):
                         collect_lnum = node.fspath.lineno
                     except AttributeError:
                         collect_lnum = None
-                    if collect_lnum:
+
+                    if collect_lnum and (collect_lnum[0] or collect_lnum[1]):
                         import inspect
+
+                        start, end = collect_lnum
 
                         for item in self.genitems(subnode):
                             lines, lnum = inspect.getsourcelines(item.obj)
-                            if collect_lnum >= lnum and collect_lnum <= lnum + len(
-                                lines
+                            if (end is None or end >= lnum) and (
+                                start is None or start <= lnum + len(lines)
                             ):
                                 yield item
                             else:

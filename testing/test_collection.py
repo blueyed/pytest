@@ -1379,6 +1379,52 @@ def test_collect_by_file_and_lineno(testdir):
     )
     assert result.ret == 0
 
+    # Range: from
+    result = testdir.runpytest("--collect-only", "{}:6-".format(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "collected 3 items / 1 deselected / 2 selected",
+            "<Module test_collect_by_file_and_lineno.py>",
+            "  <Function test_two[sel1]>",
+            "  <Function test_two[desel]>",
+            "*= 1 deselected in *",
+        ]
+    )
+    assert result.ret == 0
+
+    # Range: until
+    result = testdir.runpytest("--collect-only", "{}:-99".format(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "collected 3 items",
+            "<Module test_collect_by_file_and_lineno.py>",
+            "  <Function test_one>",
+            "  <Function test_two[sel1]>",
+            "  <Function test_two[desel]>",
+            "*= no tests ran in *",
+        ]
+    )
+    assert result.ret == 0
+
+    # Range: from-until
+    result = testdir.runpytest("--collect-only", "{}:1-3".format(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "collected 3 items / 2 deselected / 1 selected",
+            "<Module test_collect_by_file_and_lineno.py>",
+            "  <Function test_one>",
+            "*= 2 deselected in *",
+        ]
+    )
+    assert result.ret == 0
+
+    # Range: invalid / non-matching
+    result = testdir.runpytest("--collect-only", "{}:3-1".format(p1))
+    result.stdout.fnmatch_lines(
+        ["collected 3 items / 3 deselected", "*= 3 deselected in *"]
+    )
+    assert result.ret == ExitCode.NO_TESTS_COLLECTED
+
 
 def test_does_not_eagerly_collect_packages(testdir):
     testdir.makepyfile("def test(): pass")
