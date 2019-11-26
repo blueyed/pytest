@@ -1033,6 +1033,22 @@ class TestGenericReporting:
                 ]
             )
 
+    def test_maxfailures_veryquiet(self, testdir):
+        testdir.makepyfile(
+            """
+            def test_1(): assert 0
+            def test_2(): assert 0
+        """
+        )
+        result = testdir.runpytest("-x", "-qq")
+        result.stdout.fnmatch_lines(
+            [
+                "*def test_1():*",
+                "test_maxfailures_veryquiet.py:1: AssertionError",
+                "!! stopping after 1 failure !!",
+            ]
+        )
+
     def test_maxfailures_with_interrupted(self, testdir):
         testdir.makepyfile(
             """
