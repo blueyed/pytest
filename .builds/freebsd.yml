@@ -16,8 +16,8 @@ environment:
 tasks:
   - install: |
       cd pytest
-      tox --notest
+      tox --notest -vv
 
   - test: |
       cd pytest
-      tox -vv
+      env COLUMNS=120 tox -v
