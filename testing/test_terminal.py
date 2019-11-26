@@ -1876,6 +1876,40 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄...")
 
 
+@pytest.mark.parametrize("arg", (None, "--tb=native", "--full-trace"))
+def test_failed_pos(arg, testdir):
+    p1 = testdir.makepyfile("def test(): assert 0")
+    args = ("-ra", str(p1))
+    if arg:
+        args += (arg,)
+    result = testdir.runpytest(*args)
+    if arg == "--tb=native":
+        result.stdout.fnmatch_lines(
+            [
+                "*= FAILURES =*",
+                "*_ test _*",
+                "    def test(): assert 0",
+                "AssertionError: assert 0",
+                "*= short test summary info =*",
+                "FAILED test_failed_pos.py:1::test - assert 0",
+                "*= 1 failed in *",
+            ]
+        )
+    else:
+        result.stdout.fnmatch_lines(
+            [
+                "*= FAILURES =*",
+                "*_ test _*",
+                ">   def test(): assert 0",
+                "E   assert 0",
+                "test_failed_pos.py:1: AssertionError",
+                "*= short test summary info =*",
+                "FAILED test_failed_pos.py:1::test - assert 0",
+                "*= 1 failed in *",
+            ]
+        )
+
+
 @pytest.mark.parametrize(
     "seconds, expected",
     [

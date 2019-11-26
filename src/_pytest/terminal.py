@@ -1157,7 +1157,11 @@ def _get_pos(config, rep):
         try:
             testloc = rep.longrepr.reprtraceback.reprentries[0].reprfileloc
         except AttributeError:
-            return nodeid
+            # Handle --tb=native.
+            try:
+                testloc = rep.longrepr.reprcrash
+            except AttributeError:
+                return nodeid
 
     assert isinstance(testloc.path, str), testloc.path
     testloc_path = Path(testloc.path)
