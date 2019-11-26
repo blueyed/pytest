@@ -1,3 +1,6 @@
+from typing import Optional
+from typing import Tuple
+
 import pytest
 from _pytest.main import ExitCode
 from _pytest.main import Session
@@ -6,16 +9,25 @@ from _pytest.main import Session
 @pytest.mark.parametrize(
     "given,expected",
     {
-        "empty": ("", ("", None)),
-        "no_fname": (":12", (":12", None)),
-        "base": ("fname:12", ("fname", 12)),
-        "invalid_lnum": ("fname:12a", ("fname:12a", None)),
-        "optional_colon": ("fname:12:", ("fname", 12)),
-        "windows": (r"c:\foo", (r"c:\foo", None)),
-        "windows_lnum": (r"c:\foo:12", (r"c:\foo", 12)),
+        "empty": ("", ("", (None, None))),
+        "no_fname": (":12", (":12", (None, None))),
+        "base": ("fname:12", ("fname", (12, 12))),
+        "invalid_lnum": ("fname:12a", ("fname:12a", (None, None))),
+        "optional_colon": ("fname:12:", ("fname", (12, 12))),
+        "windows": (r"c:\foo", (r"c:\foo", (None, None))),
+        "windows_lnum": (r"c:\foo:12", (r"c:\foo", (12, 12))),
+        # Ranges.
+        "range": ("fname:1-2", ("fname", (1, 2))),
+        "range-nostart": ("fname:-2", ("fname", (None, 2))),
+        "range-noend": ("fname:1-", ("fname", (1, None))),
+        "range-nostart-noend": ("fname:-", ("fname", (None, None))),
+        "range-optional-colon": ("fname:1-2:", ("fname", (1, 2))),
+        "range-invalid": ("fname:2-1:", ("fname", (2, 1))),
     },
 )
-def test_parse_fname_lineno(given, expected):
+def test_parse_fname_lineno(
+    given: str, expected: Tuple[str, Tuple[Optional[int], Optional[int]]]
+):
     assert Session._parse_fname_lineno(given) == expected
 
 
