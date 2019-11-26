@@ -303,12 +303,16 @@ class Node(metaclass=NodeMeta):
     def _repr_failure_py(
         self, excinfo: ExceptionInfo[Union[Failed, FixtureLookupError]], style=None
     ) -> Union[str, ReprExceptionInfo, ExceptionChainRepr, FixtureLookupErrorRepr]:
-        if isinstance(excinfo.value, Failed):
-            if not excinfo.value.pytrace:
-                return str(excinfo.value)
+        fulltrace = self.config.getoption("fulltrace", False)
+        if (
+            not fulltrace
+            and isinstance(excinfo.value, Failed)
+            and not excinfo.value.pytrace
+        ):
+            return str(excinfo.value)
         if isinstance(excinfo.value, FixtureLookupError):
             return excinfo.value.formatrepr()
-        if self.config.getoption("fulltrace", False):
+        if fulltrace:
             style = "long"
         else:
             self._prunetraceback(excinfo)
