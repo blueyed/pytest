@@ -1145,13 +1145,23 @@ def _get_pos(config, rep):
         return nodeid
 
     # Append location (line number).
-    # This uses the first traceback entry for the location in the test itself
-    # (rather than reprcrash, which might be less relevant for going to
-    # directly, e.g. pexpect failures in pytest itself).
-    try:
-        testloc = rep.longrepr.reprtraceback.reprentries[0].reprfileloc
-    except AttributeError:
-        return nodeid
+    if config.option.fulltrace:
+        try:
+            testloc = rep.longrepr.reprcrash
+        except AttributeError:
+            return nodeid
+    else:
+        # This uses the first traceback entry for the location in the test itself
+        # (rather than reprcrash, which might be less relevant for going to
+        # directly, e.g. pexpect failures in pytest itself).
+        try:
+            testloc = rep.longrepr.reprtraceback.reprentries[0].reprfileloc
+        except AttributeError:
+            # Handle --tb=native.
+            try:
+                testloc = rep.longrepr.reprcrash
+            except AttributeError:
+                return nodeid
 
     assert isinstance(testloc.path, str), testloc.path
     testloc_path = Path(testloc.path)
