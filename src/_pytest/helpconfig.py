@@ -128,10 +128,8 @@ def showversion(config: Config) -> None:
             pytest.__version__, pytest.__file__
         )
     )
-    plugininfo = getpluginversioninfo(config)
-    if plugininfo:
-        for line in plugininfo:
-            sys.stderr.write(line + "\n")
+    for line in getpluginversioninfo(config):
+        sys.stderr.write(line + "\n")
 
 
 def pytest_cmdline_main(config: Config) -> Optional["Literal[0]"]:
@@ -237,10 +235,7 @@ def pytest_report_header(config: Config) -> List[str]:
         lines.append(
             "using: pytest-{} pylib-{}".format(pytest.__version__, py.__version__)
         )
-
-        verinfo = getpluginversioninfo(config)
-        if verinfo:
-            lines.extend(verinfo)
+        lines.extend(getpluginversioninfo(config))
 
     if config.option.traceconfig:
         lines.append("active plugins:")
