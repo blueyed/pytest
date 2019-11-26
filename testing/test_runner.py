@@ -632,6 +632,17 @@ def test_pytest_fail_notrace_runtest(testdir):
     result.stdout.fnmatch_lines(["world", "hello"])
     result.stdout.no_fnmatch_line("*def teardown_function*")
 
+    # But with --full-trace.
+    result = testdir.runpytest("--fulltrace")
+    result.stdout.fnmatch_lines(
+        [
+            "*def teardown_function*",
+            "E       Failed: world",
+            "E       Failed: hello",
+            "*= 1 failed, 1 error in *",
+        ]
+    )
+
 
 def test_pytest_fail_notrace_collection(testdir):
     """Test pytest.fail(..., pytrace=False) does not show tracebacks during collection."""
