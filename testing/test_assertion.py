@@ -1074,7 +1074,7 @@ class TestTruncateExplanation:
             ["E         ...Full output truncated (2 lines hidden), use '-vv' to show"]
         )
 
-        monkeypatch.setenv("CI", "true")
+        monkeypatch.setenv("CI", "True")
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(["* 6*"])
 

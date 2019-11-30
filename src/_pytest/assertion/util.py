@@ -462,4 +462,4 @@ def _notin_text(term: str, text: str, verbose: int = 0) -> List[str]:
 
 
 def _running_on_ci():
-    return os.environ.get("CI") == "true" or "BUILD_NUMBER" in os.environ
+    return os.environ.get("CI", "").lower() == "true" or "BUILD_NUMBER" in os.environ
