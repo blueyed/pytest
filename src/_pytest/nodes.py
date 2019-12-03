@@ -19,7 +19,6 @@ from _pytest.compat import cached_property
 from _pytest.compat import getfslineno
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
-from _pytest.deprecated import NODE_USE_FROM_PARENT
 from _pytest.fixtures import FixtureDef
 from _pytest.fixtures import FixtureLookupError
 from _pytest.fixtures import FixtureLookupErrorRepr
@@ -75,16 +74,7 @@ def ischildnode(baseid, nodeid):
     return node_parts[: len(base_parts)] == base_parts
 
 
-class NodeMeta(type):
-    def __call__(self, *k, **kw):
-        warnings.warn(NODE_USE_FROM_PARENT.format(name=self.__name__), stacklevel=2)
-        return super().__call__(*k, **kw)
-
-    def _create(self, *k, **kw):
-        return super().__call__(*k, **kw)
-
-
-class Node(metaclass=NodeMeta):
+class Node:
     """ base class for Collector and Item the test collection tree.
     Collector subclasses have children, Items are terminal nodes."""
 
@@ -143,10 +133,6 @@ class Node(metaclass=NodeMeta):
             self._nodeid = self.parent.nodeid
             if self.name != "()":
                 self._nodeid += "::" + self.name
-
-    @classmethod
-    def from_parent(cls, parent, *, name):
-        return cls._create(parent=parent, name=name)
 
     @property
     def ihook(self):
@@ -440,10 +426,6 @@ class FSCollector(Collector):
                 nodeid = nodeid.replace(os.sep, SEP)
 
         super().__init__(name, parent, config, session, nodeid=nodeid, fspath=fspath)
-
-    @classmethod
-    def from_parent(cls, parent, *, fspath):
-        return cls._create(parent=parent, fspath=fspath)
 
 
 class File(FSCollector):
