@@ -100,3 +100,12 @@ class TestArgComplete:
         fc = FilesCompleter()
         for x in "/usr/".split():
             assert not equal_with_bash(x, ffc, fc, out=sys.stdout)
+
+
+@pytest.mark.integration
+def test_integration(testdir):
+    child = testdir.spawn("bash", "--norc")
+    child.sendline('eval "$(register-python-argcomplete pytest)"')
+    child.send("pytest --qu\t")
+    child.expect_exact("iet")
+    child.sendeof()
