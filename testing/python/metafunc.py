@@ -24,11 +24,12 @@ class TestMetafunc:
 
         @attr.s
         class DefinitionMock(python.FunctionDefinition):
+            _pytest_skip_ctor_check = True
             obj = attr.ib()
 
         names = fixtures.getfuncargnames(func)
         fixtureinfo = FixtureInfo(names)
-        definition = DefinitionMock._create(func)
+        definition = DefinitionMock(func)
         return python.Metafunc(definition, fixtureinfo, config)
 
     def test_no_funcargs(self):

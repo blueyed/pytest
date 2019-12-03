@@ -1,3 +1,4 @@
+import inspect
 import os
 import warnings
 from functools import lru_cache
@@ -77,12 +78,27 @@ def ischildnode(baseid, nodeid):
 
 
 class NodeMeta(type):
-    def __call__(self, *k, **kw):
-        warnings.warn(NODE_USE_FROM_PARENT.format(name=self.__name__), stacklevel=2)
-        return super().__call__(*k, **kw)
+    def __call__(cls, *args, **kwargs):
+        from _pytest.main import Session  # noqa: F811
 
-    def _create(self, *k, **kw):
-        return super().__call__(*k, **kw)
+        sig = inspect.signature(cls.__init__)
+        bsig = sig.bind(cls, *args, **kwargs)
+
+        if cls is Session:
+            # from_config
+            assert isinstance(bsig.arguments["config"], Config), (args, kwargs)
+            assert len(bsig.arguments) == 2, bsig  # self, config
+        else:
+            # from_parent
+            # TODO: assert hierarchy?
+            if "parent" not in bsig.arguments:
+                # XXX: handle DefinitionMock from tests.  Could also go through
+                # _create instead (or get fixed?)?
+                if not getattr(cls, "_pytest_skip_ctor_check", False):
+                    warnings.warn(
+                        NODE_USE_FROM_PARENT.format(name=cls.__name__), stacklevel=2
+                    )
+        return super().__call__(*args, **kwargs)
 
 
 class Node(metaclass=NodeMeta):
@@ -144,10 +160,6 @@ class Node(metaclass=NodeMeta):
             self._nodeid = self.parent.nodeid
             if self.name != "()":
                 self._nodeid += "::" + self.name
-
-    @classmethod
-    def from_parent(cls, parent, *, name):
-        return cls._create(parent=parent, name=name)
 
     @property
     def ihook(self):
