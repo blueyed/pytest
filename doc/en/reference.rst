@@ -360,7 +360,7 @@ capfd
 
         def test_system_echo(capfd):
             os.system('echo "hello"')
-            captured = capsys.readouterr()
+            captured = capfd.readouterr()
             assert captured.out == "hello\n"
 
 
@@ -462,6 +462,8 @@ monkeypatch
 
 .. autoclass:: _pytest.monkeypatch.MonkeyPatch
     :members:
+
+.. _testdir:
 
 testdir
 ~~~~~~~

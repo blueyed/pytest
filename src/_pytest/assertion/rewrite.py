@@ -798,13 +798,6 @@ class AssertionRewriter(ast.NodeVisitor):
         self.push_format_context()
         # Rewrite assert into a bunch of statements.
         top_condition, explanation = self.visit(assert_.test)
-        # If in a test module, check if directly asserting None, in order to warn [Issue #3191]
-        if self.module_path is not None:
-            self.statements.append(
-                self.warn_about_none_ast(
-                    top_condition, module_path=self.module_path, lineno=assert_.lineno
-                )
-            )
 
         negation = ast.UnaryOp(ast.Not(), top_condition)
 
@@ -885,30 +878,6 @@ class AssertionRewriter(ast.NodeVisitor):
         for stmt in self.statements:
             set_location(stmt, assert_.lineno, assert_.col_offset)
         return self.statements
-
-    def warn_about_none_ast(self, node, module_path, lineno):
-        """
-        Returns an AST issuing a warning if the value of node is `None`.
-        This is used to warn the user when asserting a function that asserts
-        internally already.
-        See issue #3191 for more details.
-        """
-        val_is_none = ast.Compare(node, [ast.Is()], [ast.NameConstant(None)])
-        send_warning = ast.parse(
-            """\
-from _pytest.warning_types import PytestAssertRewriteWarning
-from warnings import warn_explicit
-warn_explicit(
-    PytestAssertRewriteWarning('asserting the value None, please use "assert is None"'),
-    category=None,
-    filename={filename!r},
-    lineno={lineno},
-)
-            """.format(
-                filename=fspath(module_path), lineno=lineno
-            )
-        ).body
-        return ast.If(val_is_none, send_warning, [])
 
     def visit_Name(self, name):
         # Display the repr of the name if it's a local variable or
@@ -1073,14 +1042,13 @@ def try_makedirs(cache_dir) -> bool:
 
 def get_cache_dir(file_path: Path) -> Path:
     """Returns the cache directory to write .pyc files for the given .py file path"""
-    # Type ignored until added in next mypy release.
-    if sys.version_info >= (3, 8) and sys.pycache_prefix:  # type: ignore
+    if sys.version_info >= (3, 8) and sys.pycache_prefix:
         # given:
         #   prefix = '/tmp/pycs'
         #   path = '/home/user/proj/test_app.py'
         # we want:
         #   '/tmp/pycs/home/user/proj'
-        return Path(sys.pycache_prefix) / Path(*file_path.parts[1:-1])  # type: ignore
+        return Path(sys.pycache_prefix) / Path(*file_path.parts[1:-1])
     else:
         # classic pycache directory
         return file_path.parent / "__pycache__"
