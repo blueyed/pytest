@@ -480,11 +480,12 @@ class TestGeneralUsage:
             ["*source code not available*", "E*fixture 'invalid_fixture' not found"]
         )
 
-    def test_plugins_given_as_strings(self, tmpdir, monkeypatch, _sys_snapshot):
+    def test_plugins_given_as_strings(self, testdir, monkeypatch, _sys_snapshot):
         """test that str values passed to main() as `plugins` arg
         are interpreted as module names to be imported and registered.
         #855.
         """
+        tmpdir = testdir.tmpdir
         with pytest.raises(ImportError) as excinfo:
             pytest.main([str(tmpdir)], plugins=["invalid.module"])
         assert "invalid" in str(excinfo.value)
@@ -614,10 +615,12 @@ class TestInvocationVariants:
         ):
             pytest.main("-h")
 
-    def test_invoke_with_path(self, tmpdir, capsys):
-        retcode = pytest.main(tmpdir)
+    def test_invoke_with_path(self, testdir, capsys):
+        retcode = pytest.main(testdir.tmpdir)
         assert retcode == ExitCode.NO_TESTS_COLLECTED
         out, err = capsys.readouterr()
+        assert "= no tests ran in" in out
+        assert err == ""
 
     def test_invoke_plugin_api(self, testdir, capsys):
         class MyPlugin:

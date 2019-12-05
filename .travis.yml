@@ -5,7 +5,7 @@ cache: false
 
 env:
   global:
-    - PYTEST_ADDOPTS="-vv --showlocals --durations=100 --exitfirst"
+    - PYTEST_ADDOPTS="-vv --showlocals --durations=50"
     - PYTEST_COVERAGE=1
 
 # setuptools-scm needs all tags in order to obtain a proper version
@@ -27,7 +27,9 @@ jobs:
       python: '3.8'
 
     - stage: tests
-      env: TOXENV=py37-numpy-pexpect-twisted
+      env:
+        - TOXENV=py37-numpy-pexpect-twisted
+        - PYTEST_ADDOPTS="-vv --showlocals --durations=50 --run-integration-tests"
       python: '3.7.4'
 
     - env: TOXENV=py36-xdist PYTEST_REORDER_TESTS=0
