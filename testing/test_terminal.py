@@ -765,7 +765,7 @@ class TestTerminalFunctional:
             """
         )
         result = testdir.runpytest("-rfF")
-        expected = "FAILED test_summary_f_alias.py::test - assert False"
+        expected = "FAILED test_summary_f_alias.py:2::test - assert False"
         result.stdout.fnmatch_lines([expected])
         assert result.stdout.lines.count(expected) == 1
 
@@ -1796,8 +1796,8 @@ class TestProgressWithTeardown:
         output.stdout.re_match_lines(
             [
                 r"test_teardown_with_test_also_failing.py FE\s+\[100%\]",
-                "FAILED test_teardown_with_test_also_failing.py::test_foo - assert 0",
-                "ERROR test_teardown_with_test_also_failing.py::test_foo - assert False",
+                "FAILED test_teardown_with_test_also_failing.py:2::test_foo - assert 0",
+                "ERROR test_teardown_with_test_also_failing.py::test_foo (conftest.py:6) - assert False",
             ]
         )
 
