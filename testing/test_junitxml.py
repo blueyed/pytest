@@ -4,7 +4,9 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import platform
 import sys
+from datetime import datetime
 from xml.dom import minidom
 
 import py
@@ -144,6 +146,30 @@ class TestPython(object):
         assert result.ret
         node = dom.find_first_by_tag("testsuite")
         node.assert_attr(name="pytest", errors=1, failures=2, skipped=1, tests=5)
+
+    def test_hostname_in_xml(self, testdir):
+        testdir.makepyfile(
+            """
+            def test_pass():
+                pass
+        """
+        )
+        result, dom = runandparse(testdir)
+        node = dom.find_first_by_tag("testsuite")
+        node.assert_attr(hostname=platform.node())
+
+    def test_timestamp_in_xml(self, testdir):
+        testdir.makepyfile(
+            """
+            def test_pass():
+                pass
+        """
+        )
+        start_time = datetime.now()
+        result, dom = runandparse(testdir)
+        node = dom.find_first_by_tag("testsuite")
+        timestamp = datetime.strptime(node["timestamp"], "%Y-%m-%dT%H:%M:%S.%f")
+        assert start_time <= timestamp < datetime.now()
 
     def test_timing_function(self, testdir):
         testdir.makepyfile(
@@ -1383,3 +1409,39 @@ def test_logging_passing_tests_disabled_does_not_log_test_output(testdir):
     node = dom.find_first_by_tag("testcase")
     assert len(node.find_by_tag("system-err")) == 0
     assert len(node.find_by_tag("system-out")) == 0
+
+
+@pytest.mark.parametrize("junit_logging", ["no", "system-out", "system-err"])
+def test_logging_passing_tests_disabled_logs_output_for_failing_test_issue5430(
+    testdir, junit_logging
+):
+    testdir.makeini(
+        """
+        [pytest]
+        junit_log_passing_tests=False
+    """
+    )
+    testdir.makepyfile(
+        """
+        import pytest
+        import logging
+        import sys
+
+        def test_func():
+            logging.warning('hello')
+            assert 0
+    """
+    )
+    result, dom = runandparse(testdir, "-o", "junit_logging=%s" % junit_logging)
+    assert result.ret == 1
+    node = dom.find_first_by_tag("testcase")
+    if junit_logging == "system-out":
+        assert len(node.find_by_tag("system-err")) == 0
+        assert len(node.find_by_tag("system-out")) == 1
+    elif junit_logging == "system-err":
+        assert len(node.find_by_tag("system-err")) == 1
+        assert len(node.find_by_tag("system-out")) == 0
+    else:
+        assert junit_logging == "no"
+        assert len(node.find_by_tag("system-err")) == 0
+        assert len(node.find_by_tag("system-out")) == 0
