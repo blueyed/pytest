@@ -270,6 +270,7 @@ class MonkeyPatch:
         import inspect
 
         if not hasattr(self, "_mocked_imports"):
+            self._mocked_imports = {}
             self._orig_import = __import__
 
             def import_mock(name, *args, **kwargs):
@@ -280,12 +281,7 @@ class MonkeyPatch:
                     raise err
                 return self._orig_import(name, *args)
 
-            if sys.version_info >= (3,):
-                self.setattr("builtins.__import__", import_mock)
-            else:
-                self.setattr("__builtin__.__import__", import_mock)
-
-            self._mocked_imports = {}
+            self.setattr("builtins.__import__", import_mock)
 
         if isinstance(mocked_imports, str):
             mocked_imports = (mocked_imports,)
