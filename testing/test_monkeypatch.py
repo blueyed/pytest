@@ -483,7 +483,7 @@ def test_mockimport_callable(monkeypatch):
 
     def mockedimport(*args, **kwargs):
         calls.append((args, kwargs))
-        raise monkeypatch._orig_import(*args, **kwargs)
+        raise ImportError
 
     monkeypatch.mockimport(("os.foo",), mockedimport)
     with pytest.raises(ImportError):
@@ -498,6 +498,13 @@ def test_mockimport_importlib(monkeypatch):
     """importlib.import_module is not patched"""
     import importlib
 
-    monkeypatch.mockimport("os.foo", ValueError)
+    monkeypatch.mockimport("os.foo", TypeError)
     with pytest.raises(ImportError):
         importlib.import_module("os.foo")
+
+
+def test_mockimport_already_imported(monkeypatch):
+    assert "os" in sys.modules
+    monkeypatch.mockimport("os", TypeError)
+    with pytest.raises(TypeError):
+        import os  # noqa: F401
