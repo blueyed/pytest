@@ -796,7 +796,7 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
         msgs = [
             "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: "
             + ("this_failed" * 8)
-            + "...",
+            + "\\nassert 0",
             "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: 'last_unmatched'",
         ]
     else:
