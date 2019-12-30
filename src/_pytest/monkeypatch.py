@@ -261,6 +261,31 @@ class MonkeyPatch(object):
         self._warn_if_env_name_is_not_str(name)
         self.delitem(os.environ, name, raising=raising)
 
+    def mockimport(self, mocked_imports, err=ImportError):
+        import inspect
+
+        if not hasattr(self, "_mocked_imports"):
+            self._mocked_imports = {}
+            self._orig_import = __import__
+
+            def import_mock(name, *args, **kwargs):
+                if name in self._mocked_imports:
+                    err = self._mocked_imports[name]
+                    if inspect.isfunction(err):
+                        return err(name, *args, **kwargs)
+                    raise err
+                return self._orig_import(name, *args)
+
+            if sys.version_info >= (3,):
+                self.setattr("builtins.__import__", import_mock)
+            else:
+                self.setattr("__builtin__.__import__", import_mock)
+
+        if isinstance(mocked_imports, str):
+            mocked_imports = (mocked_imports,)
+        for name in mocked_imports:
+            self._mocked_imports[name] = err
+
     def syspath_prepend(self, path):
         """ Prepend ``path`` to ``sys.path`` list of import locations. """
         from pkg_resources import fixup_namespace_packages
