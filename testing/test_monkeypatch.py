@@ -496,8 +496,18 @@ def test_mockimport_callable(monkeypatch):
         calls.append((args, kwargs))
         raise monkeypatch._orig_import(*args, **kwargs)
 
+    try:
+        __import__("os.foo", globals(), level=42)
+    except Exception:
+        expected_err = sys.exc_info()[0]
+
+    if sys.version_info > (3,):
+        assert expected_err is ImportError
+    else:
+        assert expected_err is ValueError
+
     monkeypatch.mockimport(("os.foo",), mockedimport)
-    with pytest.raises(ImportError):
+    with pytest.raises(expected_err):
         __import__("os.foo", globals(), level=42)
 
     assert calls == [
