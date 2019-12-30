@@ -40,6 +40,16 @@ def pytest_addoption(parser):
         help="Enables the pytest_assertion_pass hook."
         "Make sure to delete any previously generated pyc cache files.",
     )
+    parser.addini(
+        "assert_rewrite_files",
+        (
+            "filename patterns for where assertions should be rewritten. "
+            "Defaults to '*.py' below `testpaths` (if configured), otherwise "
+            "`python_files`, with a default of ['test_*.py', '*_test.py']."
+        ),
+        type="args",
+        default=None,
+    )
 
 
 def register_assert_rewrite(*names) -> None:

@@ -53,7 +53,7 @@ def pytest_addoption(parser):
         "directories to search for tests when no files or directories are given in the "
         "command line.",
         type="args",
-        default=[],
+        default=None,
     )
     group = parser.getgroup("general", "running and selection options")
     group._addoption(

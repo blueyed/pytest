@@ -903,10 +903,13 @@ def test_rewritten():
         testdir.makepyfile(test_remember_rewritten_modules="")
         warnings = []
         hook = AssertionRewritingHook(pytestconfig)
+        assert hook.fnpats == ["testing/**.py"]
+        hook.fnpats = ["test_*.py"]
         monkeypatch.setattr(
             hook, "_warn_already_imported", lambda code, msg: warnings.append(msg)
         )
         spec = hook.find_spec("test_remember_rewritten_modules")
+        assert spec is not None
         module = importlib.util.module_from_spec(spec)
         hook.exec_module(module)
         hook.mark_rewrite("test_remember_rewritten_modules")
@@ -1252,6 +1255,8 @@ def test_rewrite_infinite_recursion(testdir, pytestconfig, monkeypatch):
     monkeypatch.setattr(sys, "dont_write_bytecode", False)
 
     hook = AssertionRewritingHook(pytestconfig)
+    assert hook.fnpats == ["testing/**.py"]
+    hook.fnpats = ["test_*.py"]
     spec = hook.find_spec("test_foo")
     assert spec is not None
     module = importlib.util.module_from_spec(spec)
@@ -1658,3 +1663,41 @@ class TestPyCacheDir:
             cache_tag=sys.implementation.cache_tag
         )
         assert bar_init_pyc.is_file()
+
+
+@pytest.mark.parametrize("via_testpaths", (True, False))
+def test_assert_rewrite_files(via_testpaths, testdir):
+    testdir.makepyfile(
+        **{
+            "tests/test_inner.py": """
+                from .utils import check
+                from .sub.utils import check_sub
+
+                def test_test():
+                    check()
+
+                def test_sub():
+                    check_sub()
+            """,
+            "tests/__init__.py": "",
+            "tests/utils.py": "def check(): assert 1 == 2",
+            "tests/sub/__init__.py": "",
+            "tests/sub/utils.py": "def check_sub(): assert 3 == 4",
+        }
+    )
+    if via_testpaths:
+        testdir.tmpdir.join("pytest.ini").write("[pytest]\ntestpaths = tests")
+    else:
+        testdir.tmpdir.join("pytest.ini").write(
+            "[pytest]\nassert_rewrite_files = tests/**.py"
+        )
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines(
+        [
+            ">   def check(): assert 1 == 2",
+            "E   assert 1 == 2",
+            ">   def check_sub(): assert 3 == 4",
+            "E   assert 3 == 4",
+            "*= 2 failed in *",
+        ]
+    )
