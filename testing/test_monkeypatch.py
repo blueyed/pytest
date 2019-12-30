@@ -494,20 +494,10 @@ def test_mockimport_callable(monkeypatch):
 
     def mockedimport(*args, **kwargs):
         calls.append((args, kwargs))
-        raise monkeypatch._orig_import(*args, **kwargs)
-
-    try:
-        __import__("os.foo", globals(), level=42)
-    except Exception:
-        expected_err = sys.exc_info()[0]
-
-    if sys.version_info > (3,):
-        assert expected_err is ImportError
-    else:
-        assert expected_err is ValueError
+        raise ImportError
 
     monkeypatch.mockimport(("os.foo",), mockedimport)
-    with pytest.raises(expected_err):
+    with pytest.raises(ImportError):
         __import__("os.foo", globals(), level=42)
 
     assert calls == [
@@ -516,9 +506,20 @@ def test_mockimport_callable(monkeypatch):
 
 
 def test_mockimport_importlib(monkeypatch):
-    """importlib.import_module is not patched"""
+    """importlib.import_module is not patched on py3, but py27."""
     import importlib
 
-    monkeypatch.mockimport("os.foo", ValueError)
-    with pytest.raises(ImportError):
+    monkeypatch.mockimport("os.foo", TypeError)
+    if sys.version_info < (3,):
+        expected_err = TypeError
+    else:
+        expected_err = ImportError
+    with pytest.raises(expected_err):
         importlib.import_module("os.foo")
+
+
+def test_mockimport_already_imported(monkeypatch):
+    assert "os" in sys.modules
+    monkeypatch.mockimport("os", TypeError)
+    with pytest.raises(TypeError):
+        import os  # noqa: F401
