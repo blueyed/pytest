@@ -1,6 +1,5 @@
 """ monkeypatching and mocking functionality.  """
 import os
-import re
 import sys
 import warnings
 from contextlib import contextmanager
@@ -9,8 +8,6 @@ from typing import Optional
 import pytest
 from _pytest.fixtures import fixture
 from _pytest.pathlib import Path
-
-RE_IMPORT_ERROR_NAME = re.compile(r"^No module named (.*)$")
 
 
 @fixture
