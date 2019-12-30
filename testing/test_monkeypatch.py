@@ -499,7 +499,7 @@ def test_mockimport_importlib(monkeypatch):
     import importlib
 
     monkeypatch.mockimport("os.foo", TypeError)
-    with pytest.raises(TypeError):
+    with pytest.raises(ImportError):
         importlib.import_module("os.foo")
 
 
