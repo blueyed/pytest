@@ -276,7 +276,10 @@ class MonkeyPatch(object):
                     raise err
                 return self._orig_import(name, *args)
 
-            self.setattr("builtins.__import__", import_mock)
+            if sys.version_info >= (3,):
+                self.setattr("builtins.__import__", import_mock)
+            else:
+                self.setattr("__builtin__.__import__", import_mock)
 
         if isinstance(mocked_imports, str):
             mocked_imports = (mocked_imports,)
