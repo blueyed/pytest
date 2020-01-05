@@ -477,6 +477,9 @@ def test_mockimport(monkeypatch):
     with pytest.raises(TypeError):
         import another  # noqa: F401,F811
 
+    # Passes kwargs.
+    __import__("encodings.utf_8", fromlist=["*"], level=0)
+
 
 def test_mockimport_callable(monkeypatch):
     calls = []
