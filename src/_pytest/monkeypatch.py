@@ -274,7 +274,7 @@ class MonkeyPatch(object):
                     if inspect.isfunction(err):
                         return err(name, *args, **kwargs)
                     raise err
-                return self._orig_import(name, *args)
+                return self._orig_import(name, *args, **kwargs)
 
             if sys.version_info >= (3,):
                 self.setattr("builtins.__import__", import_mock)
