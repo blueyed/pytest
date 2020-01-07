@@ -1261,6 +1261,7 @@ def test_automatic_pytest_deselect(testdir):
         deselect_calls = []
 
         def pytest_deselected(items):
+            assert type(items) == list
             print("deselect", items)
             deselect_calls.append(items)
 
@@ -1268,8 +1269,6 @@ def test_automatic_pytest_deselect(testdir):
             print([x.name for x in items])
             items[:] = [item for item in items if item.name != "test_removed"]
             print(items)
-            # print(items)
-            # items.pop()
 
         def test_removed():
             assert 0

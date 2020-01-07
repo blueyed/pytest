@@ -482,7 +482,7 @@ class Session(nodes.FSCollector):
             if removed_items:
                 # Explicitly deselect them.
                 # Calls the own hook again, but that is OK.
-                self.config.hook.pytest_deselected(items=removed_items)
+                self.config.hook.pytest_deselected(items=list(removed_items))
         finally:
             hook.pytest_collection_finish(session=self)
         self.testscollected = len(items)
