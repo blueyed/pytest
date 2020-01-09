@@ -1262,13 +1262,10 @@ def test_automatic_pytest_deselect(testdir):
 
         def pytest_deselected(items):
             assert type(items) == list
-            print("deselect", items)
             deselect_calls.append(items)
 
         def pytest_collection_modifyitems(items):
-            print([x.name for x in items])
             items[:] = [item for item in items if item.name != "test_removed"]
-            print(items)
 
         def test_removed():
             assert 0
