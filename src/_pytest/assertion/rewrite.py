@@ -144,10 +144,12 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         exec(co, module.__dict__)
 
     def _early_rewrite_bailout(self, name, state):
-        """This is a fast way to get out of rewriting modules. Profiling has
-        shown that the call to PathFinder.find_spec (inside of the find_spec
-        from this class) is a major slowdown, so, this method tries to
-        filter what we're sure won't be rewritten before getting to it.
+        """This is a fast way to get out of rewriting modules.
+
+        Profiling has shown that the call to PathFinder.find_spec (inside of
+        the find_spec from this class) is a major slowdown, so, this method
+        tries to filter what we're sure won't be rewritten before getting to
+        it.
         """
         if self.session is not None and not self._session_paths_checked:
             self._session_paths_checked = True
@@ -798,13 +800,6 @@ class AssertionRewriter(ast.NodeVisitor):
         self.push_format_context()
         # Rewrite assert into a bunch of statements.
         top_condition, explanation = self.visit(assert_.test)
-        # If in a test module, check if directly asserting None, in order to warn [Issue #3191]
-        if self.module_path is not None:
-            self.statements.append(
-                self.warn_about_none_ast(
-                    top_condition, module_path=self.module_path, lineno=assert_.lineno
-                )
-            )
 
         negation = ast.UnaryOp(ast.Not(), top_condition)
 
@@ -885,30 +880,6 @@ class AssertionRewriter(ast.NodeVisitor):
         for stmt in self.statements:
             set_location(stmt, assert_.lineno, assert_.col_offset)
         return self.statements
-
-    def warn_about_none_ast(self, node, module_path, lineno):
-        """
-        Returns an AST issuing a warning if the value of node is `None`.
-        This is used to warn the user when asserting a function that asserts
-        internally already.
-        See issue #3191 for more details.
-        """
-        val_is_none = ast.Compare(node, [ast.Is()], [ast.NameConstant(None)])
-        send_warning = ast.parse(
-            """\
-from _pytest.warning_types import PytestAssertRewriteWarning
-from warnings import warn_explicit
-warn_explicit(
-    PytestAssertRewriteWarning('asserting the value None, please use "assert is None"'),
-    category=None,
-    filename={filename!r},
-    lineno={lineno},
-)
-            """.format(
-                filename=fspath(module_path), lineno=lineno
-            )
-        ).body
-        return ast.If(val_is_none, send_warning, [])
 
     def visit_Name(self, name):
         # Display the repr of the name if it's a local variable or
