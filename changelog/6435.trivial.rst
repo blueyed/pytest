@@ -1,0 +1,1 @@
+Added ``typing_extensions`` as dependency on Python 3.5.1 or lower.
