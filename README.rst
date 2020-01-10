@@ -103,12 +103,12 @@ Support pytest
 --------------
 
 `Open Collective`_ is an online funding platform for open and transparent communities.
-It provide tools to raise money and share your finances in full transparency.
+It provides tools to raise money and share your finances in full transparency.
 
 It is the platform of choice for individuals and companies that want to make one-time or
 monthly donations directly to the project.
 
-See more datails in the `pytest collective`_.
+See more details in the `pytest collective`_.
 
 .. _Open Collective: https://opencollective.com
 .. _pytest collective: https://opencollective.com/pytest
@@ -128,7 +128,7 @@ Save time, reduce risk, and improve code health, while paying the maintainers of
 Security
 ^^^^^^^^
 
-pytest has never been associated with a security vunerability, but in any case, to report a
+pytest has never been associated with a security vulnerability, but in any case, to report a
 security vulnerability please use the `Tidelift security contact <https://tidelift.com/security>`_.
 Tidelift will coordinate the fix and disclosure.
 
@@ -136,7 +136,7 @@ Tidelift will coordinate the fix and disclosure.
 License
 -------
 
-Copyright Holger Krekel and others, 2004-2019.
+Copyright Holger Krekel and others, 2004-2020.
 
 Distributed under the terms of the `MIT`_ license, pytest is free and open source software.
 
