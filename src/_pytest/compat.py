@@ -24,8 +24,6 @@ import py
 
 import _pytest
 from _pytest._io.saferepr import saferepr
-from _pytest.outcomes import fail
-from _pytest.outcomes import TEST_OUTCOME
 
 if sys.version_info < (3, 5, 2):
     from typing_extensions import TYPE_CHECKING
@@ -153,6 +151,8 @@ def getfuncargnames(
     try:
         parameters = signature(function).parameters
     except (ValueError, TypeError) as e:
+        from _pytest.outcomes import fail
+
         fail(
             "Could not determine arguments of {!r}: {}".format(function, e),
             pytrace=False,
@@ -331,8 +331,12 @@ def safe_getattr(object: Any, name: str, default: Any) -> Any:
     """
     try:
         return getattr(object, name, default)
-    except TEST_OUTCOME:
-        return default
+    except BaseException as exc:
+        from _pytest.outcomes import TEST_OUTCOME
+
+        if isinstance(exc, TEST_OUTCOME):
+            return default
+        raise
 
 
 def safe_isclass(obj: object) -> bool:
