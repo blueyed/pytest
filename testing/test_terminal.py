@@ -825,7 +825,7 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
         msgs = [
             "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: "
             + ("this_failed" * 8)
-            + "...",
+            + "\\nassert 0",
             "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: 'last_unmatched'",
         ]
     else:
@@ -1911,10 +1911,10 @@ def test_line_with_reprcrash(monkeypatch):
 
     check("some\nmessage", 25, "FAILED some::nodeid - ...")
     check("some\nmessage", 26, "FAILED some::nodeid - s...")
-    check("some\nmessage", 80, "FAILED some::nodeid - some...")
-    check("some\r\nmessage", 80, "FAILED some::nodeid - some...")
-    check("\r\nsome\r\nmessage", 80, "FAILED some::nodeid - ...")
-    check("\nsome\r\nmessage", 80, "FAILED some::nodeid - ...")
+    check("some\nmessage", 80, "FAILED some::nodeid - some\\nmessage")
+    check("some\r\nmessage", 80, "FAILED some::nodeid - some\\r\\nmessage")
+    check("\r\nsome\r\nmessage", 80, "FAILED some::nodeid - \\r\\nsome\\r\\nmessage")
+    check("\nsome\r\nmessage", 80, "FAILED some::nodeid - \\nsome\\r\\nmessage")
 
     # Test unicode safety.
     check("😄😄😄😄😄\n2nd line", 25, "FAILED some::nodeid - ...")
@@ -1929,7 +1929,7 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 40, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 41, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 42, "FAILED nodeid::😄::withunicode - 😄😄😄...")
-    check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄...")
+    check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄\\n2nd line")
 
 
 @pytest.mark.parametrize("arg", (None, "--tb=native", "--full-trace"))

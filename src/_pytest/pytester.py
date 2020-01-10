@@ -437,9 +437,14 @@ class RunResult:
         for line in reversed(self.outlines):
             if rex_session_duration.search(line):
                 outcomes = rex_outcome.findall(line)
-                return {noun: int(count) for (count, noun) in outcomes}
-
-        raise ValueError("Pytest terminal summary report not found")
+                ret = {noun: int(count) for (count, noun) in outcomes}
+                break
+        else:
+            raise ValueError("Pytest terminal summary report not found")
+        if "errors" in ret:
+            assert "error" not in ret
+            ret["error"] = ret.pop("errors")
+        return ret
 
     def assert_outcomes(
         self,
@@ -460,7 +465,7 @@ class RunResult:
             "passed": d.get("passed", 0),
             "skipped": d.get("skipped", 0),
             "failed": d.get("failed", 0),
-            "error": d.get("error", 0) + d.get("errors", 0),
+            "error": d.get("error", 0),
             "xpassed": d.get("xpassed", 0),
             "xfailed": d.get("xfailed", 0),
         }

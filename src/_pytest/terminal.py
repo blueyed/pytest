@@ -1194,12 +1194,19 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             return line
 
     try:
-        msg = rep.longrepr.reprcrash._get_short_msg()
+        msg = rep.longrepr.reprcrash.short_msg
+        assert msg is None or "\n" not in msg, repr(msg)
     except AttributeError:
-        pass
-    else:
-        assert "\n" not in msg, repr(msg)
+        msg = None
+    if msg is None:
+        try:
+            msg = rep.longrepr.reprcrash.message
+        except AttributeError:
+            msg = None
+        else:
+            msg = msg.replace("\r", "\\r").replace("\n", "\\n")
 
+    if msg is not None:
         # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
         implicit_prefix = verbose_word.lower() + ":"
         if msg[: len(implicit_prefix)].lower() == implicit_prefix:

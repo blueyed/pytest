@@ -459,3 +459,55 @@ def test_syspath_prepend_with_namespace_packages(testdir, monkeypatch):
     monkeypatch.syspath_prepend(str(modules_tmpdir))
     modules_tmpdir.join("main_app.py").write("app = True")
     from main_app import app  # noqa: F401
+
+
+def test_mockimport(monkeypatch):
+    monkeypatch.mockimport(("os.foo",), TypeError)
+    with pytest.raises(TypeError):
+        import os.foo  # noqa: F401
+
+    monkeypatch.mockimport("another", TypeError)
+    with pytest.raises(TypeError):
+        import another  # noqa: F401
+
+    monkeypatch.mockimport("os")
+    with pytest.raises(ImportError):
+        import os  # noqa: F401
+
+    with pytest.raises(TypeError):
+        import another  # noqa: F401,F811
+
+    # Passes kwargs.
+    __import__("encodings.utf_8", fromlist=["*"], level=0)
+
+
+def test_mockimport_callable(monkeypatch):
+    calls = []
+
+    def mockedimport(*args, **kwargs):
+        calls.append((args, kwargs))
+        raise ImportError
+
+    monkeypatch.mockimport(("os.foo",), mockedimport)
+    with pytest.raises(ImportError):
+        __import__("os.foo", globals(), level=42)
+
+    assert calls == [
+        (("os.foo", globals()), {"level": 42}),
+    ]
+
+
+def test_mockimport_importlib(monkeypatch):
+    """importlib.import_module is not patched"""
+    import importlib
+
+    monkeypatch.mockimport("os.foo", TypeError)
+    with pytest.raises(ImportError):
+        importlib.import_module("os.foo")
+
+
+def test_mockimport_already_imported(monkeypatch):
+    assert "os" in sys.modules
+    monkeypatch.mockimport("os", TypeError)
+    with pytest.raises(TypeError):
+        import os  # noqa: F401
