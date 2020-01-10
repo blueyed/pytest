@@ -8,7 +8,9 @@ from typing import Optional
 
 from packaging.version import Version
 
-if False:  # TYPE_CHECKING
+from _pytest.compat import TYPE_CHECKING
+
+if TYPE_CHECKING:
     from typing import NoReturn
 
 
