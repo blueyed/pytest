@@ -38,6 +38,8 @@ jobs:
     - env: TOXENV=py35-xdist
       python: '3.5.1'
       dist: trusty
+      before_install:
+        - python -m pip install -U pip
 
     - env: TOXENV=linting,docs,doctesting
       cache:
