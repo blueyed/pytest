@@ -36,7 +36,8 @@ jobs:
       python: '3.6.9'
 
     - env: TOXENV=py35-xdist
-      python: '3.5.9'
+      python: '3.5.1'
+      dist: trusty
 
     - env: TOXENV=linting,docs,doctesting
       cache:
