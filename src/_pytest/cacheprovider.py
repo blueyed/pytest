@@ -68,7 +68,11 @@ class Cache:
 
     @staticmethod
     def cache_dir_from_config(config: Config) -> Path:
-        return resolve_from_str(config.getini("cache_dir"), config.rootdir)
+        try:
+            cache_dir = config.getini("cache_dir")
+        except ValueError:
+            cache_dir = _get_cache_dir_default()
+        return resolve_from_str(cache_dir, config.rootdir)
 
     def warn(self, fmt, **args):
         from _pytest.warnings import _issue_warning_captured
@@ -370,10 +374,9 @@ def pytest_addoption(parser):
         dest="cacheclear",
         help="remove all cache contents at start of test run.",
     )
-    cache_dir_default = ".pytest_cache"
-    if "TOX_ENV_DIR" in os.environ:
-        cache_dir_default = os.path.join(os.environ["TOX_ENV_DIR"], cache_dir_default)
-    parser.addini("cache_dir", default=cache_dir_default, help="cache directory path.")
+    parser.addini(
+        "cache_dir", default=_get_cache_dir_default(), help="cache directory path."
+    )
     group.addoption(
         "--lfnf",
         "--last-failed-no-failures",
@@ -389,6 +392,13 @@ def pytest_addoption(parser):
         dest="cache_readonly",
         help="do not update cache.",
     )
+
+
+def _get_cache_dir_default() -> str:
+    cache_dir_default = ".pytest_cache"
+    if "TOX_ENV_DIR" in os.environ:
+        cache_dir_default = os.path.join(os.environ["TOX_ENV_DIR"], cache_dir_default)
+    return cache_dir_default
 
 
 def pytest_cmdline_main(config):
