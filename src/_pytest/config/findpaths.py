@@ -24,7 +24,13 @@ def exists(path, ignore=EnvironmentError):
         return False
 
 
-def getcfg(args, config=None):
+def getcfg(
+    args: "Iterable[py.path.local]", config: "Optional[Config]" = None
+) -> Tuple[
+    "Optional[py.path.local]",
+    "Optional[py.path.local]",
+    "Union[py.iniconfig.SectionWrapper, Dict, None]",
+]:
     """
     Search the list of arguments for a valid ini-file for pytest,
     and return a tuple of (rootdir, inifile, cfg-dict).
@@ -118,7 +124,7 @@ def determine_setup(
     args: List[str],
     rootdir_cmd_arg: Optional[str] = None,
     config: Optional["Config"] = None,
-) -> Tuple[py.path.local, Optional[str], "Union[py.iniconfig._SectionWrapper, Dict]"]:
+) -> "Tuple[py.path.local, py.path.local, Union[py.iniconfig.SectionWrapper, Dict]]":
     dirs = get_dirs_from_args(args)
     if inifile:
         iniconfig = py.iniconfig.IniConfig(inifile)
