@@ -38,6 +38,13 @@ jobs:
     - env: TOXENV=py35-xdist
       python: '3.5.9'
 
+    # Coverage for Python 3.5.{0,1} specific code, mostly typing related.
+    - env: TOXENV=py35 PYTEST_ADDOPTS="-k test_raises_cyclic_reference"
+      python: '3.5.1'
+      dist: trusty
+      before_install:
+        - python -m pip install -U pip
+
     - env: TOXENV=linting,docs,doctesting
       cache:
         directories:
