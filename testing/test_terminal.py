@@ -223,7 +223,7 @@ class TestTerminal:
                 "",
                 "tests/test_p1.py:5: assert 0",
                 "*= short test summary info =*",
-                "FAILED tests/test_p3.py::TestMore::test_p1 - assert 0",
+                "FAILED tests/test_p3.py::TestMore::test_p1 (tests/test_p1.py:5) - assert 0",
                 "*= 1 failed in *",
             ]
         )
