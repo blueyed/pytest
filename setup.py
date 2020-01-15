@@ -5,7 +5,7 @@ from setuptools import setup
 INSTALL_REQUIRES = [
     "py>=1.5.0",
     "packaging",
-    "attrs>=17.4.0",  # should match oldattrs tox env.
+    "attrs>=19.2.0",  # should match oldattrs tox env, bumped for kw_only.
     "more-itertools>=4.0.0",
     'atomicwrites>=1.0;sys_platform=="win32"',
     'pathlib2>=2.2.0;python_version<"3.6"',
