@@ -686,8 +686,18 @@ class FormattedExcinfo:
     astcache = attr.ib(default=attr.Factory(dict), init=False, repr=False)
 
     def __attrs_post_init__(self, *args, **kwargs):
-        # test: not used with "native".
-        assert self.style in ("long", "short", "no")
+        if self.style == "long":
+            pass
+        elif self.style == "short":
+            pass
+        elif self.style == "no":
+            pass
+        # XXX: "line"?!  (testing/acceptance_test.py:238)
+        elif self.style == "line":
+            pass
+        else:
+            # test: not used with "native".
+            assert 0, self.style
 
     def _getindent(self, source: "Source") -> int:
         # figure out indent for given source
