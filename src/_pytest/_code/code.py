@@ -42,6 +42,8 @@ if TYPE_CHECKING:
 
     from _pytest._code import Source
 
+    # XXX: "native" is never used with FormattedExcinfo etc.
+    # TODO: Use separate types?
     _TracebackStyle = Literal["long", "short", "no", "native"]
 
 
@@ -683,6 +685,20 @@ class FormattedExcinfo:
     truncate_locals = attr.ib(type=bool, default=True)
     chain = attr.ib(type=bool, default=True)
     astcache = attr.ib(default=attr.Factory(dict), init=False, repr=False)
+
+    def __attrs_post_init__(self, *args, **kwargs):
+        if self.style == "long":
+            pass
+        elif self.style == "short":
+            pass
+        elif self.style == "no":
+            pass
+        # XXX: "line"?!  (testing/acceptance_test.py:238)
+        elif self.style == "line":
+            pass
+        else:
+            # test: not used with "native".
+            assert 0, self.style
 
     def _getindent(self, source: "Source") -> int:
         # figure out indent for given source
