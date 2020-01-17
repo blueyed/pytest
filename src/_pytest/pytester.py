@@ -30,6 +30,7 @@ from _pytest._code import Source
 from _pytest._io.saferepr import saferepr
 from _pytest.capture import MultiCapture
 from _pytest.capture import SysCapture
+from _pytest.compat import TYPE_CHECKING
 from _pytest.fixtures import FixtureRequest
 from _pytest.main import ExitCode
 from _pytest.main import Session
@@ -37,8 +38,10 @@ from _pytest.monkeypatch import MonkeyPatch
 from _pytest.pathlib import Path
 from _pytest.reports import TestReport
 
-if False:  # TYPE_CHECKING
+if TYPE_CHECKING:
     from typing import Type
+
+    import pexpect
 
 
 IGNORE_PAM = [  # filenames added when obtaining details about the current user
@@ -193,7 +196,7 @@ class ParsedCall:
             self._name, ", ".join(("{}={!r}".format(k, v)) for k, v in d.items())
         )
 
-    if False:  # TYPE_CHECKING
+    if TYPE_CHECKING:
         # The class has undetermined attributes, this tells mypy about it.
         def __getattr__(self, key):
             raise NotImplementedError()
@@ -1281,7 +1284,7 @@ class Testdir:
         args = self._getpytestargs() + args
         return self.run(*args, timeout=timeout)
 
-    def spawn_pytest(self, *args, **kwargs):
+    def spawn_pytest(self, *args: str, **kwargs) -> "pexpect.spawn":
         """Run pytest using pexpect.
 
         This makes sure to use the right pytest and sets up the temporary
@@ -1304,7 +1307,7 @@ class Testdir:
         args = self._getpytestargs() + ("--basetemp={}".format(basetemp),) + args
         return self.spawn(args[0], *args[1:], **kwargs)
 
-    def spawn(self, *args: str, **kwargs):
+    def spawn(self, *args: str, **kwargs) -> "pexpect.spawn":
         """Run a command using pexpect.
 
         The pexpect child is returned.

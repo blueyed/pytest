@@ -508,7 +508,7 @@ class TestPDB:
         child.read()
         self.flush(child)
 
-    def test_pdb_interaction_doctest(self, testdir, monkeypatch):
+    def test_pdb_interaction_doctest(self, testdir):
         p1 = testdir.makepyfile(
             """
             def function_1():
@@ -534,7 +534,7 @@ class TestPDB:
         assert "1 failed" in rest
         self.flush(child)
 
-    def test_doctest_set_trace_quit(self, testdir, monkeypatch):
+    def test_doctest_set_trace_quit(self, testdir):
         p1 = testdir.makepyfile(
             """
             def function_1():
@@ -877,7 +877,7 @@ class TestPDB:
             ]
         )
 
-    def test_pdb_validate_usepdb_cls(self, testdir):
+    def test_pdb_validate_usepdb_cls(self):
         assert _validate_usepdb_cls("os.path:dirname.__name__") == (
             "os.path",
             "dirname.__name__",
