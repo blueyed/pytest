@@ -100,12 +100,6 @@ jobs:
             python: "3.7"
             os: ubuntu-latest
             tox_env: "linting,docs,doctesting"
-          - name: "mypy-diff"
-            if: github.event_name == 'pull'
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "mypy-diff"
-            skip_coverage: true
 
     steps:
     - uses: actions/checkout@v1
@@ -182,3 +176,19 @@ jobs:
       run: |
         sudo apt-get install pandoc
         tox -e publish-gh-release-notes
+
+  mypy-diff:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: "3.8"
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install --upgrade wheel setuptools tox
+    - name: tox -e mypy-diff
+      run: "tox -e mypy-diff"
