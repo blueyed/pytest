@@ -8,6 +8,10 @@ from _pytest.config import hookimpl
 from _pytest.config.exceptions import UsageError
 
 
+def untyped():
+    pass
+
+
 def _validate_usepdb_cls(value):
     """Validate syntax of --pdbcls option."""
     try:
@@ -17,6 +21,10 @@ def _validate_usepdb_cls(value):
             "{!r} is not in the format 'modname:classname'".format(value)
         )
     return (modname, classname)
+
+
+def not_untyped() -> None:
+    pass
 
 
 def pytest_addoption(parser):
