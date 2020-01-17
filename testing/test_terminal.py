@@ -624,7 +624,7 @@ class TestTerminalFunctional:
         if request.config.pluginmanager.list_plugin_distinfo():
             result.stdout.fnmatch_lines(["plugins: *"])
 
-    def test_header(self, testdir, request):
+    def test_header(self, testdir):
         testdir.tmpdir.join("tests").ensure_dir()
         testdir.tmpdir.join("gui").ensure_dir()
 
@@ -690,7 +690,7 @@ class TestTerminalFunctional:
         """
         )
 
-    def test_verbose_reporting(self, verbose_testfile, testdir, pytestconfig):
+    def test_verbose_reporting(self, verbose_testfile, testdir):
         result = testdir.runpytest(
             verbose_testfile, "-v", "-Walways::pytest.PytestWarning"
         )
@@ -844,8 +844,15 @@ def test_pass_reporting_on_fail(testdir):
 def test_pass_output_reporting(testdir):
     testdir.makepyfile(
         """
+        def setup_module():
+            print("setup_module")
+
+        def teardown_module():
+            print("teardown_module")
+
         def test_pass_has_output():
             print("Four score and seven years ago...")
+
         def test_pass_no_output():
             pass
     """
@@ -860,8 +867,12 @@ def test_pass_output_reporting(testdir):
         [
             "*= PASSES =*",
             "*_ test_pass_has_output _*",
+            "*- Captured stdout setup -*",
+            "setup_module",
             "*- Captured stdout call -*",
             "Four score and seven years ago...",
+            "*- Captured stdout teardown -*",
+            "teardown_module",
             "*= short test summary info =*",
             "PASSED test_pass_output_reporting.py::test_pass_has_output",
             "PASSED test_pass_output_reporting.py::test_pass_no_output",
@@ -986,7 +997,7 @@ def test_tbstyle_short(testdir):
     assert "assert x" in s
 
 
-def test_traceconfig(testdir, monkeypatch):
+def test_traceconfig(testdir):
     result = testdir.runpytest("--traceconfig")
     result.stdout.fnmatch_lines(["*active plugins*"])
     assert result.ret == ExitCode.NO_TESTS_COLLECTED

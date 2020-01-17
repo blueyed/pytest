@@ -47,7 +47,7 @@ def pytest_runtest_setup(item):
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(items):
     """Prefer faster tests.
 
     Use a hookwrapper to do this in the beginning, so e.g. --ff still works
