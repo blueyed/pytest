@@ -45,6 +45,7 @@ jobs:
           "macos-py38",
 
           "linting",
+          "mypy-diff",
         ]
 
         include:
