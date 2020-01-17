@@ -8,7 +8,7 @@ from _pytest.config import hookimpl
 from _pytest.config.exceptions import UsageError
 
 
-def untyped():
+def untyped() -> None:
     pass
 
 
