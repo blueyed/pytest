@@ -18,6 +18,8 @@ on:
   pull_request:
     branches:
       - master
+      - diff-cover-mypy
+      - test-diff-cover-mypy
 
 jobs:
   build:
