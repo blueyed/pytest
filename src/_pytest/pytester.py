@@ -1615,7 +1615,7 @@ class LineMatcher:
         __tracebackhide__ = True
         log_text = self._log_text
         self._log_output = []
-        pytest.fail(log_text, short_msg=msg)
+        pytest.fail("{}: Log:\n{}".format(msg, log_text), short_msg=msg)
 
     def str(self) -> str:
         """Return the entire original text."""
