@@ -1,5 +1,6 @@
 import pytest
 from _pytest import nodes
+from _pytest.pytester import Testdir
 
 
 @pytest.mark.parametrize(
@@ -36,3 +37,20 @@ def test_std_warn_not_pytestwarning(testdir):
     )
     with pytest.raises(ValueError, match=".*instance of PytestWarning.*"):
         items[0].warn(UserWarning("some warning"))
+
+
+def test_fulltrace_with_tb_native(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile("def test(): assert 0")
+    result = testdir.runpytest(str(p1), "--fulltrace", "--tb=native")
+    result.stdout.fnmatch_lines(
+        [
+            "test_repr_failure_py.py F *",
+            "",
+            "*= FAILURES =*",
+            "*_ test _*",
+            "Traceback (most recent call last):",
+            "  File *, in runtest",
+            "    def test(): assert 0",
+            "AssertionError: assert 0",
+        ]
+    )

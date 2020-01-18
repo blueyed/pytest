@@ -237,7 +237,10 @@ def pytest_addoption(parser):
         "--full-trace",
         action="store_true",
         default=False,
-        help="don't cut any tracebacks (default is to cut).",
+        help=(
+            "don't cut any tracebacks (default is to cut). "
+            "When used `-tb` defaults to 'long'."
+        )
     )
     group._addoption(
         "--color",
