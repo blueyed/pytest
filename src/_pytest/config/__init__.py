@@ -486,7 +486,7 @@ class PytestPluginManager(PluginManager):
     #
     #
 
-    def consider_preparse(self, args, exclude_only=False):
+    def consider_preparse(self, args, *, exclude_only=False):
         i = 0
         n = len(args)
         while i < n:
