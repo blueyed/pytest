@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         name: [
-          "windows-py35",
+          # "windows-py35",
           # "windows-py36",
           # "windows-py37",
           # "windows-py37-pluggy",
