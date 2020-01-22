@@ -22,7 +22,7 @@ def main():
             "write_to": "src/_pytest/_version.py",
             "git_describe_command": "git describe --dirty --tags --long --match *.*",
         },
-        setup_requires=["setuptools-scm<3.4.0", "setuptools>=40.0"],
+        setup_requires=["setuptools-scm", "setuptools>=40.0"],
         package_dir={"": "src"},
         extras_require={
             "testing": [  # fmt: off
