@@ -14,7 +14,7 @@ environment:
 tasks:
   - install: |
       python3.7 -m venv .venv
-      .venv/bin/python -m pip install git+https://github.com/blueyed/tox@master
+      .venv/bin/python -m pip install tox
       cd pytest
       ../.venv/bin/tox --notest -vv
 
