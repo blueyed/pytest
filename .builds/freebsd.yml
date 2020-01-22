@@ -1,5 +1,4 @@
 image: freebsd/12.x
-shell: true
 
 sources:
   - https://github.com/blueyed/pytest
@@ -14,3 +13,10 @@ environment:
 tasks:
   - install: |
       python3.7 -m venv .venv
+      .venv/bin/python -m pip install git+https://github.com/blueyed/tox@master
+      cd pytest
+      ../.venv/bin/tox --notest -vv
+
+  - test: |
+      cd pytest
+      env COLUMNS=120 ../.venv/bin/tox -v
