@@ -1071,10 +1071,10 @@ class ReprEntry(TerminalRepr):
         for line in lines:
             if line.startswith("E   "):
                 if bold_before:
-                    markup = tw.markup("E   ", red=True, bold=True)
+                    markup = tw.markup("E   ", bold=True, red=True)
                     markup += tw.markup(line[4:])
                 else:
-                    markup = tw.markup(line, red=True, bold=True)
+                    markup = tw.markup(line, bold=True, red=True)
                     bold_before = True
             else:
                 bold_before = False
