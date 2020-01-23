@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
     from _pytest._code import Source
 
-    _TracebackStyle = Literal["long", "short", "no", "native"]
+    _TracebackStyle = Literal["long", "short", "line", "no", "native"]
 
 
 class Code:
@@ -68,9 +68,10 @@ class Code:
         return not self == other
 
     @property
-    def path(self):
-        """ return a path object pointing to source code (note that it
-        might not point to an actually existing file). """
+    def path(self) -> Union[py.path.local, str]:
+        """ return a path object pointing to source code (or a str in case
+        of OSError / non-existing file).
+        """
         try:
             p = py.path.local(self.raw.co_filename)
             # maybe don't try this checking
@@ -350,7 +351,7 @@ class Traceback(List[TracebackEntry]):
                 (path is None or codepath == path)
                 and (
                     excludepath is None
-                    or not hasattr(codepath, "relto")
+                    or not isinstance(codepath, py.path.local)
                     or not codepath.relto(excludepath)
                 )
                 and (lineno is None or x.lineno == lineno)
@@ -947,7 +948,7 @@ class TerminalRepr:
     def __repr__(self) -> str:
         return "<{} instance at {:0x}>".format(self.__class__, id(self))
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         raise NotImplementedError()
 
 
@@ -958,7 +959,7 @@ class ExceptionRepr(TerminalRepr):
     def addsection(self, name: str, content: str, sep: str = "-") -> None:
         self.sections.append((name, content, sep))
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         for name, content, sep in self.sections:
             tw.sep(sep, name)
             tw.line(content)
@@ -978,7 +979,7 @@ class ExceptionChainRepr(ExceptionRepr):
         self.reprtraceback = chain[-1][0]
         self.reprcrash = chain[-1][1]
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         for element in self.chain:
             element[0].toterminal(tw)
             if element[2] is not None:
@@ -995,7 +996,7 @@ class ReprExceptionInfo(ExceptionRepr):
         self.reprtraceback = reprtraceback
         self.reprcrash = reprcrash
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         self.reprtraceback.toterminal(tw)
         super().toterminal(tw)
 
@@ -1013,7 +1014,7 @@ class ReprTraceback(TerminalRepr):
         self.extraline = extraline
         self.style = style
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         # the entries might have different styles
         for i, entry in enumerate(self.reprentries):
             if entry.style == "long":
@@ -1045,7 +1046,7 @@ class ReprEntryNative(TerminalRepr):
     def __init__(self, tblines: Sequence[str]) -> None:
         self.lines = tblines
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         tw.write("".join(self.lines))
 
 
@@ -1080,7 +1081,7 @@ class ReprEntry(TerminalRepr):
                 markup = line
             tw.line(markup)
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         if self.style == "short":
             assert self.reprfileloc is not None
             self.reprfileloc.toterminal(tw, style="short")
@@ -1125,7 +1126,9 @@ class ReprFileLocation(TerminalRepr):
             msg = msg[:i] + "..."
         return msg
 
-    def toterminal(self, tw, style=None) -> None:
+    def toterminal(
+        self, tw: py.io.TerminalWriter, style: "_TracebackStyle" = None
+    ) -> None:
         # filename and lineno output for each entry,
         # using an output format that most editors understand
         bold = style != "short"
@@ -1137,7 +1140,7 @@ class ReprLocals(TerminalRepr):
     def __init__(self, lines: Sequence[str]) -> None:
         self.lines = lines
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         for line in self.lines:
             tw.line(line)
 
@@ -1146,7 +1149,7 @@ class ReprFuncArgs(TerminalRepr):
     def __init__(self, args: Sequence[Tuple[str, object]]) -> None:
         self.args = args
 
-    def toterminal(self, tw) -> None:
+    def toterminal(self, tw: py.io.TerminalWriter) -> None:
         if self.args:
             linesofar = ""
             for name, value in self.args:

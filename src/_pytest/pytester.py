@@ -548,6 +548,8 @@ class Testdir:
 
     """
 
+    __test__ = False
+
     CLOSE_STDIN = object
 
     class TimeoutExpired(Exception):

@@ -3,6 +3,7 @@ terminal reporting of the full testing process.
 """
 import collections
 import os
+import re
 import sys
 import textwrap
 from io import StringIO
@@ -21,10 +22,15 @@ from _pytest.terminal import getreportopt
 from _pytest.terminal import TerminalReporter
 
 DistInfo = collections.namedtuple("DistInfo", ["project_name", "version"])
-RED = r"\x1b\[31m"
-GREEN = r"\x1b\[32m"
-YELLOW = r"\x1b\[33m"
-RESET = r"\x1b\[0m"
+
+COLORS = {
+    "red": "\x1b[31m",
+    "green": "\x1b[32m",
+    "yellow": "\x1b[33m",
+    "bold": "\x1b[1m",
+    "reset": "\x1b[0m",
+}
+RE_COLORS = {k: re.escape(v) for k, v in COLORS.items()}
 
 
 class Option:
@@ -882,10 +888,70 @@ def test_pass_output_reporting(testdir):
 
 
 def test_color_yes(testdir):
-    testdir.makepyfile("def test_this(): assert 1")
-    result = testdir.runpytest("--color=yes")
-    assert "test session starts" in result.stdout.str()
-    assert "\x1b[1m" in result.stdout.str()
+    p1 = testdir.makepyfile(
+        """
+        def fail():
+            assert 0
+
+        def test_this():
+            fail()
+        """
+    )
+    result = testdir.runpytest("--color=yes", str(p1))
+    if sys.version_info < (3, 6):
+        # py36 required for ordered markup
+        output = result.stdout.str()
+        assert "test session starts" in output
+        assert "\x1b[1m" in output
+        return
+    result.stdout.fnmatch_lines(
+        [
+            line.format(**COLORS).replace("[", "[[]")
+            for line in [
+                "{bold}=*= test session starts =*={reset}",
+                "collected 1 item",
+                "",
+                "test_color_yes.py {red}F{reset}{red} * [100%]{reset}",
+                "",
+                "=*= FAILURES =*=",
+                "{red}{bold}_*_ test_this _*_{reset}",
+                "",
+                "{bold}    def test_this():{reset}",
+                "{bold}>       fail(){reset}",
+                "",
+                "{bold}{red}test_color_yes.py{reset}:5: ",
+                "_ _ * _ _*",
+                "",
+                "{bold}    def fail():{reset}",
+                "{bold}>       assert 0{reset}",
+                "{bold}{red}E       assert 0{reset}",
+                "",
+                "{bold}{red}test_color_yes.py{reset}:2: AssertionError",
+                "{red}=*= {red}{bold}1 failed{reset}{red} in *s{reset}{red} =*={reset}",
+            ]
+        ]
+    )
+    result = testdir.runpytest("--color=yes", "--tb=short", str(p1))
+    result.stdout.fnmatch_lines(
+        [
+            line.format(**COLORS).replace("[", "[[]")
+            for line in [
+                "{bold}=*= test session starts =*={reset}",
+                "collected 1 item",
+                "",
+                "test_color_yes.py {red}F{reset}{red} * [100%]{reset}",
+                "",
+                "=*= FAILURES =*=",
+                "{red}{bold}_*_ test_this _*_{reset}",
+                "{bold}{red}test_color_yes.py{reset}:5: in test_this",
+                "{bold}    fail(){reset}",
+                "{bold}{red}test_color_yes.py{reset}:2: in fail",
+                "{bold}    assert 0{reset}",
+                "{bold}{red}E   assert 0{reset}",
+                "{red}=*= {red}{bold}1 failed{reset}{red} in *s{reset}{red} =*={reset}",
+            ]
+        ]
+    )
 
 
 def test_color_no(testdir):
@@ -1625,18 +1691,15 @@ class TestProgressOutputStyle:
                 def test_foobar(i): raise ValueError()
             """,
         )
-        output = testdir.runpytest()
-        output.stdout.re_match_lines(
+        result = testdir.runpytest()
+        result.stdout.re_match_lines(
             [
-                r"test_bar.py ({green}\.{reset}){{10}}{green} \s+ \[ 50%\]{reset}".format(
-                    green=GREEN, reset=RESET
-                ),
-                r"test_foo.py ({green}\.{reset}){{5}}{yellow} \s+ \[ 75%\]{reset}".format(
-                    green=GREEN, reset=RESET, yellow=YELLOW
-                ),
-                r"test_foobar.py ({red}F{reset}){{5}}{red} \s+ \[100%\]{reset}".format(
-                    reset=RESET, red=RED
-                ),
+                line.format(**RE_COLORS)
+                for line in [
+                    r"test_bar.py ({green}\.{reset}){{10}}{green} \s+ \[ 50%\]{reset}",
+                    r"test_foo.py ({green}\.{reset}){{5}}{yellow} \s+ \[ 75%\]{reset}",
+                    r"test_foobar.py ({red}F{reset}){{5}}{red} \s+ \[100%\]{reset}",
+                ]
             ]
         )
 
