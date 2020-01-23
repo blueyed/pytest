@@ -3,9 +3,6 @@ image: freebsd/12.x
 sources:
   - https://github.com/blueyed/pytest
 
-packages:
-  - py37-tox
-
 environment:
   CI: "true"
   TOXENV: py37-xdist
@@ -15,9 +12,12 @@ environment:
 
 tasks:
   - install: |
+      python3.7 -m venv .venv
+      .venv/bin/python -m pip install --progress-bar=off git+https://github.com/blueyed/tox@master
+      .venv/bin/tox --version
       cd pytest
-      tox --notest -vv
+      ../.venv/bin/tox --notest -v
 
   - test: |
       cd pytest
-      env COLUMNS=120 tox -v
+      env COLUMNS=120 ../.venv/bin/tox -v
