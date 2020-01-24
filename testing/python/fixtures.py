@@ -4495,3 +4495,23 @@ def test__get_direct_parametrize_args(testdir: Testdir) -> None:
             "=* 1 error in *",
         ]
     )
+
+
+class TestFinalizerOnlyAddedOnce:
+
+    @pytest.fixture(scope="class", autouse=True)
+    def a(self):
+        pass
+
+    @pytest.fixture(scope="class", autouse=True)
+    def b(self, a):
+        pass
+
+    def test_a_will_finalize_b(self, request):
+        a = request._get_active_fixturedef("a")
+        b = request._get_active_fixturedef("b")
+        assert b._will_be_finalized_by_fixture(a)
+
+    def test_a_only_finishes_one(self, request):
+        a = request._get_active_fixturedef("a")
+        assert len(a._finalizers)
