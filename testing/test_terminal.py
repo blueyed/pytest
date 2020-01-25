@@ -2105,7 +2105,7 @@ def test_sigwinch(testdir, monkeypatch):
 
     p1 = testdir.makepyfile(
         """
-        from _pytest.terminal import TerminalWriter
+        from _pytest._io import TerminalWriter
 
         def test(monkeypatch):
             import os
