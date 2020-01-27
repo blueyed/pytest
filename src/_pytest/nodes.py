@@ -19,6 +19,7 @@ from _pytest.compat import cached_property
 from _pytest.compat import getfslineno
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
+from _pytest.config import PytestPluginManager
 from _pytest.deprecated import NODE_USE_FROM_PARENT
 from _pytest.fixtures import FixtureDef
 from _pytest.fixtures import FixtureLookupError
@@ -418,12 +419,14 @@ def _check_initialpaths_for_relpath(session, fspath):
 
 
 class FSHookProxy:
-    def __init__(self, fspath, pm, remove_mods):
+    def __init__(
+        self, fspath: py.path.local, pm: PytestPluginManager, remove_mods
+    ) -> None:
         self.fspath = fspath
         self.pm = pm
         self.remove_mods = remove_mods
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         x = self.pm.subset_hook_caller(name, remove_plugins=self.remove_mods)
         self.__dict__[name] = x
         return x
@@ -459,7 +462,7 @@ class FSCollector(Collector):
     def from_parent(cls, parent, *, fspath):
         return cls._create(parent=parent, fspath=fspath)
 
-    def _gethookproxy(self, fspath):
+    def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running
         # hooks with all conftest.py files
         pm = self.config.pluginmanager
