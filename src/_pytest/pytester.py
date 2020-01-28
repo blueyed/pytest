@@ -8,6 +8,7 @@ import re
 import shlex
 import subprocess
 import sys
+import textwrap
 import time
 import traceback
 from fnmatch import fnmatch
@@ -586,19 +587,10 @@ def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
 class Testdir(Generic[AnyStr]):
     """Temporary test directory with tools to test/run pytest itself.
 
-    This is based on the ``tmpdir`` fixture but provides a number of methods
+    This is based on the :fixture:`tmpdir fixture <fixture>`, but provides
+    a number of methods
     which aid with testing pytest itself.  Unless :py:meth:`chdir` is used all
     methods will use :py:attr:`tmpdir` as their current working directory.
-
-    Attributes:
-
-    :ivar tmpdir: The :py:class:`py.path.local` instance of the temporary directory.
-
-    :ivar plugins: A list of plugins to use with :py:meth:`parseconfig` and
-       :py:meth:`runpytest`.  Initially this is an empty list but plugins can
-       be added to the list.  The type of items to add to the list depends on
-       the method using them so refer to them for details.
-
     """
 
     __test__ = False
@@ -615,9 +607,18 @@ class Testdir(Generic[AnyStr]):
             WeakKeyDictionary()
         )  # type: WeakKeyDictionary[Module, List[Union[Item, Collector]]]
         name = request.function.__name__
-        self.tmpdir = tmpdir_factory.mktemp(name, numbered=True)
+        self.tmpdir = tmpdir_factory.mktemp(name, numbered=True)  # type: py.path.local
+        """The base temporary directory.
+
+        :type: py.path.local"""
         self.test_tmproot = tmpdir_factory.mktemp("tmp-" + name, numbered=True)
         self.plugins = []  # type: List[Union[str, _PluggyPlugin]]
+        """A list of plugins to use with :func:`parseconfig` and
+        :func:`runpytest`.
+
+        Initially this is an empty list but plugins can be added to the list.
+        The type of items to add to the list depends on the method using them
+        so refer to them for details."""
         self._cwd_snapshot = CwdSnapshot()
         self._sys_path_snapshot = SysPathsSnapshot()
         self._sys_modules_snapshot = self.__take_sys_modules_snapshot()
@@ -717,6 +718,7 @@ class Testdir(Generic[AnyStr]):
 
             testdir.makefile(".ini", pytest="[pytest]\naddopts=-rs\n")
 
+        See also :func:`makefiles`.
         """
         return self._makefile(ext, args, kwargs)
 
@@ -740,6 +742,82 @@ class Testdir(Generic[AnyStr]):
     def maketxtfile(self, *args, **kwargs):
         """Shortcut for .makefile() with a .txt extension."""
         return self._makefile(".txt", args, kwargs)
+
+    def makefiles(
+        self,
+        files: Mapping[str, str],
+        *,
+        dedent=True,
+        strip_outer_newlines=True,
+        clobber=False
+    ) -> List[Path]:
+        """Create the given set of files.
+
+        This is a more straight-forward API than the other helpers (e.g.
+        :func:`makepyfile`).
+
+        :param Mapping[str,str] files:
+            Mapping of filenames to file contents.
+
+            Absolute paths are handled, but have to be inside of :attr:`tmpdir`.
+        :param bool dedent:
+            Dedent the contents (via :py:func:`python:textwrap.dedent`).
+        :param bool strip_outer_newlines:
+            Strip leading and trailing newlines from contents.
+        :param bool clobber:
+            Overwrite existing files or (dangling) symlinks.
+
+            (Dangling) symlinks are replaced with regular files.
+        :returns: List[_pytest.pathlib.Path]
+        """
+        tmpdir_path = Path(str(self.tmpdir)).resolve()
+
+        # Validate that files are inside of tmpdir, might raise ValueError.
+        cwd = Path.cwd()
+        validated_files = []
+        for k, v in files.items():
+            abspath = Path(os.path.normpath(cwd / k))
+            assert abspath.is_absolute(), abspath
+            if clobber:
+                if not (abspath.is_file() or abspath.is_symlink()):
+                    raise ValueError(
+                        "path is not a file/symlink, not clobbering: {!r}".format(
+                            str(abspath)
+                        )
+                    )
+            else:
+                if abspath.exists():
+                    raise ValueError("path exists already: {!r}".format(str(abspath)))
+                if abspath.is_symlink():
+                    raise ValueError(
+                        "path is a dangling symlink: {!r}".format(str(abspath))
+                    )
+            try:
+                abspath.relative_to(tmpdir_path)
+            except ValueError as exc:
+                raise ValueError(str(exc))
+            validated_files.append((abspath, v))
+
+        paths = []
+        for fpath, content in validated_files:
+            path = tmpdir_path.joinpath(fpath)
+            if not path.parent.is_dir():
+                path.parent.mkdir(parents=True)
+            if strip_outer_newlines:
+                content = content.strip("\n")
+            if dedent:
+                content = textwrap.dedent(content)
+            if clobber:
+                if path.is_symlink():
+                    path.unlink()
+                else:
+                    assert path.is_file(), path
+            else:
+                assert not path.exists(), path
+            with open(str(path), "w") as fp:
+                fp.write(content)
+            paths.append(path)
+        return paths
 
     def syspathinsert(self, path=None):
         """Prepend a directory to sys.path, defaults to :py:attr:`tmpdir`.
