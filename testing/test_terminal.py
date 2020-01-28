@@ -13,6 +13,7 @@ import py
 
 import pytest
 from _pytest.main import ExitCode
+from _pytest.pytester import Testdir
 from _pytest.reports import BaseReport
 from _pytest.terminal import _folded_skips
 from _pytest.terminal import _get_line_with_reprcrash_message
@@ -2105,7 +2106,7 @@ def test_sigwinch(testdir, monkeypatch):
 
     p1 = testdir.makepyfile(
         """
-        from _pytest.terminal import TerminalWriter
+        from _pytest._io import TerminalWriter
 
         def test(monkeypatch):
             import os
@@ -2160,3 +2161,11 @@ def test_sigwinch(testdir, monkeypatch):
     assert child.wait() == 0, rest
     assert "prev_handler_was_called" not in rest
     assert child.wait() == 0, rest
+
+
+def test_via_exec(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile("exec('def test_via_exec(): pass')")
+    result = testdir.runpytest(str(p1), "-vv")
+    result.stdout.fnmatch_lines(
+        ["test_via_exec.py::test_via_exec <- <string> PASSED*", "*= 1 passed in *"]
+    )
