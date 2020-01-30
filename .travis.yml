@@ -63,9 +63,9 @@ before_script:
       export _PYTEST_TOX_EXTRA_DEP=coverage-enable-subprocess
 
       # CodeClimate.
-      curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > /usr/local/bin/cc-test-reporter
-      chmod +x /usr/local/bin/cc-test-reporter
-      cc-test-reporter before-build
+      curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > /tmp/cc-test-reporter
+      chmod +x /tmp/cc-test-reporter
+      /tmp/cc-test-reporter before-build
     fi
   - python -m tox --notest -v --durations
 

@@ -14,8 +14,8 @@ python -m coverage combine
 python -m coverage xml
 python -m coverage report -m
 
-if command -v cc-test-reporter; then
-  cc-test-reporter after-build
+if [ -x /tmp/cc-test-reporter ]; then
+  /tmp/cc-test-reporter after-build
 fi
 
 # Set --connect-timeout to work around https://github.com/curl/curl/issues/4461
