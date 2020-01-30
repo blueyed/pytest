@@ -3,6 +3,7 @@ import os
 import sys
 import warnings
 from contextlib import contextmanager
+from typing import Generator
 from typing import Optional
 
 import pytest
@@ -116,7 +117,7 @@ class MonkeyPatch:
         self._savesyspath = None
 
     @contextmanager
-    def context(self):
+    def context(self) -> Generator["MonkeyPatch", None, None]:
         """
         Context manager that returns a new :class:`MonkeyPatch` object which
         undoes any patching done inside the ``with`` block upon exit:
