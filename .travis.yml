@@ -7,6 +7,7 @@ env:
   global:
     - PYTEST_ADDOPTS="-vv --showlocals --durations=50"
     - PYTEST_COVERAGE=1
+    - CC_TEST_REPORTER_ID=dc27fd578be34af685a4c6dc9e15d31bc99292165a8f3f8755d1ec3ca85d0557
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
@@ -60,6 +61,11 @@ before_script:
       export COVERAGE_PROCESS_START="$PWD/.coveragerc"
       export _PYTEST_TOX_COVERAGE_RUN="coverage run -m"
       export _PYTEST_TOX_EXTRA_DEP=coverage-enable-subprocess
+
+      # CodeClimate.
+      curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > /usr/local/bin/cc-test-reporter
+      chmod +x /usr/local/bin/cc-test-reporter
+      cc-test-reporter before-build
     fi
   - python -m tox --notest -v --durations
 
