@@ -91,9 +91,12 @@ class NodeMeta(type):
             sig = inspect.signature(cls.__init__)
             bsig = sig.bind(cls, *args, **kwargs)
             if "parent" not in bsig.arguments:
-                warnings.warn(
-                    NODE_USE_FROM_PARENT.format(name=cls.__name__), stacklevel=2
-                )
+                # XXX: handle DefinitionMock from tests.  Could also go through
+                # _create instead (or get fixed?)?
+                if not getattr(cls, "_pytest_skip_ctor_check", False):
+                    warnings.warn(
+                        NODE_USE_FROM_PARENT.format(name=cls.__name__), stacklevel=2
+                    )
         return super().__call__(*args, **kwargs)
 
 
