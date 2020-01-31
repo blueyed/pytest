@@ -1010,7 +1010,11 @@ def test_mark_fixture(testdir):
 
 
 def test_addmarker_order():
-    node = Node("Test", config=mock.Mock(), session=mock.Mock(), nodeid="Test")
+    session = mock.Mock()
+    session.own_markers = []
+    session.parent = None
+    session.nodeid = ""
+    node = Node(parent=session, name="Test")
     node.add_marker("foo")
     node.add_marker("bar")
     node.add_marker("baz", append=False)
