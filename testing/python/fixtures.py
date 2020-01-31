@@ -1102,6 +1102,38 @@ class TestFixtureUsages:
             "*Fixture 'badscope' from test_invalid_scope.py got an unexpected scope value 'functions'"
         )
 
+    @pytest.mark.parametrize("scope", ["function", "session"])
+    def test_parameters_without_eq_semantics(self, scope, testdir):
+        testdir.makepyfile(
+            """
+            class NoEq1:  # fails on `a == b` statement
+                def __eq__(self, _):
+                    raise RuntimeError
+
+            class NoEq2:  # fails on `if a == b:` statement
+                def __eq__(self, _):
+                    class NoBool:
+                        def __bool__(self):
+                            raise RuntimeError
+                    return NoBool()
+
+            import pytest
+            @pytest.fixture(params=[NoEq1(), NoEq2()], scope={scope!r})
+            def no_eq(request):
+                return request.param
+
+            def test1(no_eq):
+                pass
+
+            def test2(no_eq):
+                pass
+        """.format(
+                scope=scope
+            )
+        )
+        result = testdir.runpytest()
+        result.stdout.fnmatch_lines(["*4 passed*"])
+
     def test_funcarg_parametrized_and_used_twice(self, testdir):
         testdir.makepyfile(
             """
@@ -3662,9 +3694,26 @@ class TestParameterizedSubRequest:
                 "    test_foos.py::test_foo",
                 "",
                 "Requested fixture 'fix_with_param' defined in:",
-                "*fix.py:4",
+                "{}:4".format(fixfile),
                 "Requested here:",
                 "test_foos.py:4",
+                "*1 failed*",
+            ]
+        )
+
+        # With non-overlapping rootdir, passing tests_dir.
+        rootdir = testdir.mkdir("rootdir")
+        rootdir.chdir()
+        result = testdir.runpytest("--rootdir", rootdir, tests_dir)
+        result.stdout.fnmatch_lines(
+            [
+                "The requested fixture has no parameter defined for test:",
+                "    test_foos.py::test_foo",
+                "",
+                "Requested fixture 'fix_with_param' defined in:",
+                "{}:4".format(fixfile),
+                "Requested here:",
+                "{}:4".format(testfile),
                 "*1 failed*",
             ]
         )
@@ -4207,3 +4256,38 @@ def test_fixture_parametrization_nparray(testdir):
     )
     result = testdir.runpytest()
     result.assert_outcomes(passed=10)
+
+
+def test_fixture_arg_ordering(testdir):
+    """
+    This test describes how fixtures in the same scope but without explicit dependencies
+    between them are created. While users should make dependencies explicit, often
+    they rely on this order, so this test exists to catch regressions in this regard.
+    See #6540 and #6492.
+    """
+    p1 = testdir.makepyfile(
+        """
+        import pytest
+
+        suffixes = []
+
+        @pytest.fixture
+        def fix_1(): suffixes.append("fix_1")
+        @pytest.fixture
+        def fix_2(): suffixes.append("fix_2")
+        @pytest.fixture
+        def fix_3(): suffixes.append("fix_3")
+        @pytest.fixture
+        def fix_4(): suffixes.append("fix_4")
+        @pytest.fixture
+        def fix_5(): suffixes.append("fix_5")
+
+        @pytest.fixture
+        def fix_combined(fix_1, fix_2, fix_3, fix_4, fix_5): pass
+
+        def test_suffix(fix_combined):
+            assert suffixes == ["fix_1", "fix_2", "fix_3", "fix_4", "fix_5"]
+        """
+    )
+    result = testdir.runpytest("-vv", str(p1))
+    assert result.ret == 0

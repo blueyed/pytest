@@ -61,9 +61,9 @@ repos:
                 _code\.|
                 builtin\.|
                 code\.|
-                io\.(BytesIO|saferepr)|
+                io\.(BytesIO|saferepr|TerminalWriter)|
                 path\.local\.sysfind|
                 process\.|
                 std\.
-            )
+            ).*(?<!\#\ noqa:\ pygrep-py)$
         types: [python]

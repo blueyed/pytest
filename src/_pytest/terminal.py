@@ -120,18 +120,6 @@ def get_terminal_width():
     return _cached_terminal_width
 
 
-class TerminalWriter(py.io.TerminalWriter):
-    @property
-    def fullwidth(self):
-        if hasattr(self, "_terminal_width"):
-            return self._terminal_width
-        return get_terminal_width()
-
-    @fullwidth.setter
-    def fullwidth(self, value):
-        self._terminal_width = value
-
-
 class MoreQuietAction(argparse.Action):
     """
     a modified copy of the argparse count action which counts down and updates
