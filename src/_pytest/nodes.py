@@ -1,3 +1,4 @@
+import inspect
 import os
 import warnings
 from functools import lru_cache
@@ -80,17 +81,16 @@ class NodeMeta(type):
     def __call__(cls, *args, **kwargs):
         from _pytest.main import Session  # noqa: F811
 
+        sig = inspect.signature(cls.__init__)
+        bsig = sig.bind(cls, *args, **kwargs)
+
         if cls is Session:
             # from_config
-            assert len(args) == 1, args
-            assert isinstance(args[0], Config), args
-            assert not kwargs, kwargs
+            assert isinstance(bsig.arguments["config"], Config), (args, kwargs)
+            assert len(bsig.arguments) == 2, bsig  # self, config
         else:
             # from_parent
-            import inspect
-
-            sig = inspect.signature(cls.__init__)
-            bsig = sig.bind(cls, *args, **kwargs)
+            # TODO: assert hierarchy?
             if "parent" not in bsig.arguments:
                 # XXX: handle DefinitionMock from tests.  Could also go through
                 # _create instead (or get fixed?)?
