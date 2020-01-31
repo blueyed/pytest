@@ -140,6 +140,9 @@ class WarningsRecorder(warnings.catch_warnings):
         self._entered = False
         self._list = []  # type: List[warnings._Record]
 
+    def __repr__(self):
+        return "<{} len(_list)={}>".format(self.__class__.__name__, len(self._list))
+
     @property
     def list(self) -> List["warnings._Record"]:
         """The list of recorded warnings."""
