@@ -19,6 +19,7 @@ from _pytest.compat import cached_property
 from _pytest.compat import getfslineno
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
+from _pytest.deprecated import NODE_USE_FROM_PARENT
 from _pytest.fixtures import FixtureDef
 from _pytest.fixtures import FixtureLookupError
 from _pytest.fixtures import FixtureLookupErrorRepr
