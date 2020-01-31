@@ -75,7 +75,29 @@ def ischildnode(baseid, nodeid):
     return node_parts[: len(base_parts)] == base_parts
 
 
-class Node:
+class NodeMeta(type):
+    def __call__(cls, *args, **kwargs):
+        from _pytest.main import Session  # noqa: F811
+
+        if cls is Session:
+            # from_config
+            assert len(args) == 1, args
+            assert isinstance(args[0], Config), args
+            assert not kwargs, kwargs
+        else:
+            # from_parent
+            import inspect
+
+            sig = inspect.signature(cls.__init__)
+            bsig = sig.bind(cls, *args, **kwargs)
+            if "parent" not in bsig.arguments:
+                warnings.warn(
+                    NODE_USE_FROM_PARENT.format(name=cls.__name__), stacklevel=2
+                )
+        return super().__call__(*args, **kwargs)
+
+
+class Node(metaclass=NodeMeta):
     """ base class for Collector and Item the test collection tree.
     Collector subclasses have children, Items are terminal nodes."""
 
