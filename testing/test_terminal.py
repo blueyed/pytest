@@ -13,6 +13,7 @@ import py
 
 import pytest
 from _pytest.main import ExitCode
+from _pytest.pytester import Testdir
 from _pytest.reports import BaseReport
 from _pytest.terminal import _folded_skips
 from _pytest.terminal import _get_line_with_reprcrash_message
@@ -31,6 +32,8 @@ COLORS = {
     "reset": "\x1b[0m",
 }
 RE_COLORS = {k: re.escape(v) for k, v in COLORS.items()}
+
+TRANS_FNMATCH = str.maketrans({"[": "[[]", "]": "[]]"})
 
 
 class Option:
@@ -1848,14 +1851,19 @@ class TestProgressWithTeardown:
             [r"test_bar.py (\.E){5}\s+\[ 25%\]", r"test_foo.py (\.E){15}\s+\[100%\]"]
         )
 
-    def test_teardown_many_verbose(self, testdir, many_files):
-        output = testdir.runpytest("-v")
-        output.stdout.re_match_lines(
+    def test_teardown_many_verbose(self, testdir: Testdir, many_files) -> None:
+        result = testdir.runpytest("-v")
+        result.stdout.fnmatch_lines(
             [
-                r"test_bar.py::test_bar\[0\] PASSED\s+\[  5%\]",
-                r"test_bar.py::test_bar\[0\] ERROR\s+\[  5%\]",
-                r"test_bar.py::test_bar\[4\] PASSED\s+\[ 25%\]",
-                r"test_bar.py::test_bar\[4\] ERROR\s+\[ 25%\]",
+                line.translate(TRANS_FNMATCH)
+                for line in [
+                    "test_bar.py::test_bar[0] PASSED  * [  5%]",
+                    "test_bar.py::test_bar[0] ERROR   * [  5%]",
+                    "test_bar.py::test_bar[4] PASSED  * [ 25%]",
+                    "test_foo.py::test_foo[14] PASSED * [100%]",
+                    "test_foo.py::test_foo[14] ERROR  * [100%]",
+                    "=* 20 passed, 20 errors in *",
+                ]
             ]
         )
 
@@ -2105,7 +2113,7 @@ def test_sigwinch(testdir, monkeypatch):
 
     p1 = testdir.makepyfile(
         """
-        from _pytest.terminal import TerminalWriter
+        from _pytest._io import TerminalWriter
 
         def test(monkeypatch):
             import os
@@ -2160,3 +2168,11 @@ def test_sigwinch(testdir, monkeypatch):
     assert child.wait() == 0, rest
     assert "prev_handler_was_called" not in rest
     assert child.wait() == 0, rest
+
+
+def test_via_exec(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile("exec('def test_via_exec(): pass')")
+    result = testdir.runpytest(str(p1), "-vv")
+    result.stdout.fnmatch_lines(
+        ["test_via_exec.py::test_via_exec <- <string> PASSED*", "*= 1 passed in *"]
+    )

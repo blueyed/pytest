@@ -28,6 +28,15 @@ with advance notice in the **Deprecations** section of releases.
 
 .. towncrier release notes start
 
+pytest 5.3.5 (2020-01-29)
+=========================
+
+Bug Fixes
+---------
+
+- `#6517 <https://github.com/pytest-dev/pytest/issues/6517>`_: Fix regression in pytest 5.3.4 causing an INTERNALERROR due to a wrong assertion.
+
+
 pytest 5.3.4 (2020-01-20)
 =========================
 
@@ -2357,7 +2366,7 @@ Deprecations and Removals
 - `#4036 <https://github.com/pytest-dev/pytest/issues/4036>`_: The ``item`` parameter of ``pytest_warning_captured`` hook is now documented as deprecated. We realized only after
   the ``3.8`` release that this parameter is incompatible with ``pytest-xdist``.
 
-  Our policy is to not deprecate features during bugfix releases, but in this case we believe it makes sense as we are
+  Our policy is to not deprecate features during bug-fix releases, but in this case we believe it makes sense as we are
   only documenting it as deprecated, without issuing warnings which might potentially break test suites. This will get
   the word out that hook implementers should not use this parameter at all.
 
@@ -5380,7 +5389,7 @@ time or change existing behaviors in order to make them less surprising/more use
   Thanks Daniel Grunwald for the report and Bruno Oliveira for the PR.
 
 - (experimental) adapt more SEMVER style versioning and change meaning of
-  master branch in git repo: "master" branch now keeps the bugfixes, changes
+  master branch in git repo: "master" branch now keeps the bug fixes, changes
   aimed for micro releases.  "features" branch will only be released
   with minor or major pytest releases.
 

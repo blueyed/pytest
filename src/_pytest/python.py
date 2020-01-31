@@ -13,6 +13,7 @@ from textwrap import dedent
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import py
 
@@ -35,7 +36,6 @@ from _pytest.compat import safe_isclass
 from _pytest.compat import STRING_TYPES
 from _pytest.config import hookimpl
 from _pytest.deprecated import FUNCARGNAMES
-from _pytest.main import FSHookProxy
 from _pytest.mark import MARK_GEN
 from _pytest.mark.structures import get_unpacked_marks
 from _pytest.mark.structures import Mark
@@ -282,15 +282,16 @@ class PyobjMixin(PyobjContext):
         parts.reverse()
         return ".".join(parts)
 
-    def reportinfo(self) -> Tuple[str, int, str]:
+    def reportinfo(self) -> Tuple[Union[py.path.local, str], int, str]:
         # XXX caching?
         obj = self.obj
         compat_co_firstlineno = getattr(obj, "compat_co_firstlineno", None)
         if isinstance(compat_co_firstlineno, int):
             # nose compatibility
-            fspath = sys.modules[obj.__module__].__file__
-            if fspath.endswith(".pyc"):
-                fspath = fspath[:-1]
+            file_path = sys.modules[obj.__module__].__file__
+            if file_path.endswith(".pyc"):
+                file_path = file_path[:-1]
+            fspath = file_path  # type: Union[py.path.local, str]
             lineno = compat_co_firstlineno
         else:
             fspath, lineno = getfslineno(obj)
@@ -371,7 +372,12 @@ class PyCollector(PyobjMixin, nodes.Collector):
                 if not isinstance(res, list):
                     res = [res]
                 values.extend(res)
-        values.sort(key=lambda item: item.reportinfo()[:2])
+
+        def sort_key(item):
+            fspath, lineno, _ = item.reportinfo()
+            return (str(fspath), lineno)
+
+        values.sort(key=sort_key)
         return values
 
     def _makeitem(self, name, obj):
@@ -542,15 +548,23 @@ class Module(nodes.File, PyCollector):
 
 
 class Package(Module):
-    def __init__(self, fspath, parent=None, config=None, session=None, nodeid=None):
+    def __init__(
+        self,
+        fspath: py.path.local,
+        parent: nodes.Collector,
+        # NOTE: following args are unused:
+        config=None,
+        session=None,
+        nodeid=None,
+    ) -> None:
+        # NOTE: could be just the following, but kept as-is for compat.
+        # nodes.FSCollector.__init__(self, fspath, parent=parent)
         session = parent.session
         nodes.FSCollector.__init__(
             self, fspath, parent=parent, config=config, session=session, nodeid=nodeid
         )
+
         self.name = fspath.dirname
-        self.trace = session.trace
-        self._norecursepatterns = session._norecursepatterns
-        self.fspath = fspath
 
     def setup(self):
         # not using fixtures to call setup_module here because autouse fixtures
@@ -568,32 +582,8 @@ class Package(Module):
             func = partial(_call_with_optional_argument, teardown_module, self.obj)
             self.addfinalizer(func)
 
-    def _recurse(self, dirpath):
-        if dirpath.basename == "__pycache__":
-            return False
-        ihook = self.gethookproxy(dirpath.dirpath())
-        if ihook.pytest_ignore_collect(path=dirpath, config=self.config):
-            return
-        for pat in self._norecursepatterns:
-            if dirpath.check(fnmatch=pat):
-                return False
-        ihook = self.gethookproxy(dirpath)
-        ihook.pytest_collect_directory(path=dirpath, parent=self)
-        return True
-
-    def gethookproxy(self, fspath):
-        # check if we have the common case of running
-        # hooks with all conftest.py filesall conftest.py
-        pm = self.config.pluginmanager
-        my_conftestmodules = pm._getconftestmodules(fspath)
-        remove_mods = pm._conftest_plugins.difference(my_conftestmodules)
-        if remove_mods:
-            # one or more conftests are not in use at this fspath
-            proxy = FSHookProxy(fspath, pm, remove_mods)
-        else:
-            # all plugins are active for this fspath
-            proxy = self.config.hook
-        return proxy
+    def gethookproxy(self, fspath: py.path.local):
+        return super()._gethookproxy(fspath)
 
     def _collectfile(self, path, handle_dupes=True):
         assert (

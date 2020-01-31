@@ -17,6 +17,7 @@ from .pathlib import Path
 from .pathlib import resolve_from_str
 from .pathlib import rm_rf
 from _pytest import nodes
+from _pytest._io import TerminalWriter
 from _pytest.config import Config
 from _pytest.main import Session
 
@@ -432,8 +433,6 @@ def pytest_report_header(config):
 
 def cacheshow(config, session):
     from pprint import pformat
-
-    from _pytest.terminal import TerminalWriter
 
     tw = TerminalWriter()
     tw.line("cachedir: " + str(config.cache._cachedir))

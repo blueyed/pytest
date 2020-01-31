@@ -36,6 +36,7 @@ from .findpaths import determine_setup
 from .findpaths import exists
 from _pytest._code import ExceptionInfo
 from _pytest._code import filter_traceback
+from _pytest._io import TerminalWriter
 from _pytest.compat import importlib_metadata
 from _pytest.compat import TYPE_CHECKING
 from _pytest.outcomes import fail
@@ -47,6 +48,13 @@ if TYPE_CHECKING:
     from typing import Type
 
     from .argparsing import Argument
+
+
+_PluggyPlugin = object
+"""A type to represent plugin objects.
+Plugins can be any namespace, so we can't narrow it down much, but we use an
+alias to make the intent clear.
+Ideally this type would be provided by pluggy itself."""
 
 
 hookimpl = HookimplMarker("pytest")
@@ -69,7 +77,6 @@ def main(args=None, plugins=None) -> "Union[int, _pytest.main.ExitCode]":
                   initialization.
     """
     from _pytest.main import ExitCode
-    from _pytest.terminal import TerminalWriter
 
     try:
         try:
@@ -1175,13 +1182,11 @@ def setns(obj, dic):
             setattr(pytest, name, value)
 
 
-def create_terminal_writer(config, *args, **kwargs):
+def create_terminal_writer(config: Config, *args, **kwargs) -> TerminalWriter:
     """Create a TerminalWriter instance configured according to the options
     in the config object. Every code which requires a TerminalWriter object
     and has access to a config object should use this function.
     """
-    from _pytest.terminal import TerminalWriter
-
     tw = TerminalWriter(*args, **kwargs)
     if config.option.color == "yes":
         tw.hasmarkup = True

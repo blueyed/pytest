@@ -849,7 +849,7 @@ Running this test will *skip* the invocation of ``data_set`` with value ``2``:
 Modularity: using fixtures from a fixture function
 ----------------------------------------------------------
 
-You can not only use fixtures in test functions but fixture functions
+In addition to using fixtures in test functions, fixture functions
 can use other fixtures themselves.  This contributes to a modular design
 of your fixtures and allows re-use of framework-specific fixtures across
 many projects.  As a simple example, we can extend the previous example
@@ -1042,11 +1042,13 @@ file:
     import pytest
 
 
-    @pytest.fixture()
+    @pytest.fixture
     def cleandir():
+        old_cwd = os.getcwd()
         newpath = tempfile.mkdtemp()
         os.chdir(newpath)
         yield
+        os.chdir(old_cwd)
         shutil.rmtree(newpath)
 
 and declare its use in a test module via a ``usefixtures`` marker:
