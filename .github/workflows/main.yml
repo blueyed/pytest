@@ -10,12 +10,14 @@ on:
   push:
     branches:
       - master
+      - features
     tags:
       - "*"
 
   pull_request:
     branches:
       - master
+      - features
 
 jobs:
   build:

@@ -810,9 +810,7 @@ class FormattedExcinfo:
                 message = excinfo and excinfo.typename or ""
             path = self._makepath(entry.path)
             filelocrepr = ReprFileLocation(str(path), entry.lineno + 1, message)
-            localsrepr = None
-            if not short:
-                localsrepr = self.repr_locals(entry.locals)
+            localsrepr = self.repr_locals(entry.locals)
             return ReprEntry(lines, reprargs, localsrepr, filelocrepr, style)
         if excinfo:
             lines.extend(self.get_exconly(excinfo, indent=4))
@@ -1084,6 +1082,8 @@ class ReprEntry(TerminalRepr):
             assert self.reprfileloc is not None
             self.reprfileloc.toterminal(tw, style="short")
             self._color_error_lines(tw, self.lines)
+            if self.reprlocals:
+                self.reprlocals.toterminal(tw, indent=" " * 8)
             return
 
         if self.reprfuncargs:
@@ -1136,9 +1136,9 @@ class ReprLocals(TerminalRepr):
     def __init__(self, lines: Sequence[str]) -> None:
         self.lines = lines
 
-    def toterminal(self, tw: TerminalWriter) -> None:
+    def toterminal(self, tw: TerminalWriter, indent="") -> None:
         for line in self.lines:
-            tw.line(line)
+            tw.line(indent + line)
 
 
 class ReprFuncArgs(TerminalRepr):

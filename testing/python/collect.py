@@ -284,7 +284,7 @@ class TestFunction:
         session = testdir.Session.from_config(config)
         session._fixturemanager = FixtureManager(session)
 
-        return pytest.Function.from_parent(config=config, parent=session, **kwargs)
+        return pytest.Function.from_parent(parent=session, **kwargs)
 
     def test_function_equality(self, testdir):
         def func1():
@@ -492,6 +492,19 @@ class TestFunction:
             and "baz" not in keywords[0]
         )
         assert "foo" in keywords[1] and "bar" in keywords[1] and "baz" in keywords[1]
+
+    def test_parametrize_with_empty_string_arguments(self, testdir):
+        items = testdir.getitems(
+            """\
+            import pytest
+
+            @pytest.mark.parametrize('v', ('', ' '))
+            @pytest.mark.parametrize('w', ('', ' '))
+            def test(v, w): ...
+            """
+        )
+        names = {item.name for item in items}
+        assert names == {"test[-]", "test[ -]", "test[- ]", "test[ - ]"}
 
     def test_function_equality_with_callspec(self, testdir):
         items = testdir.getitems(

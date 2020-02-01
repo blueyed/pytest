@@ -148,27 +148,30 @@ def pytest_configure(config):
     )
 
 
-@hookimpl(trylast=True)
-def pytest_pyfunc_call(pyfuncitem):
-    def async_warn():
-        msg = "async def functions are not natively supported and have been skipped.\n"
-        msg += "You need to install a suitable plugin for your async framework, for example:\n"
-        msg += "  - pytest-asyncio\n"
-        msg += "  - pytest-trio\n"
-        msg += "  - pytest-tornasync"
-        warnings.warn(PytestUnhandledCoroutineWarning(msg.format(pyfuncitem.nodeid)))
-        skip(msg="async def function and no async plugin installed (see warnings)")
+def async_warn(nodeid: str) -> None:
+    msg = "async def functions are not natively supported and have been skipped.\n"
+    msg += (
+        "You need to install a suitable plugin for your async framework, for example:\n"
+    )
+    msg += "  - pytest-asyncio\n"
+    msg += "  - pytest-trio\n"
+    msg += "  - pytest-tornasync"
+    warnings.warn(PytestUnhandledCoroutineWarning(msg.format(nodeid)))
+    skip(msg="async def function and no async plugin installed (see warnings)")
 
+
+@hookimpl(trylast=True)
+def pytest_pyfunc_call(pyfuncitem: "Function"):
     testfunction = pyfuncitem.obj
     if iscoroutinefunction(testfunction) or (
         sys.version_info >= (3, 6) and inspect.isasyncgenfunction(testfunction)
     ):
-        async_warn()
+        async_warn(pyfuncitem.nodeid)
     funcargs = pyfuncitem.funcargs
     testargs = {arg: funcargs[arg] for arg in pyfuncitem._fixtureinfo.argnames}
     result = testfunction(**testargs)
     if hasattr(result, "__await__") or hasattr(result, "__aiter__"):
-        async_warn()
+        async_warn(pyfuncitem.nodeid)
     return True
 
 
@@ -672,7 +675,10 @@ class Class(PyCollector):
 
     @classmethod
     def from_parent(cls, parent, *, name, obj=None):
-        return cls._create(name=name, parent=parent)
+        """
+        The public constructor
+        """
+        return super().from_parent(name=name, parent=parent)
 
     def collect(self):
         if not safe_getattr(self.obj, "__test__", True):
@@ -860,7 +866,7 @@ class CallSpec2:
 
     @property
     def id(self):
-        return "-".join(map(str, filter(None, self._idlist)))
+        return "-".join(map(str, self._idlist))
 
     def setmulti2(self, valtypes, argnames, valset, id, marks, scopenum, param_index):
         for arg, val in zip(argnames, valset):
@@ -1462,8 +1468,11 @@ class Function(FunctionMixin, nodes.Item):
         self.originalname = originalname
 
     @classmethod
-    def from_parent(cls, parent, **kw):
-        return cls._create(parent=parent, **kw)
+    def from_parent(cls, parent, **kw):  # todo: determine sound type limitations
+        """
+        The public  constructor
+        """
+        return super().from_parent(parent=parent, **kw)
 
     def _initrequest(self):
         self.funcargs = {}
