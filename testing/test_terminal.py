@@ -832,9 +832,19 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
 
 
 def test_fail_reporting_with_tb_no(testdir):
+    """Test that testloc is handled properly.
+
+    It also checks that there is no extra newline (fixed in `TerminalReporter`
+    by using `write_sep` in `section`).
+    """
     testdir.makepyfile("def test_this(): assert 0")
     result = testdir.runpytest("-rf", "--tb=no")
-    result.stdout.fnmatch_lines("*short test summary*")
+    assert result.stdout.lines[-5:-1] == [
+        "test_fail_reporting_with_tb_no.py F                                      [100%]",
+        "",
+        "=========================== short test summary info ============================",
+        "FAILED test_fail_reporting_with_tb_no.py:1::test_this - assert 0",
+    ]
 
 
 def test_fail_reporting_on_pass(testdir):
