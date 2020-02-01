@@ -770,9 +770,7 @@ def test_load_entrypoint_plugins(testdir, monkeypatch, parse_args, should_load):
 
         def load(self):
             nonlocal loaded
-            if not should_load:
-                assert 0
-
+            assert should_load
             loaded = True
             return PseudoPlugin()
 
