@@ -1511,3 +1511,30 @@ def test_assertion_location_with_coverage(testdir):
             "*= 1 failed in*",
         ]
     )
+
+
+def test_verbose_diff_after_runpytest(testdir):
+    """Test that the assertion hook(s) are being restored/used properly."""
+    p1 = testdir.makepyfile(
+        """
+        def test_inner(testdir):
+            p1 = testdir.makepyfile("def test(): pass")
+            assert testdir.runpytest(str(p1)).ret == 0
+
+            assert [5, 6] == [7, 8]
+        """
+    )
+    result = testdir.runpytest("-p", "pytester", str(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "*= FAILURES =*",
+            "    def test_inner(testdir):",
+            "    ",
+            ">       assert [5, 6] == [7, 8]",
+            "E       assert [5, 6] == [7, 8]",
+            "E         At index 0 diff: 5 != 7",
+            "E         Use -v to get the full diff",
+            "",
+            "../../test_verbose_diff_after_runpytest.py:5: AssertionError",
+        ]
+    )

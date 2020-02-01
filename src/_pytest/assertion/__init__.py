@@ -9,6 +9,9 @@ from _pytest.assertion import truncate
 from _pytest.assertion import util
 
 
+saved_hooks = []
+
+
 def pytest_addoption(parser):
     group = parser.getgroup("debugconfig")
     group.addoption(
@@ -139,6 +142,7 @@ def pytest_runtest_setup(item):
                 return res
         return None
 
+    saved_hooks.append((util._reprcompare, util._assertion_pass))
     util._reprcompare = callbinrepr
 
     if item.ihook.pytest_assertion_pass.get_hookimpls():
@@ -152,8 +156,7 @@ def pytest_runtest_setup(item):
 
 
 def pytest_runtest_teardown(item):
-    util._reprcompare = None
-    util._assertion_pass = None
+    util._reprcompare, util._assertion_pass = saved_hooks.pop()
 
 
 def pytest_sessionfinish(session):
