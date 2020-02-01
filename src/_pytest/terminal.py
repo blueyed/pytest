@@ -1158,7 +1158,9 @@ def _get_pos(config, rep):
         try:
             testloc = rep.longrepr.reprtraceback.reprentries[0].reprfileloc
         except AttributeError:
-            # Handle --tb=native.
+            testloc = None
+        if testloc is None:
+            # Handle --tb=native, --tb=no.
             try:
                 testloc = rep.longrepr.reprcrash
             except AttributeError:
