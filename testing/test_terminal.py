@@ -830,6 +830,12 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
     )
 
 
+def test_fail_reporting_with_tb_no(testdir):
+    testdir.makepyfile("def test_this(): assert 0")
+    result = testdir.runpytest("-rf", "--tb=no")
+    result.stdout.fnmatch_lines("*short test summary*")
+
+
 def test_fail_reporting_on_pass(testdir):
     testdir.makepyfile("def test_this(): assert 1")
     result = testdir.runpytest("-rf")
