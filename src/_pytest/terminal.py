@@ -420,7 +420,7 @@ class TerminalReporter:
             self.currentfspath = -2
 
     def ensure_newline(self):
-        if self.currentfspath:
+        if self.currentfspath or self._width_of_current_line:
             self._tw.line()
             self.currentfspath = None
 
