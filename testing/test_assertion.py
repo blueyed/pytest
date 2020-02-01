@@ -1535,6 +1535,6 @@ def test_verbose_diff_after_runpytest(testdir):
             "E         At index 0 diff: 5 != 7",
             "E         Use -v to get the full diff",
             "",
-            "../../test_verbose_diff_after_runpytest.py:5: AssertionError",
+            "*/test_verbose_diff_after_runpytest.py:5: AssertionError",
         ]
     )
