@@ -36,6 +36,14 @@ def pytest_addoption(parser):
     )
 
 
+def pytest_configure():
+    saved_hooks.append((util._reprcompare, util._assertion_pass))
+
+
+def pytest_unconfigure():
+    util._reprcompare, util._assertion_pass = saved_hooks.pop()
+
+
 def register_assert_rewrite(*names) -> None:
     """Register one or more module names to be rewritten on import.
 
@@ -142,7 +150,6 @@ def pytest_runtest_setup(item):
                 return res
         return None
 
-    saved_hooks.append((util._reprcompare, util._assertion_pass))
     util._reprcompare = callbinrepr
 
     if item.ihook.pytest_assertion_pass.get_hookimpls():
@@ -156,7 +163,7 @@ def pytest_runtest_setup(item):
 
 
 def pytest_runtest_teardown(item):
-    util._reprcompare, util._assertion_pass = saved_hooks.pop()
+    util._reprcompare, util._assertion_pass = saved_hooks[-1]
 
 
 def pytest_sessionfinish(session):
