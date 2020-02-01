@@ -194,8 +194,8 @@ def path_matches_patterns(path, patterns):
 
 def pytest_pycollect_makemodule(path, parent):
     if path.basename == "__init__.py":
-        return Package.from_parent(parent, fspath=path)
-    return Module.from_parent(parent, fspath=path)
+        return Package(path, parent)
+    return Module(path, parent)
 
 
 @hookimpl(hookwrapper=True)
@@ -207,7 +207,7 @@ def pytest_pycollect_makeitem(collector, name, obj):
     # nothing was collected elsewhere, let's do it here
     if safe_isclass(obj):
         if collector.istestclass(obj, name):
-            outcome.force_result(Class.from_parent(collector, name=name, obj=obj))
+            outcome.force_result(Class(name, parent=collector))
     elif collector.istestfunction(obj, name):
         # mock seems to store unbound methods (issue473), normalize it
         obj = getattr(obj, "__func__", obj)
@@ -226,7 +226,7 @@ def pytest_pycollect_makeitem(collector, name, obj):
             )
         elif getattr(obj, "__test__", True):
             if is_generator(obj):
-                res = Function.from_parent(collector, name=name)
+                res = Function(name, parent=collector)
                 reason = "yield tests were removed in pytest 4.0 - {name} will be ignored".format(
                     name=name
                 )
@@ -393,7 +393,7 @@ class PyCollector(PyobjMixin, nodes.Collector):
         cls = clscol and clscol.obj or None
         fm = self.session._fixturemanager
 
-        definition = FunctionDefinition.from_parent(self, name=name, callobj=funcobj)
+        definition = FunctionDefinition(name=name, parent=self, callobj=funcobj)
         fixtureinfo = fm.getfixtureinfo(definition, funcobj, cls)
 
         metafunc = Metafunc(
@@ -408,7 +408,7 @@ class PyCollector(PyobjMixin, nodes.Collector):
         self.ihook.pytest_generate_tests.call_extra(methods, dict(metafunc=metafunc))
 
         if not metafunc._calls:
-            yield Function.from_parent(self, name=name, fixtureinfo=fixtureinfo)
+            yield Function(name, parent=self, fixtureinfo=fixtureinfo)
         else:
             # add funcargs() as fixturedefs to fixtureinfo.arg2fixturedefs
             fixtures.add_funcarg_pseudo_fixture_def(self, metafunc, fm)
@@ -420,9 +420,9 @@ class PyCollector(PyobjMixin, nodes.Collector):
 
             for callspec in metafunc._calls:
                 subname = "{}[{}]".format(name, callspec.id)
-                yield Function.from_parent(
-                    self,
+                yield Function(
                     name=subname,
+                    parent=self,
                     callspec=callspec,
                     callobj=funcobj,
                     fixtureinfo=fixtureinfo,
@@ -622,7 +622,7 @@ class Package(Module):
         if init_module.check(file=1) and path_matches_patterns(
             init_module, self.config.getini("python_files")
         ):
-            yield Module.from_parent(self, fspath=init_module)
+            yield Module(init_module, self)
         pkg_prefixes = set()
         for path in this_path.visit(rec=self._recurse, bf=True, sort=True):
             # We will visit our own __init__.py file, in which case we skip it.
@@ -673,13 +673,6 @@ def _get_first_non_fixture_func(obj, names):
 class Class(PyCollector):
     """ Collector for test methods. """
 
-    @classmethod
-    def from_parent(cls, parent, *, name, obj=None):
-        """
-        The public constructor
-        """
-        return super().from_parent(name=name, parent=parent)
-
     def collect(self):
         if not safe_getattr(self.obj, "__test__", True):
             return []
@@ -705,7 +698,7 @@ class Class(PyCollector):
         self._inject_setup_class_fixture()
         self._inject_setup_method_fixture()
 
-        return [Instance.from_parent(self, name="()")]
+        return [Instance(name="()", parent=self)]
 
     def _inject_setup_class_fixture(self):
         """Injects a hidden autouse, class scoped fixture into the collected class object
@@ -1466,13 +1459,6 @@ class Function(FunctionMixin, nodes.Item):
         #:
         #: .. versionadded:: 3.0
         self.originalname = originalname
-
-    @classmethod
-    def from_parent(cls, parent, **kw):  # todo: determine sound type limitations
-        """
-        The public  constructor
-        """
-        return super().from_parent(parent=parent, **kw)
 
     def _initrequest(self):
         self.funcargs = {}

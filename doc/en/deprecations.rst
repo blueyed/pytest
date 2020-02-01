@@ -33,16 +33,6 @@ provide feedback.
 display captured output when tests fail: ``no``, ``stdout``, ``stderr``, ``log`` or ``all`` (the default).
 
 
-
-Node Construction changed to ``Node.from_parent``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. deprecated:: 5.3
-
-The construction of nodes new should use the named constructor ``from_parent``.
-This limitation in api surface intends to enable better/simpler refactoring of the collection tree.
-
-
 ``junit_family`` default value change to "xunit2"
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

@@ -1,3 +1,4 @@
+import inspect
 import os
 import warnings
 from functools import lru_cache
@@ -20,7 +21,8 @@ from _pytest.compat import getfslineno
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import PytestPluginManager
-from _pytest.deprecated import NODE_USE_FROM_PARENT
+from _pytest.deprecated import NODE_REMOVED_ARGUMENT
+from _pytest.deprecated import NODE_REQUIRES_PARENT
 from _pytest.fixtures import FixtureDef
 from _pytest.fixtures import FixtureLookupError
 from _pytest.fixtures import FixtureLookupErrorRepr
@@ -77,12 +79,38 @@ def ischildnode(baseid, nodeid):
 
 
 class NodeMeta(type):
-    def __call__(self, *k, **kw):
-        warnings.warn(NODE_USE_FROM_PARENT.format(name=self.__name__), stacklevel=2)
-        return super().__call__(*k, **kw)
+    def __call__(cls, *args, **kwargs):
+        from _pytest.main import Session  # noqa: F811
 
-    def _create(self, *k, **kw):
-        return super().__call__(*k, **kw)
+        sig = inspect.signature(cls.__init__)
+        bsig = sig.bind(cls, *args, **kwargs)
+
+        if cls is Session:
+            # from_config
+            assert isinstance(bsig.arguments["config"], Config), (args, kwargs)
+            assert len(bsig.arguments) == 2, bsig  # self, config
+        else:
+            # from_parent
+            # TODO: assert hierarchy?
+            if "parent" not in bsig.arguments:
+                # XXX: handle DefinitionMock from tests.  Could also go through
+                # _create instead (or get fixed?)?
+                if not getattr(cls, "_pytest_skip_ctor_check", False):
+                    warnings.warn(
+                        NODE_REQUIRES_PARENT.format(name=cls.__name__), stacklevel=2
+                    )
+            if "config" in bsig.arguments:
+                warnings.warn(
+                    NODE_REMOVED_ARGUMENT.format(name=cls.__name__, arg="config"),
+                    stacklevel=2,
+                )
+            if "session" in bsig.arguments:
+                warnings.warn(
+                    NODE_REMOVED_ARGUMENT.format(name=cls.__name__, arg="session"),
+                    stacklevel=2,
+                )
+
+        return super().__call__(*args, **kwargs)
 
 
 class Node(metaclass=NodeMeta):
@@ -144,24 +172,6 @@ class Node(metaclass=NodeMeta):
             self._nodeid = self.parent.nodeid
             if self.name != "()":
                 self._nodeid += "::" + self.name
-
-    @classmethod
-    def from_parent(cls, parent: "Node", **kw):
-        """
-        Public Constructor for Nodes
-
-        This indirection got introduced in order to enable removing
-        the fragile logic from the node constructors.
-
-        Subclasses can use ``super().from_parent(...)`` when overriding the construction
-
-        :param parent: the parent node of this test Node
-        """
-        if "config" in kw:
-            raise TypeError("config is not a valid argument for from_parent")
-        if "session" in kw:
-            raise TypeError("session is not a valid argument for from_parent")
-        return cls._create(parent=parent, **kw)
 
     @property
     def ihook(self):
