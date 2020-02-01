@@ -11,6 +11,7 @@ from typing import FrozenSet
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 import attr
 import py
@@ -254,7 +255,7 @@ def pytest_cmdline_main(config):
     return wrap_session(config, _main)
 
 
-def _main(config, session):
+def _main(config: Config, session: "Session") -> Optional[Union[int, ExitCode]]:
     """ default command line protocol for initialization, session,
     running tests and reporting. """
     config.hook.pytest_collection(session=session)
@@ -264,6 +265,7 @@ def _main(config, session):
         return ExitCode.TESTS_FAILED
     elif session.testscollected == 0:
         return ExitCode.NO_TESTS_COLLECTED
+    return None
 
 
 def pytest_collection(session):
