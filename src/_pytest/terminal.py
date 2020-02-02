@@ -612,7 +612,7 @@ class TerminalReporter:
             # py < 1.6.0
             return self._tw.chars_on_current_line
 
-    def pytest_collection(self):
+    def pytest_collection(self) -> None:
         if self.isatty:
             if self.config.option.verbose >= 0:
                 self.write("collecting ... ", bold=True)
@@ -1153,7 +1153,9 @@ def _get_pos(config, rep):
         try:
             testloc = rep.longrepr.reprtraceback.reprentries[0].reprfileloc
         except AttributeError:
-            # Handle --tb=native.
+            testloc = None
+        if testloc is None:
+            # Handle --tb=native, --tb=no.
             try:
                 testloc = rep.longrepr.reprcrash
             except AttributeError:

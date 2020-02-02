@@ -894,3 +894,35 @@ def test_makefile_joins_absolute_path(testdir: Testdir) -> None:
     else:
         p1 = testdir.makepyfile(**{str(absfile): ""})
         assert str(p1) == (testdir.tmpdir / absfile) + ".py"
+
+
+def test_makefile_warts(testdir: Testdir) -> None:
+    """Test behavior with makefile.
+
+    Additional issues:
+     - always strips and dedents.
+    """
+    # Requires "ext".
+    with pytest.raises(TypeError, match="required positional argument"):
+        testdir.makefile(foo="")  # type: ignore[call-arg]  # noqa: F821
+
+    # Cannot create a file named "ext".
+    p1 = testdir.makefile(ext="")
+    assert p1 is None
+    assert testdir.tmpdir.listdir() == []
+
+    with pytest.raises(TypeError, match="got multiple values for argument 'ext'"):
+        testdir.makefile("", ext="")  # type: ignore[misc]  # noqa: F821
+
+    # However, "ext.py" can be created via `makepyfile` at least.
+    p1 = testdir.makepyfile(ext="")
+    assert p1.basename == "ext.py"
+
+    # Replaces any "ext".
+    p1 = testdir.makefile(ext="txt", **{"foo.txt": ""})
+    assert p1.basename == "foo.txt"
+    # Even if empty.  Could allow for None to skip it.
+    p1 = testdir.makefile(ext="", **{"foo.txt.txt": ""})
+    assert p1.basename == "foo.txt"
+    p1 = testdir.makefile(ext="", **{"foo.txt.txt.meh": ""})
+    assert p1.basename == "foo.txt.txt"
