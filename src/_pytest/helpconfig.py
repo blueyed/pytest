@@ -9,10 +9,11 @@ from typing import Optional
 import py
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import PrintHelp
 
-if False:  # TYPE_CHECKING
+if TYPE_CHECKING:
     from typing_extensions import Literal  # noqa: F401
 
 

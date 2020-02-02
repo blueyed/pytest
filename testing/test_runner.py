@@ -14,12 +14,13 @@ from _pytest import main
 from _pytest import outcomes
 from _pytest import reports
 from _pytest import runner
+from _pytest.compat import TYPE_CHECKING
 from _pytest.outcomes import Exit
 from _pytest.outcomes import Failed
 from _pytest.outcomes import OutcomeException
 from _pytest.outcomes import Skipped
 
-if False:  # TYPE_CHECKING
+if TYPE_CHECKING:
     from typing import Type
 
 
