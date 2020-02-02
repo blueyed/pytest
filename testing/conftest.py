@@ -11,11 +11,6 @@ def pytest_addoption(parser):
     )
 
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_env(monkeypatch_session):
-    monkeypatch_session.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
-
-
 if sys.gettrace():
 
     @pytest.fixture(autouse=True)
