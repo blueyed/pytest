@@ -282,6 +282,11 @@ class pytestPDB(PdbBase):
         _pdb = self._init_pdb("set_trace", *args, **kwargs)
         _pdb.set_trace(frame)
 
+    def interaction(self, *args, **kwargs):
+        _pdb = self._init_pdb("interaction", *args, **kwargs)
+        _pdb.reset()
+        _pdb.interaction(*args, **kwargs)
+
 
 def set_trace(*, header=None):
     """Placeholder for when there is no config (yet)."""
