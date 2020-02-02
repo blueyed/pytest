@@ -2,17 +2,13 @@ import os
 import sys
 
 import pytest
+from _pytest.pytester import Testdir
 
 
 def pytest_addoption(parser):
     parser.addoption(
         "--run-integration-tests", action="store_true", help=("Run integration tests.")
     )
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_env(monkeypatch_session):
-    monkeypatch_session.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
 
 
 if sys.gettrace():
@@ -152,3 +148,9 @@ def dummy_yaml_custom_test(testdir):
     """
     )
     testdir.makefile(".yaml", test1="")
+
+
+@pytest.fixture
+def testdir(testdir: Testdir) -> Testdir:
+    testdir.monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    return testdir
