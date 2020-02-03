@@ -14,6 +14,7 @@ from typing import Iterable
 
 import pytest
 from _pytest.compat import CaptureIO
+from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
 
 patchsysdict = {0: "stdin", 1: "stdout", 2: "stderr"}
@@ -46,7 +47,7 @@ def pytest_load_initial_conftests(early_config, parser, args):
     _colorama_workaround()
     _readline_workaround()
     pluginmanager = early_config.pluginmanager
-    capman = CaptureManager(ns.capture)
+    capman = CaptureManager(ns.capture, config=early_config)
     pluginmanager.register(capman, "capturemanager")
 
     # make sure that capturemanager is properly reset at final shutdown
@@ -75,14 +76,23 @@ class CaptureManager:
       case special handling is needed to ensure the fixtures take precedence over the global capture.
     """
 
-    def __init__(self, method):
+    def __init__(
+        self, method, *, config: Config = None
+    ) -> None:  # XXX: optional for tests
         self._method = method
         self._global_capturing = None
-        self._current_item = None
+        self._config = config
+        self._current_item_fixture = None
+
+    @property
+    def _current_item(self):
+        # if not self._config:
+        #     return None
+        return self._config.pluginmanager.getplugin("session")._current_item
 
     def __repr__(self):
-        return "<CaptureManager _method={!r} _global_capturing={!r} _current_item={!r}>".format(
-            self._method, self._global_capturing, self._current_item
+        return "<CaptureManager _method={!r} _global_capturing={!r} _current_item_fixture={!r}>".format(
+            self._method, self._global_capturing, self._current_item_fixture
         )
 
     def _getcapture(self, method):
@@ -97,11 +107,8 @@ class CaptureManager:
     def is_capturing(self):
         if self.is_globally_capturing():
             return "global"
-        capture_fixture = getattr(self._current_item, "_capture_fixture", None)
-        if capture_fixture is not None:
-            return (
-                "fixture %s" % self._current_item._capture_fixture.request.fixturename
-            )
+        if self._current_item_fixture:
+            return "fixture %s" % self._current_item_fixture.request.fixturename
         return False
 
     # Global capturing control
@@ -133,41 +140,37 @@ class CaptureManager:
 
     def suspend(self, in_=False):
         # Need to undo local capsys-et-al if it exists before disabling global capture.
-        self.suspend_fixture(self._current_item)
+        self.suspend_fixture()
         self.suspend_global_capture(in_)
 
     def resume(self):
         self.resume_global_capture()
-        self.resume_fixture(self._current_item)
+        self.resume_fixture()
 
     def read_global_capture(self):
         return self._global_capturing.readouterr()
 
     # Fixture Control (it's just forwarding, think about removing this later)
 
-    def activate_fixture(self, item):
+    def activate_fixture(self):
         """If the current item is using ``capsys`` or ``capfd``, activate them so they take precedence over
         the global capture.
         """
-        fixture = getattr(item, "_capture_fixture", None)
-        if fixture is not None:
-            fixture._start()
+        if self._current_item_fixture:
+            self._current_item_fixture._start()
 
-    def deactivate_fixture(self, item):
+    def deactivate_fixture(self):
         """Deactivates the ``capsys`` or ``capfd`` fixture of this item, if any."""
-        fixture = getattr(item, "_capture_fixture", None)
-        if fixture is not None:
-            fixture.close()
+        if self._current_item_fixture:
+            self._current_item_fixture.close()
 
-    def suspend_fixture(self, item):
-        fixture = getattr(item, "_capture_fixture", None)
-        if fixture is not None:
-            fixture._suspend()
+    def suspend_fixture(self):
+        if self._current_item_fixture:
+            self._current_item_fixture._suspend()
 
-    def resume_fixture(self, item):
-        fixture = getattr(item, "_capture_fixture", None)
-        if fixture is not None:
-            fixture._resume()
+    def resume_fixture(self):
+        if self._current_item_fixture:
+            self._current_item_fixture._resume()
 
     # Helper context managers
 
@@ -183,11 +186,11 @@ class CaptureManager:
     @contextlib.contextmanager
     def item_capture(self, when, item):
         self.resume_global_capture()
-        self.activate_fixture(item)
+        self.activate_fixture()
         try:
             yield
         finally:
-            self.deactivate_fixture(item)
+            self.deactivate_fixture()
             self.suspend_global_capture(in_=False)
 
         out, err = self.read_global_capture()
@@ -210,12 +213,6 @@ class CaptureManager:
                 rep.sections.append(("Captured stderr", err))
         else:
             yield
-
-    @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_protocol(self, item):
-        self._current_item = item
-        yield
-        self._current_item = None
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_setup(self, item):
@@ -322,15 +319,12 @@ def _install_capture_fixture_on_item(request, capture_class):
     The CaptureFixture is added as attribute of the item because it needs to accessed
     by ``CaptureManager`` during its ``pytest_runtest_*`` hooks.
     """
-    request.node._capture_fixture = fixture = CaptureFixture(capture_class, request)
     capmanager = request.config.pluginmanager.getplugin("capturemanager")
-    # Need to active this fixture right away in case it is being used by another fixture (setup phase).
-    # If this fixture is being used only by a test function (call phase), then we wouldn't need this
-    # activation, but it doesn't hurt.
-    capmanager.activate_fixture(request.node)
+    capmanager._current_item_fixture = fixture = CaptureFixture(capture_class, request)
+    capmanager.activate_fixture()
     yield fixture
     fixture.close()
-    del request.node._capture_fixture
+    capmanager._current_item_fixture = None
 
 
 class CaptureFixture:
