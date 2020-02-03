@@ -12,10 +12,12 @@ from tempfile import TemporaryFile
 from typing import BinaryIO
 from typing import Generator
 from typing import Iterable
+from typing import Optional
 
 import pytest
 from _pytest.compat import CaptureIO
 from _pytest.config import Config
+from _pytest.fixtures import FixtureRequest
 
 patchsysdict = {0: "stdin", 1: "stdout", 2: "stderr"}
 
@@ -40,7 +42,7 @@ def pytest_addoption(parser):
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_load_initial_conftests(early_config, parser, args):
+def pytest_load_initial_conftests(early_config):
     ns = early_config.known_args_namespace
     if ns.capture == "fd":
         _py36_windowsconsoleio_workaround(sys.stdout)
@@ -82,7 +84,7 @@ class CaptureManager:
         self._method = method
         self._global_capturing = None
         self._config = config
-        self._current_item_fixture = None
+        self._current_item_fixture = None  # type: Optional[CaptureFixture]
 
     @property
     def _current_item(self):
@@ -151,6 +153,29 @@ class CaptureManager:
         return self._global_capturing.readouterr()
 
     # Fixture Control (it's just forwarding, think about removing this later)
+
+    @contextlib.contextmanager
+    def _item_fixture(
+        self, request: FixtureRequest
+    ) -> Generator["CaptureFixture", None, None]:
+        cur_fix = self._current_item_fixture
+        if cur_fix:
+            other_name = next(
+                k
+                for k in map_fixname_class
+                if map_fixname_class[k] is cur_fix.captureclass
+            )
+            raise request.raiseerror(
+                "cannot use {} and {} at the same time".format(
+                    request.fixturename, other_name
+                )
+            )
+        capture_class = map_fixname_class[request.fixturename]
+        self._current_item_fixture = fixture = CaptureFixture(capture_class, request)
+        self.activate_fixture()
+        yield fixture
+        fixture.close()
+        self._current_item_fixture = None
 
     def activate_fixture(self):
         """If the current item is using ``capsys`` or ``capfd``, activate them so they take precedence over
@@ -246,7 +271,9 @@ def capsys(request):
     calls, which return a ``(out, err)`` namedtuple.
     ``out`` and ``err`` will be ``text`` objects.
     """
-    with _install_capture_fixture_on_item(request, SysCapture) as fixture:
+    with request.config.pluginmanager.getplugin("capturemanager")._item_fixture(
+        request
+    ) as fixture:
         yield fixture
 
 
@@ -258,7 +285,9 @@ def capsysbinary(request):
     method calls, which return a ``(out, err)`` namedtuple.
     ``out`` and ``err`` will be ``bytes`` objects.
     """
-    with _install_capture_fixture_on_item(request, SysCaptureBinary) as fixture:
+    with request.config.pluginmanager.getplugin("capturemanager")._item_fixture(
+        request
+    ) as fixture:
         yield fixture
 
 
@@ -274,7 +303,9 @@ def capfd(request):
         pytest.skip(
             "capfd fixture needs os.dup function which is not available in this system"
         )
-    with _install_capture_fixture_on_item(request, FDCapture) as fixture:
+    with request.config.pluginmanager.getplugin("capturemanager")._item_fixture(
+        request
+    ) as fixture:
         yield fixture
 
 
@@ -290,27 +321,10 @@ def capfdbinary(request):
         pytest.skip(
             "capfdbinary fixture needs os.dup function which is not available in this system"
         )
-    with _install_capture_fixture_on_item(request, FDCaptureBinary) as fixture:
+    with request.config.pluginmanager.getplugin("capturemanager")._item_fixture(
+        request
+    ) as fixture:
         yield fixture
-
-
-@contextlib.contextmanager
-def _install_capture_fixture_on_item(
-    request, capture_class
-) -> Generator["CaptureFixture", None, None]:
-    capmanager = request.config.pluginmanager.getplugin("capturemanager")
-    cur_fix = capmanager._current_item_fixture
-    if cur_fix:
-        this_name = map_class_fixname[capture_class]
-        other_name = map_class_fixname[cur_fix.captureclass]
-        raise request.raiseerror(
-            "cannot use {} and {} at the same time".format(this_name, other_name)
-        )
-    capmanager._current_item_fixture = fixture = CaptureFixture(capture_class, request)
-    capmanager.activate_fixture()
-    yield fixture
-    fixture.close()
-    capmanager._current_item_fixture = None
 
 
 class CaptureFixture:
@@ -675,11 +689,11 @@ class SysCaptureBinary(SysCapture):
         return res
 
 
-map_class_fixname = {
-    FDCapture: "capfd",
-    FDCaptureBinary: "capfdbinary",
-    SysCapture: "capsys",
-    SysCaptureBinary: "capsysbinary",
+map_fixname_class = {
+    "capfd": FDCapture,
+    "capfdbinary": FDCaptureBinary,
+    "capsys": SysCapture,
+    "capsysbinary": SysCaptureBinary,
 }
 
 
