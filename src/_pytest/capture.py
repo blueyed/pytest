@@ -10,12 +10,12 @@ import sys
 from io import UnsupportedOperation
 from tempfile import TemporaryFile
 from typing import BinaryIO
+from typing import Generator
 from typing import Iterable
 
 import pytest
 from _pytest.compat import CaptureIO
 from _pytest.config import Config
-from _pytest.fixtures import FixtureRequest
 
 patchsysdict = {0: "stdin", 1: "stdout", 2: "stderr"}
 
@@ -238,18 +238,6 @@ class CaptureManager:
         self.stop_global_capturing()
 
 
-capture_fixtures = {"capfd", "capfdbinary", "capsys", "capsysbinary"}
-
-
-def _ensure_only_one_capture_fixture(request: FixtureRequest, name):
-    fixtures = sorted(set(request.fixturenames) & capture_fixtures - {name})
-    if fixtures:
-        arg = fixtures[0] if len(fixtures) == 1 else fixtures
-        raise request.raiseerror(
-            "cannot use {} and {} at the same time".format(arg, name)
-        )
-
-
 @pytest.fixture
 def capsys(request):
     """Enable text capturing of writes to ``sys.stdout`` and ``sys.stderr``.
@@ -258,7 +246,6 @@ def capsys(request):
     calls, which return a ``(out, err)`` namedtuple.
     ``out`` and ``err`` will be ``text`` objects.
     """
-    _ensure_only_one_capture_fixture(request, "capsys")
     with _install_capture_fixture_on_item(request, SysCapture) as fixture:
         yield fixture
 
@@ -271,7 +258,6 @@ def capsysbinary(request):
     method calls, which return a ``(out, err)`` namedtuple.
     ``out`` and ``err`` will be ``bytes`` objects.
     """
-    _ensure_only_one_capture_fixture(request, "capsysbinary")
     with _install_capture_fixture_on_item(request, SysCaptureBinary) as fixture:
         yield fixture
 
@@ -284,7 +270,6 @@ def capfd(request):
     calls, which return a ``(out, err)`` namedtuple.
     ``out`` and ``err`` will be ``text`` objects.
     """
-    _ensure_only_one_capture_fixture(request, "capfd")
     if not hasattr(os, "dup"):
         pytest.skip(
             "capfd fixture needs os.dup function which is not available in this system"
@@ -301,7 +286,6 @@ def capfdbinary(request):
     calls, which return a ``(out, err)`` namedtuple.
     ``out`` and ``err`` will be ``byte`` objects.
     """
-    _ensure_only_one_capture_fixture(request, "capfdbinary")
     if not hasattr(os, "dup"):
         pytest.skip(
             "capfdbinary fixture needs os.dup function which is not available in this system"
@@ -311,15 +295,17 @@ def capfdbinary(request):
 
 
 @contextlib.contextmanager
-def _install_capture_fixture_on_item(request, capture_class):
-    """
-    Context manager which creates a ``CaptureFixture`` instance and "installs" it on
-    the item/node of the given request. Used by ``capsys`` and ``capfd``.
-
-    The CaptureFixture is added as attribute of the item because it needs to accessed
-    by ``CaptureManager`` during its ``pytest_runtest_*`` hooks.
-    """
+def _install_capture_fixture_on_item(
+    request, capture_class
+) -> Generator["CaptureFixture", None, None]:
     capmanager = request.config.pluginmanager.getplugin("capturemanager")
+    cur_fix = capmanager._current_item_fixture
+    if cur_fix:
+        this_name = map_class_fixname[capture_class]
+        other_name = map_class_fixname[cur_fix.captureclass]
+        raise request.raiseerror(
+            "cannot use {} and {} at the same time".format(this_name, other_name)
+        )
     capmanager._current_item_fixture = fixture = CaptureFixture(capture_class, request)
     capmanager.activate_fixture()
     yield fixture
@@ -687,6 +673,14 @@ class SysCaptureBinary(SysCapture):
         self.tmpfile.seek(0)
         self.tmpfile.truncate()
         return res
+
+
+map_class_fixname = {
+    FDCapture: "capfd",
+    FDCaptureBinary: "capfdbinary",
+    SysCapture: "capsys",
+    SysCaptureBinary: "capsysbinary",
+}
 
 
 class DontReadFromInput:
