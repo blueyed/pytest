@@ -42,14 +42,14 @@ def pytest_addoption(parser):
 
 
 @pytest.hookimpl(hookwrapper=True)
-def pytest_load_initial_conftests(early_config):
+def pytest_load_initial_conftests(early_config: Config):
     ns = early_config.known_args_namespace
     if ns.capture == "fd":
         _py36_windowsconsoleio_workaround(sys.stdout)
     _colorama_workaround()
     _readline_workaround()
     pluginmanager = early_config.pluginmanager
-    capman = CaptureManager(ns.capture, config=early_config)
+    capman = CaptureManager(ns.capture)
     pluginmanager.register(capman, "capturemanager")
 
     # make sure that capturemanager is properly reset at final shutdown
@@ -78,19 +78,10 @@ class CaptureManager:
       case special handling is needed to ensure the fixtures take precedence over the global capture.
     """
 
-    def __init__(
-        self, method, *, config: Config = None
-    ) -> None:  # XXX: optional for tests
+    def __init__(self, method) -> None:
         self._method = method
         self._global_capturing = None
-        self._config = config
         self._current_item_fixture = None  # type: Optional[CaptureFixture]
-
-    @property
-    def _current_item(self):
-        # if not self._config:
-        #     return None
-        return self._config.pluginmanager.getplugin("session")._current_item
 
     def __repr__(self):
         return "<CaptureManager _method={!r} _global_capturing={!r} _current_item_fixture={!r}>".format(
