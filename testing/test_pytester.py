@@ -621,6 +621,7 @@ def test_testdir_terminal_width(monkeypatch):
 
 def test_testdir_terminal_width_inner(testdir, monkeypatch):
     monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 1234)
+    monkeypatch.delenv("COLUMNS", raising=False)
 
     p1 = testdir.makepyfile(
         """
