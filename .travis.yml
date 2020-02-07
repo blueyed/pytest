@@ -31,7 +31,6 @@ jobs:
     - env:
         - TOXENV=py37-numpy-pexpect-twisted
         - PYTEST_ADDOPTS="-vv --showlocals --durations=50 --run-integration-tests"
-        - SCRIPT_PREFIX="env COLUMNS=1024"
       python: '3.7.4'
 
     - env: TOXENV=py36-xdist PYTEST_REORDER_TESTS=0
@@ -41,7 +40,10 @@ jobs:
       python: '3.5.9'
 
     # Coverage for Python 3.5.{0,1} specific code, mostly typing related.
-    - env: TOXENV=py35 PYTEST_ADDOPTS="-k test_raises_cyclic_reference"
+    - env:
+        - TOXENV=py35
+        - PYTEST_ADDOPTS="-k test_raises_cyclic_reference"
+        - SCRIPT_PREFIX="env COLUMNS=1024"
       python: '3.5.1'
       dist: trusty
       before_install:
