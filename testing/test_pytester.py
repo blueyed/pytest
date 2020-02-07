@@ -608,7 +608,7 @@ def test_pytester_addopts_before_testdir(request, monkeypatch) -> None:
     assert os.environ.get("PYTEST_ADDOPTS") == "--orig-unused"
 
 
-def test_testdir_terminal_width(request, monkeypatch):
+def test_testdir_terminal_width(monkeypatch):
     """testdir does not set COLUMNS, but _cached_terminal_width."""
     from _pytest.terminal import get_terminal_width
 
@@ -620,9 +620,13 @@ def test_testdir_terminal_width(request, monkeypatch):
     assert get_terminal_width() == 1234
     monkeypatch.delenv("COLUMNS")
 
-    testdir = request.getfixturevalue("testdir")
-    # Not changed by requesting the fixture dynamically.
-    assert get_terminal_width() == 1234
+    monkeypatch.undo()
+    assert os.environ.get("COLUMNS") == orig_env
+    assert get_terminal_width() == orig_width
+
+
+def test_testdir_terminal_width_inner(testdir, monkeypatch):
+    monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 1234)
 
     p1 = testdir.makepyfile(
         """
@@ -642,10 +646,6 @@ def test_testdir_terminal_width(request, monkeypatch):
     )
     result = testdir.runpytest("-p", "pytester", str(p1))
     assert result.ret == 0
-
-    monkeypatch.undo()
-    assert os.environ.get("COLUMNS") == orig_env
-    assert get_terminal_width() == orig_width
 
 
 def test_run_stdin(testdir) -> None:
