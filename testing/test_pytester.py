@@ -574,16 +574,10 @@ def test_no_matching_after_match() -> None:
 
 def test_pytester_addopts_before_testdir(request, monkeypatch) -> None:
     monkeypatch.setenv("PYTEST_ADDOPTS", "--orig-unused")
-    orig_env = dict(os.environ.copy())
-
     # Requesting the fixture dynamically / instantiating Testdir does not
-    # change the env.
+    # change the env via its monkeypatch instance.
     testdir = request.getfixturevalue("testdir")
     assert os.environ["PYTEST_ADDOPTS"] == "--orig-unused"
-    # Only our adjustments via conftest get done.
-    expected_env = dict(os.environ)
-    assert expected_env.pop("PYTEST_DISABLE_PLUGIN_AUTOLOAD") == "1"
-    assert orig_env == expected_env
 
     assert testdir.monkeypatch is not monkeypatch
     testdir.monkeypatch.setenv("PYTEST_ADDOPTS", "-p pytester")
