@@ -28,6 +28,7 @@ jobs:
     - env:
         - TOXENV=py37-numpy-pexpect-twisted
         - PYTEST_ADDOPTS="-vv --showlocals --durations=50 --run-integration-tests"
+        - SCRIPT_PREFIX="env COLUMNS=1024"
       python: '3.7.4'
 
     - env: TOXENV=py36-xdist PYTEST_REORDER_TESTS=0
@@ -64,7 +65,7 @@ before_script:
   - python -m tox --notest -v --durations
 
 script:
-  - env COLUMNS=500 python -m tox -v --durations
+  - '"$SCRIPT_PREFIX" python -m tox -v --durations'
   - |
     if [[ "$PYTEST_COVERAGE" = 1 ]]; then
       env CODECOV_NAME="$TOXENV-$TRAVIS_OS_NAME" scripts/report-coverage.sh -F Travis
