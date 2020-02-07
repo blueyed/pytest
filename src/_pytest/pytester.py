@@ -15,6 +15,7 @@ from fnmatch import fnmatch
 from io import StringIO
 from typing import Callable
 from typing import Dict
+from typing import Generator
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -39,6 +40,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from _pytest.nodes import Collector
 from _pytest.nodes import Item
 from _pytest.pathlib import Path
+from _pytest.python import Function
 from _pytest.python import Module
 from _pytest.reports import TestReport
 from _pytest.tmpdir import TempdirFactory
@@ -535,6 +537,39 @@ def _display_running(header, *args):
     print("{}: {}\n{}in: {}".format(header, args_str, indent, cwd))
 
 
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
+    """Setup/activate testdir's monkeypatching only during test calls.
+
+    When it would be done via the instance/fixture directly it would also be
+    active during teardown (e.g. with the terminal plugin's reporting), where
+    it might mess with the column width etc.
+    """
+    testdir = item.funcargs.get("testdir")
+    if not isinstance(testdir, Testdir):
+        yield
+        return
+
+    mp = testdir.monkeypatch
+    mp.setenv("PYTEST_DEBUG_TEMPROOT", str(testdir.test_tmproot))
+    # Ensure no unexpected caching via tox.
+    mp.delenv("TOX_ENV_DIR", raising=False)
+    # Discard outer pytest options.
+    mp.delenv("PYTEST_ADDOPTS", raising=False)
+    # Ensure no user config is used.
+    tmphome = str(testdir.tmpdir)
+    mp.setenv("HOME", tmphome)
+    mp.setenv("USERPROFILE", tmphome)
+    # Do not use colors for inner runs by default.
+    mp.setenv("PY_COLORS", "0")
+
+    mp.setattr("_pytest.terminal._cached_terminal_width", None)
+    try:
+        yield
+    finally:
+        mp.undo()
+
+
 class Testdir:
     """Temporary test directory with tools to test/run pytest itself.
 
@@ -575,20 +610,7 @@ class Testdir:
         self.chdir()
         self.request.addfinalizer(self.finalize)
         self._method = self.request.config.getoption("--runpytest")
-
-        mp = self.monkeypatch = MonkeyPatch()
-        mp.setenv("PYTEST_DEBUG_TEMPROOT", str(self.test_tmproot))
-        # Ensure no unexpected caching via tox.
-        mp.delenv("TOX_ENV_DIR", raising=False)
-        # Discard outer pytest options.
-        mp.delenv("PYTEST_ADDOPTS", raising=False)
-        # Ensure no user config is used.
-        tmphome = str(self.tmpdir)
-        mp.setenv("HOME", tmphome)
-        mp.setenv("USERPROFILE", tmphome)
-        # Do not use colors for inner runs by default.
-        mp.setenv("PY_COLORS", "0")
-        mp.setattr("_pytest.terminal._cached_terminal_width", 80)
+        self.monkeypatch = MonkeyPatch()
 
     def __repr__(self):
         return "<Testdir {!r}>".format(self.tmpdir)

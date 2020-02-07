@@ -573,14 +573,39 @@ def test_no_matching_after_match() -> None:
 
 
 def test_pytester_addopts_before_testdir(request, monkeypatch) -> None:
-    orig = os.environ.get("PYTEST_ADDOPTS", None)
     monkeypatch.setenv("PYTEST_ADDOPTS", "--orig-unused")
+    orig_env = dict(os.environ.copy())
+
+    # Requesting the fixture dynamically / instantiating Testdir does not
+    # change the env.
     testdir = request.getfixturevalue("testdir")
-    assert "PYTEST_ADDOPTS" not in os.environ
+    assert os.environ["PYTEST_ADDOPTS"] == "--orig-unused"
+    # Only our adjustments via conftest get done.
+    expected_env = dict(os.environ)
+    assert expected_env.pop("PYTEST_DISABLE_PLUGIN_AUTOLOAD") == "1"
+    assert orig_env == expected_env
+
+    assert testdir.monkeypatch is not monkeypatch
+    testdir.monkeypatch.setenv("PYTEST_ADDOPTS", "-p pytester")
+
+    p1 = testdir.makepyfile(
+        """
+        import os
+
+        def test(testdir):
+            assert "PYTEST_ADDOPTS" not in os.environ
+
+        def test2():
+            assert os.environ.get("PYTEST_ADDOPTS") == "-p pytester"
+        """
+    )
+    result = testdir.runpytest(str(p1))
+    assert result.ret == 0
+
+    # Finalizer undos always, although a context is used via
+    # pytest_runtest_call.
     testdir.finalize()
     assert os.environ.get("PYTEST_ADDOPTS") == "--orig-unused"
-    monkeypatch.undo()
-    assert os.environ.get("PYTEST_ADDOPTS") == orig
 
 
 def test_testdir_terminal_width(request, monkeypatch):
@@ -596,11 +621,27 @@ def test_testdir_terminal_width(request, monkeypatch):
     monkeypatch.delenv("COLUMNS")
 
     testdir = request.getfixturevalue("testdir")
-    assert get_terminal_width() == 80
-    assert "COLUMNS" not in os.environ
-    testdir.finalize()
+    # Not changed by requesting the fixture dynamically.
     assert get_terminal_width() == 1234
-    assert "COLUMNS" not in os.environ
+
+    p1 = testdir.makepyfile(
+        """
+        import os
+        from _pytest.terminal import get_terminal_width
+
+        def test1():
+            assert get_terminal_width() == 1234
+
+        def test2(testdir):
+            assert get_terminal_width() == 80
+            assert "COLUMNS" not in os.environ
+            testdir.finalize()
+            assert get_terminal_width() == 1234
+            assert "COLUMNS" not in os.environ
+        """
+    )
+    result = testdir.runpytest("-p", "pytester", str(p1))
+    assert result.ret == 0
 
     monkeypatch.undo()
     assert os.environ.get("COLUMNS") == orig_env
