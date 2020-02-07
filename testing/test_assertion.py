@@ -506,7 +506,9 @@ class TestAssert_reprcompare:
             "  ]",
         ]
 
-    def test_dict_wrap(self):
+    def test_dict_wrap(self, monkeypatch):
+        monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 80)
+
         d1 = {"common": 1, "env": {"env1": 1}}
         d2 = {"common": 1, "env": {"env1": 1, "env2": 2}}
 

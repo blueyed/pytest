@@ -7,6 +7,7 @@ env:
   global:
     - PYTEST_ADDOPTS="-vv --showlocals --durations=50"
     - PYTEST_COVERAGE=1
+    - SCRIPT_PREFIX="env COLUMNS=130"
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
@@ -22,7 +23,9 @@ jobs:
     # - numpy
     # - verbose=0
     # - test_sys_breakpoint_interception (via pexpect).
-    - env: TOXENV=py38-xdist
+    - env:
+        - TOXENV=py38-xdist
+        - SCRIPT_PREFIX="env -u COLUMNS"
       python: '3.8'
 
     - env:
@@ -37,7 +40,10 @@ jobs:
       python: '3.5.9'
 
     # Coverage for Python 3.5.{0,1} specific code, mostly typing related.
-    - env: TOXENV=py35 PYTEST_ADDOPTS="-k test_raises_cyclic_reference"
+    - env:
+        - TOXENV=py35
+        - PYTEST_ADDOPTS="-k test_raises_cyclic_reference"
+        - SCRIPT_PREFIX="env COLUMNS=1024"
       python: '3.5.1'
       dist: trusty
       before_install:
@@ -64,7 +70,7 @@ before_script:
   - python -m tox --notest -v --durations
 
 script:
-  - env COLUMNS=120 python -m tox -v --durations
+  - $SCRIPT_PREFIX python -m tox -v --durations
   - |
     if [[ "$PYTEST_COVERAGE" = 1 ]]; then
       env CODECOV_NAME="$TOXENV-$TRAVIS_OS_NAME" scripts/report-coverage.sh -F Travis
