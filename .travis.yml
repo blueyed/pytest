@@ -7,6 +7,7 @@ env:
   global:
     - PYTEST_ADDOPTS="-vv --showlocals --durations=50"
     - PYTEST_COVERAGE=1
+    - SCRIPT_PREFIX="env COLUMNS=130"
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
@@ -22,7 +23,9 @@ jobs:
     # - numpy
     # - verbose=0
     # - test_sys_breakpoint_interception (via pexpect).
-    - env: TOXENV=py38-xdist
+    - env:
+        - TOXENV=py38-xdist
+        - SCRIPT_PREFIX="env -u COLUMNS"
       python: '3.8'
 
     - env:
