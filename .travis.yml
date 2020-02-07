@@ -64,7 +64,7 @@ before_script:
   - python -m tox --notest -v --durations
 
 script:
-  - env COLUMNS=120 python -m tox -v --durations
+  - env COLUMNS=500 python -m tox -v --durations
   - |
     if [[ "$PYTEST_COVERAGE" = 1 ]]; then
       env CODECOV_NAME="$TOXENV-$TRAVIS_OS_NAME" scripts/report-coverage.sh -F Travis
