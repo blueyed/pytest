@@ -6,6 +6,7 @@ cache: false
 env:
   global:
     - PYTEST_ADDOPTS="-vv --showlocals --durations=50"
+    - PIP_DISABLE_PIP_VERSION_CHECK=1
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
@@ -23,7 +24,7 @@ jobs:
       python: '3.5.1'
       dist: trusty
       before_install:
-        - python -m pip install -U pip
+        - python -m pip install -U pip==19.3.1
 
 before_script:
   - |

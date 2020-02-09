@@ -111,7 +111,11 @@ jobs:
         key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
     - name: Install tox
-      run: python -m pip install git+https://github.com/blueyed/tox@master
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      run: |
+        python -m pip --version
+        python -m pip install git+https://github.com/blueyed/tox@master
 
     - name: Setup tox environment
       run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}
@@ -145,6 +149,7 @@ jobs:
         python-version: "3.7"
     - name: Install dependencies
       run: |
+        python -m pip --version
         python -m pip install wheel setuptools git+https://github.com/blueyed/tox@master
     - name: Build package
       run: |
