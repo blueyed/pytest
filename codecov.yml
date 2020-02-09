@@ -4,4 +4,4 @@ codecov:
   ci:
     - builds.sr.ht
   notify:
-    after_n_builds: 6
+    after_n_builds: 7
