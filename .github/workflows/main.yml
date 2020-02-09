@@ -54,6 +54,7 @@ jobs:
             python: "3.8"
             os: ubuntu-latest
             tox_env: "py38-xdist-coverage"
+            script_prefix: "env PYTEST_REORDER_TESTS=0"
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
