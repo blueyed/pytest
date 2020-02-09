@@ -59,7 +59,7 @@ jobs:
             # NOTE: the lsof factor is not really useful currently, with its
             # warnings being ignored.  This uses it here only to cover the
             # LsofFdLeakChecker itself.
-            # (https://github.com/pytest-dev/pytest/issues/3879#issuecomment-416738050)
+            # (https://github.com/blueyed/pytest/issues/195)
             tox_env: "py38-lsof-pexpect-coverage"
             pytest_addopts: "-m 'uses_pexpect or integration' --run-integration-tests"
 
