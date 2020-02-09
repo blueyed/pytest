@@ -1242,7 +1242,10 @@ def _get_pos(config: Config, rep: TestReport) -> str:
             repr(testloc),
         )
 
+    if str(testloc_path) == path:
+        return "%s:%d::%s" % (path, testloc.lineno, testname)
     if str(testloc_path).replace("\\", nodes.SEP) == path:
+        assert 0, "cover me"
         return "%s:%d::%s" % (path, testloc.lineno, testname)
 
     return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
