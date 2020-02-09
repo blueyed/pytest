@@ -24,12 +24,11 @@ jobs:
       fail-fast: false
       matrix:
         name: [
-          "ubuntu-py36",
           "ubuntu-py37",
           "ubuntu-py38",
           "ubuntu-pypy3",
 
-          "macos-py38",
+          "macos-py36",
 
           "linting",
           "docs",
@@ -38,10 +37,6 @@ jobs:
         ]
 
         include:
-          - name: "ubuntu-py36"
-            python: "3.6"
-            os: ubuntu-latest
-            tox_env: "py36-xdist"
           - name: "ubuntu-py37"
             python: "3.7"
             os: ubuntu-latest
@@ -67,10 +62,10 @@ jobs:
           # Coverage for:
           # - osx
           # - verbosity=1
-          - name: "macos-py38"
-            python: "3.8"
+          - name: "macos-py36"
+            python: "3.6"
             os: macos-latest
-            tox_env: "py38-xdist-coverage"
+            tox_env: "py36-xdist-coverage"
             pytest_addopts: "--verbosity=1"
 
           - name: "linting"
