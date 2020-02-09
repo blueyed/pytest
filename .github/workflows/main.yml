@@ -48,8 +48,8 @@ jobs:
             # - old attrs
             # - verbose=0
             # - test_sys_breakpoint_interception (via pexpect).
-            script_prefix: "env -u COLUMNS PYTEST_REORDER_TESTS=0"
-            pytest_addopts: "--run-integration-tests"
+            # script_prefix: "env -u COLUMNS PYTEST_REORDER_TESTS=0"
+            # pytest_addopts: "--run-integration-tests"
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
