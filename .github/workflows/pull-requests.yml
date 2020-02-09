@@ -1,3 +1,5 @@
+# Jobs only for pull requests.
+# Keep the steps in sync with .github/workflows/main.yml.
 name: PR only
 
 on:
@@ -6,7 +8,7 @@ on:
       - my-master
 
 jobs:
-  build:
+  tests:
     runs-on: ${{ matrix.os }}
 
     strategy:
