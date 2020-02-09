@@ -17,7 +17,6 @@ from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprExceptionInfo
 from _pytest._code.source import getfslineno
 from _pytest.compat import cached_property
-from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import PytestPluginManager
 from _pytest.deprecated import NODE_USE_FROM_PARENT
@@ -28,10 +27,6 @@ from _pytest.mark.structures import Mark
 from _pytest.mark.structures import MarkDecorator
 from _pytest.mark.structures import NodeKeywords
 from _pytest.outcomes import Failed
-
-if TYPE_CHECKING:
-    # Imported here due to circular import.
-    from _pytest.main import Session  # noqa: F401
 
 SEP = "/"
 
@@ -94,7 +89,7 @@ class Node(metaclass=NodeMeta):
         name: str,
         parent: Optional["Node"] = None,
         config: Optional[Config] = None,
-        session: Optional["Session"] = None,
+        session: Optional["_pytest.main.Session"] = None,
         fspath: Optional[py.path.local] = None,
         nodeid: Optional[str] = None,
     ) -> None:
