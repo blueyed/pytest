@@ -1235,7 +1235,7 @@ def _get_pos(config: Config, rep: TestReport) -> str:
     testloc_path = Path(testloc.path)
     if testloc_path.is_absolute():
         try:
-            testloc_path = testloc_path.relative_to(str(config.invocation_dir))
+            testloc_path = _shorten_path(testloc_path, Path(str(config.invocation_dir)))
         except ValueError:
             pass
     else:
