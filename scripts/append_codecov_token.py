@@ -19,12 +19,12 @@ def main():
     )
 
     with open(cov_file, "a") as f:
-        # token from: https://codecov.io/gh/pytest-dev/pytest/settings
+        # token from: https://codecov.io/gh/blueyed/pytest/settings
         # use same URL to regenerate it if needed
         text = dedent(
             """
             codecov:
-              token: "1eca3b1f-31a2-4fb8-a8c3-138b441b50a7"
+              token: "d79f3a85-e675-4d75-8f55-3d0e4a99ebe8"
         """
         )
         f.write(text)

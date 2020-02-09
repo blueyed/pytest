@@ -73,10 +73,20 @@ class TestImportHookInstallation:
         result.stdout.fnmatch_lines(
             [
                 ">       r.assertoutcome(passed=1)",
-                "E       AssertionError: ([],",
-                "E          [],",
-                "E          [<TestReport 'test_dummy_failure.py::test' when='call' outcome='failed'>])",
-                "E       assert {'failed': 1, 'passed': 0, 'skipped': 0} == {'failed': 0, 'passed': 1, 'skipped': 0}",
+                "E       AssertionError: ([[][]],",
+                "E          [[][]],",
+                "E          [[]<TestReport *>[]])*",
+                "E       assert {'failed': 1,... 'skipped': 0} == {'failed': 0,... 'skipped': 0}",
+                "E         Omitting 1 identical items, use -vv to show",
+                "E         Differing items:",
+                "E         Use -v to get the full diff",
+            ]
+        )
+        # XXX: unstable output.
+        result.stdout.fnmatch_lines_random(
+            [
+                "E         {'failed': 1} != {'failed': 0}",
+                "E         {'passed': 0} != {'passed': 1}",
             ]
         )
 
@@ -496,7 +506,9 @@ class TestAssert_reprcompare:
             "  ]",
         ]
 
-    def test_dict_wrap(self):
+    def test_dict_wrap(self, monkeypatch):
+        monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 80)
+
         d1 = {"common": 1, "env": {"env1": 1}}
         d2 = {"common": 1, "env": {"env1": 1, "env2": 2}}
 

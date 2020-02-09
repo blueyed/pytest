@@ -573,17 +573,36 @@ def test_no_matching_after_match() -> None:
 
 
 def test_pytester_addopts_before_testdir(request, monkeypatch) -> None:
-    orig = os.environ.get("PYTEST_ADDOPTS", None)
     monkeypatch.setenv("PYTEST_ADDOPTS", "--orig-unused")
+    # Requesting the fixture dynamically / instantiating Testdir does not
+    # change the env via its monkeypatch instance.
     testdir = request.getfixturevalue("testdir")
-    assert "PYTEST_ADDOPTS" not in os.environ
+    assert os.environ["PYTEST_ADDOPTS"] == "--orig-unused"
+
+    assert testdir.monkeypatch is not monkeypatch
+    testdir.monkeypatch.setenv("PYTEST_ADDOPTS", "-p pytester")
+
+    p1 = testdir.makepyfile(
+        """
+        import os
+
+        def test(testdir):
+            assert "PYTEST_ADDOPTS" not in os.environ
+
+        def test2():
+            assert os.environ.get("PYTEST_ADDOPTS") == "-p pytester"
+        """
+    )
+    result = testdir.runpytest(str(p1))
+    assert result.ret == 0
+
+    # Finalizer undos always, although a context is used via
+    # pytest_runtest_call.
     testdir.finalize()
     assert os.environ.get("PYTEST_ADDOPTS") == "--orig-unused"
-    monkeypatch.undo()
-    assert os.environ.get("PYTEST_ADDOPTS") == orig
 
 
-def test_testdir_terminal_width(request, monkeypatch):
+def test_testdir_terminal_width(monkeypatch):
     """testdir does not set COLUMNS, but _cached_terminal_width."""
     from _pytest.terminal import get_terminal_width
 
@@ -595,16 +614,33 @@ def test_testdir_terminal_width(request, monkeypatch):
     assert get_terminal_width() == 1234
     monkeypatch.delenv("COLUMNS")
 
-    testdir = request.getfixturevalue("testdir")
-    assert get_terminal_width() == 80
-    assert "COLUMNS" not in os.environ
-    testdir.finalize()
-    assert get_terminal_width() == 1234
-    assert "COLUMNS" not in os.environ
-
     monkeypatch.undo()
     assert os.environ.get("COLUMNS") == orig_env
     assert get_terminal_width() == orig_width
+
+
+def test_testdir_terminal_width_inner(testdir, monkeypatch):
+    monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 1234)
+    monkeypatch.delenv("COLUMNS", raising=False)
+
+    p1 = testdir.makepyfile(
+        """
+        import os
+        from _pytest.terminal import get_terminal_width
+
+        def test1():
+            assert get_terminal_width() == 1234
+
+        def test2(testdir):
+            assert get_terminal_width() == 80
+            assert "COLUMNS" not in os.environ
+            testdir.finalize()
+            assert get_terminal_width() == 1234
+            assert "COLUMNS" not in os.environ
+        """
+    )
+    result = testdir.runpytest("-p", "pytester", str(p1))
+    assert result.ret == 0
 
 
 def test_run_stdin(testdir) -> None:
