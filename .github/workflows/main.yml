@@ -1,9 +1,3 @@
-# evaluating GitHub actions for CI, disregard failures when evaluating PRs
-#
-# this is still missing:
-# - deploy
-# - upload github notes
-#
 name: main
 
 on:
