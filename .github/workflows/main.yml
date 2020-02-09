@@ -20,12 +20,13 @@ jobs:
       fail-fast: false
       matrix:
         name: [
-          "ubuntu-py37",
           "ubuntu-py38",
           "ubuntu-py38 (pexpect, integration)",
           "ubuntu-pypy3",
 
           "macos-py36",
+
+          "windows-py37",
 
           "linting",
           "docs",
@@ -34,19 +35,11 @@ jobs:
         ]
 
         include:
-          - name: "ubuntu-py37"
-            python: "3.7"
-            os: ubuntu-latest
-            tox_env: "py37-numpy-oldattrs-twisted-xdist-coverage"
-            pytest_addopts: "-n4"
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "py38-coverage"
-            script_prefix: "env PYTEST_REORDER_TESTS=0"
-            # Coverage for:
-            # - verbosity=2
-            pytest_addopts: "--verbosity=2"
+            tox_env: "py38-numpy-oldattrs-twisted-xdist-coverage"
+            pytest_addopts: "-n4"
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
@@ -71,6 +64,15 @@ jobs:
             os: macos-latest
             tox_env: "py36-xdist-coverage"
             pytest_addopts: "-n4 --verbosity=1"
+
+          - name: "windows-py37"
+            python: "3.7"
+            os: windows-latest
+            tox_env: "py37-coverage"
+            script_prefix: "env PYTEST_REORDER_TESTS=0"
+            # Coverage for:
+            # - verbosity=2
+            pytest_addopts: "--verbosity=2"
 
           - name: "linting"
             python: "3.8"
