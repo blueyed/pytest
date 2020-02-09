@@ -649,27 +649,28 @@ def test_testdir_terminal_width(monkeypatch):
 
 
 def test_testdir_terminal_width_inner(testdir, monkeypatch):
-    monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 1234)
-    monkeypatch.delenv("COLUMNS", raising=False)
+    import _pytest.terminal
+
+    assert _pytest.terminal.get_terminal_width() == 80
+    monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 1234)
 
     p1 = testdir.makepyfile(
         """
         import os
-        from _pytest.terminal import get_terminal_width
+        import _pytest.terminal
 
         def test1():
-            assert get_terminal_width() == 1234
+            assert _pytest.terminal.get_terminal_width() == 1234
 
         def test2(testdir):
-            assert get_terminal_width() == 80
-            assert "COLUMNS" not in os.environ
+            assert _pytest.terminal.get_terminal_width() == 80
             testdir.finalize()
-            assert get_terminal_width() == 1234
-            assert "COLUMNS" not in os.environ
+            assert _pytest.terminal.get_terminal_width() == 1234
         """
     )
     result = testdir.runpytest("-p", "pytester", str(p1))
     assert result.ret == 0
+    monkeypatch.undo()
 
 
 def test_run_stdin(testdir) -> None:

@@ -1264,16 +1264,9 @@ def test_help_and_version_after_argument_error(testdir):
 
 
 def test_help_formatter_uses_py_get_terminal_width(monkeypatch):
-    import _pytest.terminal
     from _pytest.config.argparsing import DropShorterLongHelpFormatter
 
-    monkeypatch.setattr(_pytest.terminal, "_cached_terminal_width", None)
-
-    monkeypatch.setenv("COLUMNS", "90")
-    formatter = DropShorterLongHelpFormatter("prog")
-    assert formatter._width == 90
-
-    monkeypatch.setattr(_pytest.terminal, "_cached_terminal_width", 160)
+    monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 160)
     formatter = DropShorterLongHelpFormatter("prog")
     assert formatter._width == 160
 
