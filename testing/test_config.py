@@ -1537,7 +1537,7 @@ def test_report_implicit_args(testdir, monkeypatch):
     result.stdout.fnmatch_lines(
         [
             "implicit args: '-vv -k bar' (PYTEST_ADDOPTS)",
-            "explicit args: -v -m 'foo and bar' *test_report_implicit_args.py --basetemp=*",
+            "explicit args: -v -m 'foo and bar' *test_report_implicit_args.py* *--basetemp=*",
         ]
     )
     result = testdir.runpytest()
