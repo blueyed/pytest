@@ -35,6 +35,7 @@ jobs:
           "docs",
           "doctesting",
           "mypy",
+          "mypy-diff",
         ]
 
         include:
@@ -91,7 +92,10 @@ jobs:
             python: "3.8"
             os: ubuntu-latest
             tox_env: "mypy"
-            skip_coverage: true
+          - name: "mypy-diff"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "mypy-diff"
 
     steps:
     - uses: actions/checkout@v1
