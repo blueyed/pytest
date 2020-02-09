@@ -118,6 +118,9 @@ jobs:
     - name: Install tox
       run: python -m pip install git+https://github.com/blueyed/tox@master
 
+    - name: Setup tox environment
+      run: python -m tox --notest -v --durations
+
     - name: Test
       env:
         PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
