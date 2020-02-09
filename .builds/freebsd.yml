@@ -6,7 +6,7 @@ sources:
 environment:
   CI: "true"
   TOXENV: py37-xdist
-  PYTEST_ADDOPTS: -vv --showlocals --durations=100
+  PYTEST_ADDOPTS: -ra -vv --durations=100
   # XXX: makes testing/test_pdb.py hang (with pexpect).
   PYTEST_REORDER_TESTS: 0
   PIP_DISABLE_PIP_VERSION_CHECK: 1
