@@ -104,7 +104,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.tox/${{ matrix.tox_env }}
-        key: tox|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}
+        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting')
       uses: actions/cache@v1
