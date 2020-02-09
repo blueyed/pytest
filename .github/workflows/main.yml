@@ -161,6 +161,7 @@ jobs:
       if: "! matrix.use_coverage"
       env:
         PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
+        COLUMNS: "120"
       run: "tox -e ${{ matrix.tox_env }}"
 
     - name: Test with coverage
@@ -170,6 +171,7 @@ jobs:
         COVERAGE_PROCESS_START: ".coveragerc"
         _PYTEST_TOX_EXTRA_DEP: "coverage-enable-subprocess"
         PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
+        COLUMNS: "120"
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
     - name: Prepare coverage token
