@@ -47,14 +47,18 @@ jobs:
         key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
     - name: Install tox
-      run: python -m pip install git+https://github.com/blueyed/tox@master
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      run: |
+        python -m pip --version
+        python -m pip install git+https://github.com/blueyed/tox@master
 
     - name: Setup tox environment
       run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}
 
     - name: Test
       env:
-        PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
+        PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
         COLUMNS: "120"
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 

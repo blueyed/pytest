@@ -43,6 +43,9 @@ jobs:
             os: ubuntu-latest
             tox_env: "py38-coverage"
             script_prefix: "env PYTEST_REORDER_TESTS=0"
+            # Coverage for:
+            # - verbosity=2
+            pytest_addopts: "--verbosity=2"
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
@@ -80,9 +83,6 @@ jobs:
             python: "3.8"
             os: ubuntu-latest
             tox_env: "doctesting-coverage"
-            # Coverage for:
-            # - verbose=0
-            pytest_addopts: "--verbosity=0"
           - name: "mypy"
             python: "3.8"
             os: ubuntu-latest
@@ -122,7 +122,7 @@ jobs:
 
     - name: Test
       env:
-        PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
+        PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
         COLUMNS: "120"
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
