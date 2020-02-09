@@ -42,7 +42,6 @@ jobs:
             python: "3.7"
             os: ubuntu-latest
             tox_env: "py37-numpy-oldattrs-twisted-xdist-coverage"
-            # script_prefix: "env -u COLUMNS PYTEST_REORDER_TESTS=0"
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
@@ -62,6 +61,7 @@ jobs:
             # (https://github.com/blueyed/pytest/issues/195)
             tox_env: "py38-lsof-pexpect-coverage"
             pytest_addopts: "-m 'uses_pexpect or integration' --run-integration-tests"
+            script_prefix: "env -u COLUMNS"
 
           # Coverage for:
           # - osx
