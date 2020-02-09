@@ -96,6 +96,22 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: ${{ matrix.python }}
+
+    # Caching.
+    - name: set PY_CACHE_KEY
+      run: echo "::set-env name=PY_CACHE_KEY::$(python --version --version | sha256sum | cut -d' ' -f1)"
+    - name: Cache .tox
+      uses: actions/cache@v1
+      with:
+        path: ~/.tox/${{ matrix.tox_env }}
+        key: tox|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}
+    - name: Cache .pre-commit
+      if: (matrix.tox_env == 'linting')
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
