@@ -838,7 +838,7 @@ class Config:
                 sys.stderr.write("INTERNALERROR> %s\n" % line)
                 sys.stderr.flush()
 
-    def cwd_relative_nodeid(self, nodeid):
+    def cwd_relative_nodeid(self, nodeid: str) -> str:
         # nodeid's are relative to the rootpath, compute relative to cwd
         if self.invocation_dir != self.rootdir:
             fullpath = self.rootdir.join(nodeid)
