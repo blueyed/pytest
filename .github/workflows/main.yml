@@ -83,7 +83,16 @@ jobs:
             python: "3.7"
             os: ubuntu-latest
             tox_env: "py37-lsof-numpy-oldattrs-pexpect-twisted"
+            # Coverage for:
+            # - pytester's LsofFdLeakChecker
+            # - TestArgComplete (linux only)
+            # - numpy
+            # - old attrs
+            # - verbose=0
+            # - test_sys_breakpoint_interception (via pexpect).
             use_coverage: true
+            script_prefix: "env -u COLUMNS PYTEST_REORDER_TESTS=0"
+            pytest_addopts: "--run-integration-tests"
           - name: "ubuntu-py37-pluggy"
             python: "3.7"
             os: ubuntu-latest
@@ -105,11 +114,15 @@ jobs:
             python: "3.7"
             os: macos-latest
             tox_env: "py37-xdist"
+          # Coverage for:
+          # - osx
+          # - verbosity=1
           - name: "macos-py38"
             python: "3.8"
             os: macos-latest
             tox_env: "py38-xdist"
             use_coverage: true
+            pytest_addopts: "--verbosity=1"
 
           - name: "linting"
             python: "3.7"
@@ -123,7 +136,10 @@ jobs:
             python: "3.7"
             os: ubuntu-latest
             tox_env: "doctesting"
+            # Coverage for:
+            # - verbose=0
             use_coverage: true
+            pytest_addopts: "--verbosity=0"
           - name: "mypy"
             python: "3.7"
             os: ubuntu-latest
@@ -143,6 +159,8 @@ jobs:
 
     - name: Test without coverage
       if: "! matrix.use_coverage"
+      env:
+        PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
       run: "tox -e ${{ matrix.tox_env }}"
 
     - name: Test with coverage
@@ -151,7 +169,8 @@ jobs:
         _PYTEST_TOX_COVERAGE_RUN: "coverage run -m"
         COVERAGE_PROCESS_START: ".coveragerc"
         _PYTEST_TOX_EXTRA_DEP: "coverage-enable-subprocess"
-      run: "tox -e ${{ matrix.tox_env }}"
+        PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
+      run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
     - name: Prepare coverage token
       if: (matrix.use_coverage && ( github.repository == 'blueyed/pytest' || github.event_name == 'pull_request' ))

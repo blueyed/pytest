@@ -18,27 +18,6 @@ install:
 
 jobs:
   include:
-    # Coverage for:
-    # - TestArgComplete (linux only)
-    # - numpy
-    # - verbose=0
-    # - test_sys_breakpoint_interception (via pexpect).
-    - env:
-        - TOXENV=py38-xdist
-        - SCRIPT_PREFIX="env -u COLUMNS"
-      python: '3.8'
-
-    - env:
-        - TOXENV=py37-numpy-pexpect-twisted
-        - PYTEST_ADDOPTS="-vv --showlocals --durations=50 --run-integration-tests"
-      python: '3.7.4'
-
-    - env: TOXENV=py36-xdist PYTEST_REORDER_TESTS=0
-      python: '3.6.9'
-
-    - env: TOXENV=py35-xdist
-      python: '3.5.9'
-
     # Coverage for Python 3.5.{0,1} specific code, mostly typing related.
     - env:
         - TOXENV=py35
@@ -48,11 +27,6 @@ jobs:
       dist: trusty
       before_install:
         - python -m pip install -U pip
-
-    - env: TOXENV=linting,docs,doctesting
-      cache:
-        directories:
-          - $HOME/.cache/pre-commit
 
 before_script:
   - |
