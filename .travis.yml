@@ -19,7 +19,7 @@ jobs:
     # Coverage for Python 3.5.{0,1} specific code, mostly typing related.
     - env:
         - TOXENV=py35-coverage
-        - PYTEST_ADDOPTS="-k test_raises_cyclic_reference"
+        - PYTEST_ADDOPTS="-k 'test_raises_cyclic_reference or test_supports_breakpoint_module_global'"
       python: '3.5.1'
       dist: trusty
       before_install:
