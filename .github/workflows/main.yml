@@ -41,7 +41,7 @@ jobs:
           - name: "ubuntu-py37"
             python: "3.7"
             os: ubuntu-latest
-            tox_env: "py37-numpy-oldattrs-twisted-coverage"
+            tox_env: "py37-numpy-oldattrs-twisted-xdist-coverage"
             # script_prefix: "env -u COLUMNS PYTEST_REORDER_TESTS=0"
           - name: "ubuntu-py38"
             python: "3.8"
