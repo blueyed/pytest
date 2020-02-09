@@ -496,6 +496,7 @@ def test_findsource() -> None:
     assert src[lineno] == "    def x():"
 
 
+@pytest.mark.pypy_specific
 def test_getfslineno() -> None:
     def f(x) -> None:
         raise NotImplementedError()
@@ -585,6 +586,7 @@ def test_oneline_and_comment() -> None:
     assert str(source) == "raise ValueError"
 
 
+@pytest.mark.pypy_specific
 def test_comments() -> None:
     source = '''def test():
     "comment 1"

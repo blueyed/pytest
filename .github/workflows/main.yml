@@ -57,7 +57,8 @@ jobs:
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
-            tox_env: "pypy3-xdist"
+            tox_env: "pypy3-xdist-coverage"
+            pytest_addopts: "-m pypy_specific"
 
           # Coverage for:
           # - osx
