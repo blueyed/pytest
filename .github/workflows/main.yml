@@ -46,7 +46,7 @@ jobs:
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "py38-lsof-xdist-coverage"
+            tox_env: "py38-xdist-coverage"
             script_prefix: "env PYTEST_REORDER_TESTS=0"
           - name: "ubuntu-pypy3"
             python: "pypy3"
@@ -56,7 +56,11 @@ jobs:
           - name: "ubuntu-py38 (pexpect, integration)"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "py38-pexpect-coverage"
+            # NOTE: the lsof factor is not really useful currently, with its
+            # warnings being ignored.  This uses it here only to cover the
+            # LsofFdLeakChecker itself.
+            # (https://github.com/pytest-dev/pytest/issues/3879#issuecomment-416738050)
+            tox_env: "py38-lsof-pexpect-coverage"
             pytest_addopts: "-m 'uses_pexpect or integration' --run-integration-tests"
 
           # Coverage for:
