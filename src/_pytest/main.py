@@ -37,10 +37,6 @@ if TYPE_CHECKING:
     from _pytest.python import Package
 
 
-def test():
-    pass
-
-
 class ExitCode(enum.IntEnum):
     """
     .. versionadded:: 5.0
