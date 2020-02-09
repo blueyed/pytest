@@ -2158,6 +2158,9 @@ def test_getdimensions(monkeypatch):
     assert get_terminal_width() == 80
     assert calls == [0, 2, 1]
 
+    # Do not mess with the terminal plugin.
+    monkeypatch.undo()
+
 
 def test_sigwinch(testdir, monkeypatch):
     import signal
