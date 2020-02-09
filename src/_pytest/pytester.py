@@ -563,7 +563,7 @@ def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
     # Do not use colors for inner runs by default.
     mp.setenv("PY_COLORS", "0")
 
-    mp.setattr("_pytest.terminal._cached_terminal_width", None)
+    mp.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
     try:
         yield
     finally:
