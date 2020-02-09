@@ -1229,6 +1229,10 @@ def _get_pos(config, rep):
                 testloc = rep.longrepr.reprcrash
             except AttributeError:
                 return nodeid
+            else:
+                assert Path(testloc.path).is_absolute(), testloc
+        else:
+            assert not Path(testloc.path).is_absolute(), testloc
 
     assert isinstance(testloc.path, str), testloc.path
     testloc_path = Path(testloc.path)
