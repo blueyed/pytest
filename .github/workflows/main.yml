@@ -40,7 +40,7 @@ jobs:
           - name: "ubuntu-py37"
             python: "3.7"
             os: ubuntu-latest
-            tox_env: "py37-lsof-numpy-oldattrs-pexpect-twisted-coverage"
+            tox_env: "py37-numpy-oldattrs-pexpect-twisted-coverage"
             # Coverage for:
             # - pytester's LsofFdLeakChecker
             # - TestArgComplete (linux only)
@@ -53,7 +53,7 @@ jobs:
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "py38-xdist-coverage"
+            tox_env: "py38-lsof-xdist-coverage"
             script_prefix: "env PYTEST_REORDER_TESTS=0"
           - name: "ubuntu-pypy3"
             python: "pypy3"
