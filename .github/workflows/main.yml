@@ -38,6 +38,7 @@ jobs:
             python: "3.7"
             os: ubuntu-latest
             tox_env: "py37-numpy-oldattrs-twisted-xdist-coverage"
+            pytest_addopts: "-n4"
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
@@ -49,7 +50,7 @@ jobs:
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
-            tox_env: "pypy3-xdist-coverage"
+            tox_env: "pypy3-coverage"
             pytest_addopts: "-m pypy_specific"
           - name: "ubuntu-py38 (pexpect, integration)"
             python: "3.8"
@@ -69,7 +70,7 @@ jobs:
             python: "3.6"
             os: macos-latest
             tox_env: "py36-xdist-coverage"
-            pytest_addopts: "--verbosity=1"
+            pytest_addopts: "-n4 --verbosity=1"
 
           - name: "linting"
             python: "3.8"
