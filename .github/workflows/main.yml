@@ -51,8 +51,7 @@ jobs:
           - name: "windows-py35"
             python: "3.5"
             os: windows-latest
-            tox_env: "py35-xdist"
-            use_coverage: true
+            tox_env: "py35-xdist-coverage"
           - name: "windows-py36"
             python: "3.6"
             os: windows-latest
@@ -68,8 +67,7 @@ jobs:
           - name: "windows-py38"
             python: "3.8"
             os: windows-latest
-            tox_env: "py38"
-            use_coverage: true
+            tox_env: "py38-coverage"
 
           - name: "ubuntu-py35"
             python: "3.5"
@@ -82,7 +80,7 @@ jobs:
           - name: "ubuntu-py37"
             python: "3.7"
             os: ubuntu-latest
-            tox_env: "py37-lsof-numpy-oldattrs-pexpect-twisted"
+            tox_env: "py37-lsof-numpy-oldattrs-pexpect-twisted-coverage"
             # Coverage for:
             # - pytester's LsofFdLeakChecker
             # - TestArgComplete (linux only)
@@ -90,7 +88,6 @@ jobs:
             # - old attrs
             # - verbose=0
             # - test_sys_breakpoint_interception (via pexpect).
-            use_coverage: true
             script_prefix: "env -u COLUMNS PYTEST_REORDER_TESTS=0"
             pytest_addopts: "--run-integration-tests"
           - name: "ubuntu-py37-pluggy"
@@ -120,8 +117,7 @@ jobs:
           - name: "macos-py38"
             python: "3.8"
             os: macos-latest
-            tox_env: "py38-xdist"
-            use_coverage: true
+            tox_env: "py38-xdist-coverage"
             pytest_addopts: "--verbosity=1"
 
           - name: "linting"
@@ -135,10 +131,9 @@ jobs:
           - name: "doctesting"
             python: "3.7"
             os: ubuntu-latest
-            tox_env: "doctesting"
+            tox_env: "doctesting-coverage"
             # Coverage for:
             # - verbose=0
-            use_coverage: true
             pytest_addopts: "--verbosity=0"
           - name: "mypy"
             python: "3.7"
@@ -157,30 +152,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install tox coverage
 
-    - name: Test without coverage
-      if: "! matrix.use_coverage"
+    - name: Test
       env:
-        PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
-        COLUMNS: "120"
-      run: "tox -e ${{ matrix.tox_env }}"
-
-    - name: Test with coverage
-      if: "matrix.use_coverage"
-      env:
-        _PYTEST_TOX_COVERAGE_RUN: "coverage run -m"
-        COVERAGE_PROCESS_START: ".coveragerc"
-        _PYTEST_TOX_EXTRA_DEP: "coverage-enable-subprocess"
         PYTEST_ADDOPTS: "-vv --showlocals --durations=50 ${{ matrix.pytest_addopts }}"
         COLUMNS: "120"
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
     - name: Prepare coverage token
-      if: (matrix.use_coverage && ( github.repository == 'blueyed/pytest' || github.event_name == 'pull_request' ))
+      if: (contains(matrix.tox_env, '-coverage') && ( github.repository == 'blueyed/pytest' || github.event_name == 'pull_request' ))
       run: |
         python scripts/append_codecov_token.py
 
     - name: Report coverage
-      if: (matrix.use_coverage)
+      if: (contains(matrix.tox_env, '-coverage'))
       env:
         CODECOV_NAME: ${{ matrix.name }}
       run: bash scripts/report-coverage.sh -F GHA,${{ runner.os }}
