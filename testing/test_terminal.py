@@ -932,7 +932,7 @@ def test_color_yes(testdir):
                 ">       fail()",
                 "",
                 "{bold}test_color_yes.py{reset}:5: ",
-                "_ _ * _ _ ",
+                "_ _ * _ _*",
                 "",
                 "    def fail():",
                 ">       assert 0",
