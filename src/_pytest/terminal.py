@@ -1121,9 +1121,11 @@ class TerminalReporter:
             if not fskips:
                 return
             verbose_word = skipped[0]._get_verbose_word(self.config)
+            invocation_path = Path(str(self.config.invocation_dir))
             for num, fspath, lineno, reason in fskips:
                 if reason.startswith("Skipped: "):
                     reason = reason[9:]
+                fspath = _shorten_path(fspath, invocation_path)
                 if lineno is not None:
                     lines.append(
                         "%s [%d] %s:%d: %s"
