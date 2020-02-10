@@ -1,6 +1,5 @@
 """(disabled by default) support for testing pytest and pytest plugins."""
 import collections.abc
-import functools
 import gc
 import importlib
 import os
@@ -957,7 +956,7 @@ class Testdir:
             for finalizer in finalizers:
                 finalizer()
 
-    def runpytest_inprocess(self, *args, **kwargs) -> RunResult:
+    def runpytest_inprocess(self, *args, tty=None, **kwargs) -> RunResult:
         """Return result of running pytest in-process, providing a similar
         interface to what self.runpytest() provides.
         """
@@ -989,10 +988,23 @@ class Testdir:
             stdin = EchoingInput(stdin)
         elif stdin is None:
             stdin = sys.stdin
-        Capture = functools.partial(SysCapture, stdin=stdin)
+
+        def get_capture(fd):
+            from _pytest.compat import CaptureIO
+
+            if fd == 0:
+                if not stdin or stdin is SysCapture.CLOSE_STDIN:
+                    tmpfile = None
+                else:
+                    tmpfile = stdin
+            else:
+                tmpfile = CaptureIO()
+            if tmpfile and tty is not None:
+                tmpfile.isatty = lambda: tty
+            return SysCapture(fd, tmpfile=tmpfile)
 
         _display_running("=== running (inline)", "pytest", *args)
-        capture = MultiCapture(Capture=Capture)
+        capture = MultiCapture(Capture=get_capture)
         capture.start_capturing()
         try:
             try:
@@ -1025,14 +1037,14 @@ class Testdir:
         res.reprec = reprec  # type: ignore
         return res
 
-    def runpytest(self, *args, **kwargs) -> RunResult:
+    def runpytest(self, *args, tty=None, **kwargs) -> RunResult:
         """Run pytest inline or in a subprocess, depending on the command line
         option "--runpytest" and return a :py:class:`RunResult`.
 
         """
         args = self._ensure_basetemp(args)
         if self._method == "inprocess":
-            return self.runpytest_inprocess(*args, **kwargs)
+            return self.runpytest_inprocess(*args, tty=tty, **kwargs)
         elif self._method == "subprocess":
             return self.runpytest_subprocess(*args, **kwargs)
         raise RuntimeError("Unrecognized runpytest option: {}".format(self._method))

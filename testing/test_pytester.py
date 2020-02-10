@@ -784,6 +784,68 @@ def test_runtest_inprocess_stdin(testdir: Testdir, monkeypatch: MonkeyPatch) -> 
     assert result.ret == 0
 
 
+def test_runtest_inprocess_tty(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is True
+            assert sys.stdout.isatty() is True
+            assert sys.stderr.isatty() is True
+    """
+    )
+    result = testdir.runpytest(str(p1), "-s", tty=True)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is False
+            assert sys.stdout.isatty() is True
+            assert sys.stderr.isatty() is True
+    """
+    )
+    result = testdir.runpytest(str(p1), "-s", tty=True, stdin=False)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is False
+            assert sys.stdout.isatty() is False
+            assert sys.stderr.isatty() is False
+    """
+    )
+    result = testdir.runpytest(str(p1), tty=True)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    id_stdin = id(sys.stdin)
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is False
+            assert sys.stdout.isatty() is False
+            assert sys.stderr.isatty() is False
+            assert id(sys.stdin) == {}
+    """.format(
+            id_stdin
+        )
+    )
+    result = testdir.runpytest(str(p1), "-s", tty=False)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+
 def test_popen_stdin_pipe(testdir) -> None:
     proc = testdir.popen(
         [sys.executable, "-c", "import sys; print(sys.stdin.read())"],
