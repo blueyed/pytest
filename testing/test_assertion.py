@@ -1443,14 +1443,13 @@ def test_diff_newline_at_end(testdir):
 
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
-        [
-            ">       assert 'asdf' == 'asdf\\n'",
-            "E       AssertionError: assert 'asdf' == 'asdf\\n'",
-            "E         Strings contain non-printable/escape characters, escaping them using repr()",
-            "E         - 'asdf'",
-            "E         + 'asdf\\n'",
-            "E         ?      ++",
-        ]
+        r"""
+        *assert 'asdf' == 'asdf\n'
+        E         Strings contain non-printable/escape characters, escaping them using repr()
+        *  - 'asdf'
+        *  + 'asdf\n'
+        *  ?      ++
+    """
     )
 
 
