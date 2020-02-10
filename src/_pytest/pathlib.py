@@ -374,13 +374,11 @@ def _shorten_path(path: Path, relative_to: Path = None) -> Path:
         return path
 
     if relative_to:
-        try:
-            path = path.relative_to(relative_to)
-        except ValueError:
-            pass
-        else:
-            if not path.is_absolute():
-                return path
+        rel_path = os.path.relpath(path, relative_to)
+        if len(rel_path) <= len(str(path)):
+            path = Path(rel_path)
+        if not path.is_absolute():
+            return path
 
     try:
         rel = path.relative_to(Path.home())
