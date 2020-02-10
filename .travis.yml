@@ -1,6 +1,6 @@
 language: python
 dist: trusty
-python: '3.5.2'
+python: '3.5.3'
 cache: false
 
 env:
