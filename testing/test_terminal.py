@@ -22,6 +22,7 @@ from _pytest.reports import BaseReport
 from _pytest.terminal import _folded_skips
 from _pytest.terminal import _get_line_with_reprcrash_message
 from _pytest.terminal import _plugin_nameversions
+from _pytest.terminal import _wcswidth
 from _pytest.terminal import getreportopt
 from _pytest.terminal import TerminalReporter
 
@@ -2026,9 +2027,15 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 28, "FAILED some::nodeid - 😄...")
     check("😄😄😄😄😄\n2nd line", 29, "FAILED some::nodeid - 😄😄...")
 
-    # Message with non-printable character
+    # Color escape codes.
     check("with \x1b[31mcolor", 30, "FAILED some::nodeid - with ...")
     check("with \x1b[31mcolor", 50, "FAILED some::nodeid - with \x1b[31mcolor")
+    # Non-printable (kept).
+    check("with \0NULL", 30, "FAILED some::nodeid - with ...")
+    check("with \0NULL", 50, "FAILED some::nodeid - with \0NULL")
+    # Non-printable (via repr).
+    check("with \bBS", 25, "FAILED some::nodeid - ...")
+    check("with \bBS", 50, "FAILED some::nodeid - 'with \\x08BS'")
 
     # NOTE: constructed, not sure if this is supported.
     mocked_pos = "nodeid::😄::withunicode"
@@ -2037,6 +2044,45 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 41, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 42, "FAILED nodeid::😄::withunicode - 😄😄😄...")
     check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄\\n2nd line")
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    (
+        ("", 0),
+        ("foo", 3),
+        ("😄", 2),
+        # Color escape sequence.
+        ("\x1b[31mred", 3),
+        # Invalid/overlapping escape codes.
+        ("\x1b[0\x1b[31mminvalid", -1),
+        # Other escape codes.
+        ("\0", 0),
+        ("\b", -1),
+    ),
+    ids=repr,
+)
+def test_wcswidth(input, expected):
+    assert _wcswidth(input) == expected
+
+
+def test_summary_with_nonprintable(testdir: Testdir) -> None:
+    testdir.monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 100)
+    p1 = testdir.makepyfile(
+        r"""
+        def test():
+            assert 0, "\x1b[31mred\0\b ENDOFSTRING"
+        """
+    )
+    result = testdir.runpytest("-rf", str(p1), tty=True)
+    result.stdout.fnmatch_lines(
+        [
+            "test_summary_with_nonprintable.py:2: AssertionError",
+            "*= short test summary info =*",
+            r"FAILED test_summary_with_nonprintable.py:2::test - 'AssertionError: \x1b[31mred\x00\x08 ENDOFSTRI...",
+            "*= 1 failed in *=",
+        ]
+    )
 
 
 @pytest.mark.parametrize("arg", (None, "--tb=native", "--full-trace"))
