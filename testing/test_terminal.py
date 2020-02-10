@@ -2026,6 +2026,10 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 28, "FAILED some::nodeid - 😄...")
     check("😄😄😄😄😄\n2nd line", 29, "FAILED some::nodeid - 😄😄...")
 
+    # Message with non-printable character
+    check("with \x1b[31mcolor", 30, "FAILED some::nodeid - with ...")
+    check("with \x1b[31mcolor", 50, "FAILED some::nodeid - with \x1b[31mcolor")
+
     # NOTE: constructed, not sure if this is supported.
     mocked_pos = "nodeid::😄::withunicode"
     check("😄😄😄😄😄\n2nd line", 29, "FAILED nodeid::😄::withunicode")
@@ -2033,9 +2037,6 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 41, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 42, "FAILED nodeid::😄::withunicode - 😄😄😄...")
     check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄\\n2nd line")
-
-    # Message with non-printable character
-    check("some message with \x1b[31mcolor", 25, "FAILED some::nodeid - ...")
 
 
 @pytest.mark.parametrize("arg", (None, "--tb=native", "--full-trace"))

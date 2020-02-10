@@ -1240,6 +1240,18 @@ def _get_pos(config, rep):
     return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
 
 
+def wcswidth(s: str) -> int:
+    """wcswidth that does not stop with non-printable/escape chars."""
+    from wcwidth import wcwidth
+
+    ret = 0
+    for c in s:
+        w = wcwidth(c)
+        if w > 0:
+            ret += w
+    return ret
+
+
 def _get_line_with_reprcrash_message(config, rep, termwidth):
     """Get summary line for a report, trying to add reprcrash message."""
     verbose_word = rep._get_verbose_word(config)
@@ -1248,8 +1260,6 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
     line = "{} {}".format(verbose_word, pos)
 
     if termwidth is not None:
-        from wcwidth import wcswidth
-
         len_line = wcswidth(line)
         ellipsis, len_ellipsis = "...", 3
         if len_line > termwidth - len_ellipsis:
