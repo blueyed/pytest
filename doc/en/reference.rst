@@ -1535,6 +1535,17 @@ passed multiple times. The expected format is ``name=value``. For example::
    test modules.
 
 
+.. confval:: assert_rewrite_files
+
+   One or more glob-style file patterns determining for which Python files
+   :ref:`assertions are being rewritten <assertion-rewriting>`.
+   This is similar to :confval:`python_files`
+   in general, and defaults to ``*.py`` below :confval:`testpaths` (if
+   configured), and :confval:`python_files` otherwise.
+   I.e. with ``testpaths = tests`` assertions are rewritten also in
+   ``tests/utils.py``.
+
+
 .. confval:: python_functions
 
    One or more name prefixes or glob-patterns determining which test functions
