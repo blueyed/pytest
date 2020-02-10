@@ -2068,10 +2068,11 @@ def test_wcswidth(input, expected):
 
 def test_summary_with_nonprintable(testdir: Testdir) -> None:
     testdir.monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 100)
+    testdir.monkeypatch.delattr("CI", raising=False)
     p1 = testdir.makepyfile(
         r"""
         def test():
-            assert 0, "\x1b[31mred\0\b ENDOFSTRING"
+            assert 0, "\x1b[31mred\0\b!!"
         """
     )
     result = testdir.runpytest("-rf", str(p1), tty=True)
@@ -2079,7 +2080,7 @@ def test_summary_with_nonprintable(testdir: Testdir) -> None:
         [
             "test_summary_with_nonprintable.py:2: AssertionError",
             "*= short test summary info =*",
-            r"FAILED test_summary_with_nonprintable.py:2::test - 'AssertionError: \x1b[31mred\x00\x08 ENDOFSTRI...",
+            r"FAILED test_summary_with_nonprintable.py:2::test - 'AssertionError: \x1b[31mred\x00\x08!!\\nasser...",
             "*= 1 failed in *=",
         ]
     )
