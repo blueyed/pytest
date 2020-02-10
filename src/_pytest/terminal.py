@@ -1285,16 +1285,16 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             msg = msg[len(implicit_prefix) + 1 :]
 
         sep = " - "
-        if termwidth is None:
-            return line + sep + msg
-
-        len_sep = 3
         len_msg = _wcswidth(msg)
         if len_msg == -1:
             msg = repr(msg)
             len_msg = _wcswidth(msg)
             assert len_msg != -1, repr(msg)
 
+        if termwidth is None:
+            return line + sep + msg
+
+        len_sep = 3
         max_len_msg = termwidth - len_line - len_sep
         if max_len_msg >= len_ellipsis:
             if len_msg > max_len_msg:
