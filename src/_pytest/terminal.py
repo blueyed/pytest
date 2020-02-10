@@ -7,6 +7,7 @@ import collections
 import datetime
 import os
 import platform
+import re
 import sys
 import time
 from functools import partial
@@ -37,6 +38,7 @@ from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
 REPORT_COLLECTING_RESOLUTION = 0.5
+RE_COLOR_ESCAPES = re.compile(r"\x1b\[[\d;]+m")
 
 KNOWN_TYPES = (
     "failed",
@@ -1240,6 +1242,14 @@ def _get_pos(config, rep):
     return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
 
 
+def _wcswidth(s: str) -> int:
+    """wcswidth that ignores color escape codes."""
+    from wcwidth import wcswidth
+
+    s = RE_COLOR_ESCAPES.sub("", s)
+    return wcswidth(s)  # type: ignore[no-any-return]  # noqa: F723
+
+
 def _get_line_with_reprcrash_message(config, rep, termwidth):
     """Get summary line for a report, trying to add reprcrash message."""
     verbose_word = rep._get_verbose_word(config)
@@ -1248,9 +1258,8 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
     line = "{} {}".format(verbose_word, pos)
 
     if termwidth is not None:
-        from wcwidth import wcswidth
-
-        len_line = wcswidth(line)
+        len_line = _wcswidth(line)
+        assert len_line != -1, repr(line)
         ellipsis, len_ellipsis = "...", 3
         if len_line > termwidth - len_ellipsis:
             # No space for an additional message.
@@ -1276,18 +1285,22 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             msg = msg[len(implicit_prefix) + 1 :]
 
         sep = " - "
+        len_msg = _wcswidth(msg)
+        if len_msg == -1:
+            msg = repr(msg)
+            len_msg = _wcswidth(msg)
+            assert len_msg != -1, repr(msg)
+
         if termwidth is None:
             return line + sep + msg
 
         len_sep = 3
-        len_msg = wcswidth(msg)
-
         max_len_msg = termwidth - len_line - len_sep
         if max_len_msg >= len_ellipsis:
             if len_msg > max_len_msg:
                 max_len_msg -= len_ellipsis
                 msg = msg[:max_len_msg]
-                while wcswidth(msg) > max_len_msg:
+                while _wcswidth(msg) > max_len_msg:
                     msg = msg[:-1]
                 msg += ellipsis
             line += sep + msg
