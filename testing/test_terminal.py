@@ -771,7 +771,8 @@ class TestTerminalFunctional:
 
 @pytest.mark.parametrize("tty", (True, False))
 @pytest.mark.parametrize("use_CI", (True, False))
-def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
+def test_fail_extra_reporting(tty: bool, use_CI: bool, testdir: Testdir):
+    monkeypatch = testdir.monkeypatch
     if use_CI:
         monkeypatch.setenv("CI", "true")
     else:
@@ -796,6 +797,8 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
     )
 
     if tty:
+        from _pytest.pytester import LineMatcher
+
         child = testdir.spawn_pytest("-rf")
         lm = LineMatcher(child.read().decode().splitlines())
     else:
