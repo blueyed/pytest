@@ -1070,7 +1070,7 @@ class TestTruncateExplanation:
         # test assert_truncate_level ini option.
         result = testdir.runpytest("-o", "assert_truncate_level=1")
         result.stdout.fnmatch_lines(
-            ["E         ...Full output truncated (2 lines hidden), use '-vv' to show"]
+            ["*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines]
         )
         result = testdir.runpytest("-o", "assert_truncate_level=0")
         result.stdout.fnmatch_lines(["* 6*"])
@@ -1083,7 +1083,7 @@ class TestTruncateExplanation:
         monkeypatch.setenv("CI", "")
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(
-            ["E         ...Full output truncated (2 lines hidden), use '-vv' to show"]
+            ["*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines]
         )
 
         monkeypatch.setenv("CI", "True")
