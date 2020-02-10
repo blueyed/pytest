@@ -345,8 +345,14 @@ class TestAssert_reprcompare:
         left = "foo\nspam\nbar"
         right = "foo\neggs\nbar"
         diff = callequal(left, right)
-        assert "- spam" in diff
-        assert "+ eggs" in diff
+        assert diff == [
+            "'foo\\nspam\\nbar' == 'foo\\neggs\\nbar'",
+            "Strings contain non-printable/escape characters, escaping them using repr()",
+            "  'foo\\n'",
+            "- 'spam\\n'",
+            "+ 'eggs\\n'",
+            "  'bar'",
+        ]
 
     def test_bytes_diff_normal(self):
         """Check special handling for bytes diff (#5260)"""
@@ -1042,7 +1048,7 @@ class TestTruncateExplanation:
 
         line_count = 7
         line_len = 100
-        expected_truncated_lines = 2
+        expected_truncated_lines = 3
         testdir.makepyfile(
             r"""
             def test_many_lines():
@@ -1060,9 +1066,16 @@ class TestTruncateExplanation:
         # without -vv, truncate the message showing a few diff lines only
         result.stdout.fnmatch_lines(
             [
-                "*- 1*",
-                "*- 3*",
-                "*- 5*",
+                ">       assert a == b",
+                "E       AssertionError: assert '000000000000...6666666666666' == '000000000000...6666666666666'",
+                "E         Skipping 91 identical leading characters in diff, use -v to show",
+                "E         Strings contain non-printable/escape characters, escaping them using repr()",
+                "E           '000000000\\n'",
+                "E         - '1*\\n'",
+                "E           '2*\\n'",
+                "E         - '3*\\n'",
+                "E           '4*\\...",
+                "E         ",
                 "*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines,
             ]
         )
@@ -1078,7 +1091,7 @@ class TestTruncateExplanation:
         result.stdout.fnmatch_lines(["* 6*"])
 
         result = testdir.runpytest("-vv")
-        result.stdout.fnmatch_lines(["* 6*"])
+        result.stdout.fnmatch_lines(["* '6*"])
 
         monkeypatch.setenv("CI", "")
         result = testdir.runpytest()
@@ -1088,7 +1101,7 @@ class TestTruncateExplanation:
 
         monkeypatch.setenv("CI", "True")
         result = testdir.runpytest()
-        result.stdout.fnmatch_lines(["* 6*"])
+        result.stdout.fnmatch_lines(["* '6*"])
 
 
 def test_python25_compile_issue257(testdir):
@@ -1134,6 +1147,43 @@ def test_reprcompare_whitespaces():
         r"- '\r\n'",
         r"?  --",
         r"+ '\n'",
+    ]
+
+
+def test_reprcompare_escape_sequences():
+    config = mock_config()
+    detail = plugin.pytest_assertrepr_compare(
+        config, "==", "\x1b[31mred", "\x1b[31mgreen"
+    )
+    assert detail == [
+        "'\\x1b[31mred' == '\\x1b[31mgreen'",
+        "Strings contain non-printable/escape characters, escaping them using repr()",
+        "- '\\x1b[31mred'",
+        "?            ^",
+        "+ '\\x1b[31mgreen'",
+        "?          +  ^^",
+    ]
+
+    detail = plugin.pytest_assertrepr_compare(
+        config, "==", ["\x1b[31mred"], ["\x1b[31mgreen"]
+    )
+    assert detail == [
+        "['\\x1b[31mred'] == ['\\x1b[31mgreen']",
+        "At index 0 diff: '\\x1b[31mred' != '\\x1b[31mgreen'",
+        "Use -v to get the full diff",
+    ]
+    config = mock_config(verbose=2)
+    detail = plugin.pytest_assertrepr_compare(
+        config, "==", ["\x1b[31mred"], ["\x1b[31mgreen"]
+    )
+    assert detail == [
+        "['\\x1b[31mred'] == ['\\x1b[31mgreen']",
+        "At index 0 diff: '\\x1b[31mred' != '\\x1b[31mgreen'",
+        "Full diff:",
+        "- ['\\x1b[31mred']",
+        "?             ^",
+        "+ ['\\x1b[31mgreen']",
+        "?           +  ^^",
     ]
 
 
@@ -1393,12 +1443,14 @@ def test_diff_newline_at_end(testdir):
 
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
-        r"""
-        *assert 'asdf' == 'asdf\n'
-        *  - asdf
-        *  + asdf
-        *  ?     +
-    """
+        [
+            ">       assert 'asdf' == 'asdf\\n'",
+            "E       AssertionError: assert 'asdf' == 'asdf\\n'",
+            "E         Strings contain non-printable/escape characters, escaping them using repr()",
+            "E         - 'asdf'",
+            "E         + 'asdf\\n'",
+            "E         ?      ++",
+        ]
     )
 
 
