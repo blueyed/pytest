@@ -19,6 +19,7 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
+import _pytest.config
 from _pytest._io.saferepr import safeformat
 from _pytest._io.saferepr import saferepr
 from _pytest._version import version
@@ -31,9 +32,6 @@ from _pytest.pathlib import fnmatch_ex
 from _pytest.pathlib import Path
 from _pytest.pathlib import PurePath
 
-if False:  # TYPE_CHECKING
-    from _pytest.config import Config
-
 # pytest caches rewritten pycs in pycache dirs
 PYTEST_TAG = "{}-pytest-{}".format(sys.implementation.cache_tag, version)
 PYC_EXT = ".py" + (__debug__ and "c" or "o")
@@ -43,7 +41,7 @@ PYC_TAIL = "." + PYTEST_TAG + PYC_EXT
 class AssertionRewritingHook(importlib.abc.MetaPathFinder):
     """PEP302/PEP451 import hook which rewrites asserts."""
 
-    def __init__(self, config: "Config"):
+    def __init__(self, config: "_pytest.config.Config"):
         self.config = config
         self.fnpats = self._get_fnpats(config)
         self.session = None
@@ -56,7 +54,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         self._marked_for_rewrite_cache = {}  # type: Dict[str, bool]
         self._session_paths_checked = False
 
-    def _get_fnpats(self, config: "Config") -> List[str]:
+    def _get_fnpats(self, config: "_pytest.config.Config") -> List[str]:
         fnpats = config.getini("assert_rewrite_files")  # type: Optional[List[str]]
         if fnpats is not None:
             return fnpats
