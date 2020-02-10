@@ -2075,18 +2075,13 @@ def test_summary_with_nonprintable(ci, testdir: Testdir) -> None:
     else:
         testdir.monkeypatch.delenv("CI", raising=False)
         expected = r"'AssertionError: \x1b[31mred\x00\x08!!\\nasser..."
-    p1 = testdir.makepyfile(
-        r"""
-        def test():
-            assert 0, "\x1b[31mred\0\b!!"
-        """
-    )
+    p1 = testdir.makepyfile(r"def test(): assert 0, '\x1b[31mred\0\b!!'")
     result = testdir.runpytest("-rf", str(p1), tty=True)
     result.stdout.fnmatch_lines(
         [
-            "test_summary_with_nonprintable.py:2: AssertionError",
+            "test_summary_with_nonprintable.py:1: AssertionError",
             "*= short test summary info =*",
-            "FAILED test_summary_with_nonprintable.py:2::test - " + expected,
+            "FAILED test_summary_with_nonprintable.py:1::test - " + expected,
             "*= 1 failed in *=",
         ]
     )
