@@ -24,6 +24,7 @@ jobs:
         name: [
           "ubuntu-py38",
           "ubuntu-py38 (pexpect, integration)",
+          "ubuntu-py35",
           "ubuntu-pypy3",
 
           "macos-py36",
@@ -57,6 +58,11 @@ jobs:
             tox_env: "py38-lsof-pexpect-coverage"
             pytest_addopts: "-m 'uses_pexpect or integration' --run-integration-tests"
             script_prefix: "env -u COLUMNS"
+          - name: "ubuntu-py35"
+            python: "3.5"
+            os: ubuntu-latest
+            tox_env: "py35-xdist-coverage"
+            pytest_addopts: "-n4"
 
           # Coverage for:
           # - osx
