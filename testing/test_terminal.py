@@ -2034,6 +2034,9 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 42, "FAILED nodeid::😄::withunicode - 😄😄😄...")
     check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄\\n2nd line")
 
+    # Message with non-printable character
+    check("some message with \x1b[31mcolor", 25, "FAILED some::nodeid - ...")
+
 
 @pytest.mark.parametrize("arg", (None, "--tb=native", "--full-trace"))
 def test_failed_pos(arg, testdir):
