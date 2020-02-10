@@ -25,6 +25,8 @@ jobs:
       dist: trusty
       before_install:
         - python -m pip install -U pip==19.3.1
+        # Work around https://github.com/jaraco/zipp/issues/40.
+        - python -m pip install -U 'setuptools>=34.4.0' virtualenv
 
 before_script:
   - python -m tox --notest -v --durations
