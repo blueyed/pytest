@@ -566,7 +566,7 @@ class TestAssert_reprcompare:
             "   9,",
             "   10,",
             "   11,",
-            "+  12,",
+            "-  12,",
             "  ]",
         ]
         monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
@@ -575,9 +575,9 @@ class TestAssert_reprcompare:
             "[0, 1, 2, 3, 4, 5, ...] == [0, 1, 2, 3, 4, 5, ...]",
             "Right contains one more item: 12",
             "Full diff:",
-            "- [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]",
-            "+ [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]",
-            "?                                      ++++",
+            "- [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]",
+            "?                                      ----",
+            "+ [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]",
         ]
 
     def test_dict(self):
