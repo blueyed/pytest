@@ -2,8 +2,9 @@ from typing import Optional
 from typing import Tuple
 
 import pytest
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.main import Session
+from _pytest.pytester import Testdir
 
 
 @pytest.mark.parametrize(
@@ -79,3 +80,25 @@ def test_wrap_session_notify_exception(ret_exc, testdir):
         assert result.stderr.lines == ["mainloop: caught unexpected SystemExit!"]
     else:
         assert result.stderr.lines == ["Exit: exiting after {}...".format(exc.__name__)]
+
+
+@pytest.mark.parametrize("returncode", (None, 42))
+def test_wrap_session_exit_sessionfinish(
+    returncode: Optional[int], testdir: Testdir
+) -> None:
+    testdir.makeconftest(
+        """
+        import pytest
+        def pytest_sessionfinish():
+            pytest.exit(msg="exit_pytest_sessionfinish", returncode={returncode})
+    """.format(
+            returncode=returncode
+        )
+    )
+    result = testdir.runpytest()
+    if returncode:
+        assert result.ret == returncode
+    else:
+        assert result.ret == ExitCode.NO_TESTS_COLLECTED
+    assert result.stdout.lines[-1] == "collected 0 items"
+    assert result.stderr.lines == ["Exit: exit_pytest_sessionfinish"]

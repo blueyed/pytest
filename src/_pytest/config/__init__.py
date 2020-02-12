@@ -1,6 +1,7 @@
 """ command line options, ini-file and conftest.py processing. """
 import argparse
 import copy
+import enum
 import inspect
 import os
 import shlex
@@ -27,7 +28,6 @@ from pluggy import HookspecMarker
 from pluggy import PluginManager
 
 import _pytest._code
-import _pytest.assertion
 import _pytest.deprecated
 import _pytest.hookspec  # the extension point definitions
 from .exceptions import PrintHelp
@@ -61,6 +61,29 @@ hookimpl = HookimplMarker("pytest")
 hookspec = HookspecMarker("pytest")
 
 
+class ExitCode(enum.IntEnum):
+    """
+    .. versionadded:: 5.0
+
+    Encodes the valid exit codes by pytest.
+
+    Currently users and plugins may supply other exit codes as well.
+    """
+
+    #: tests passed
+    OK = 0
+    #: tests failed
+    TESTS_FAILED = 1
+    #: pytest was interrupted
+    INTERRUPTED = 2
+    #: an internal error got in the way
+    INTERNAL_ERROR = 3
+    #: pytest was misused
+    USAGE_ERROR = 4
+    #: pytest couldn't find tests
+    NO_TESTS_COLLECTED = 5
+
+
 class ConftestImportFailure(Exception):
     def __init__(self, path, excinfo):
         Exception.__init__(self, path, excinfo)
@@ -68,7 +91,7 @@ class ConftestImportFailure(Exception):
         self.excinfo = excinfo  # type: Tuple[Type[Exception], Exception, TracebackType]
 
 
-def main(args=None, plugins=None) -> "Union[int, _pytest.main.ExitCode]":
+def main(args=None, plugins=None) -> Union[int, ExitCode]:
     """ return exit code, after performing an in-process test run.
 
     :arg args: list of command line arguments.
@@ -76,8 +99,6 @@ def main(args=None, plugins=None) -> "Union[int, _pytest.main.ExitCode]":
     :arg plugins: list of plugin objects to be auto-registered during
                   initialization.
     """
-    from _pytest.main import ExitCode
-
     try:
         try:
             config = _prepareconfig(args, plugins)
@@ -262,6 +283,8 @@ class PytestPluginManager(PluginManager):
     """
 
     def __init__(self):
+        import _pytest.assertion
+
         super().__init__("pytest")
         # The objects are module objects, only used generically.
         self._conftest_plugins = set()  # type: Set[object]
@@ -899,6 +922,8 @@ class Config:
         ns, unknown_args = self._parser.parse_known_and_unknown_args(args)
         mode = getattr(ns, "assertmode", "plain")
         if mode == "rewrite":
+            import _pytest.assertion
+
             try:
                 hook = _pytest.assertion.install_importhook(self)
             except SystemError:

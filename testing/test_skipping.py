@@ -878,6 +878,7 @@ def test_reportchars_all_error(testdir):
     result.stdout.fnmatch_lines(["ERROR*test_foo*"])
 
 
+@pytest.mark.pypy_specific
 def test_errors_in_xfail_skip_expressions(testdir):
     testdir.makepyfile(
         """

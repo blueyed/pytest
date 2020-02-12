@@ -1,6 +1,5 @@
 import functools
 import inspect
-import itertools
 import sys
 import warnings
 from collections import defaultdict
@@ -16,12 +15,12 @@ import py
 import _pytest
 from _pytest._code.code import FormattedExcinfo
 from _pytest._code.code import TerminalRepr
+from _pytest._code.source import getfslineno
 from _pytest._io import TerminalWriter
 from _pytest.compat import _format_args
 from _pytest.compat import _PytestWrapper
 from _pytest.compat import get_real_func
 from _pytest.compat import get_real_method
-from _pytest.compat import getfslineno
 from _pytest.compat import getfuncargnames
 from _pytest.compat import getimfunc
 from _pytest.compat import getlocation
@@ -1250,7 +1249,6 @@ class FixtureManager:
         self.config = session.config
         self._arg2fixturedefs = {}
         self._holderobjseen = set()
-        self._arg2finish = {}
         self._nodeid_and_autousenames = [("", self.config.getini("usefixtures"))]
         session.config.pluginmanager.register(self, "funcmanage")
 
@@ -1279,10 +1277,8 @@ class FixtureManager:
         else:
             argnames = ()
 
-        usefixtures = itertools.chain.from_iterable(
-            mark.args for mark in node.iter_markers(name="usefixtures")
-        )
-        initialnames = tuple(usefixtures) + argnames
+        usefixtures = get_use_fixtures_for_node(node)
+        initialnames = usefixtures + argnames
         fm = node.session._fixturemanager
         initialnames, names_closure, arg2fixturedefs = fm.getfixtureclosure(
             initialnames, node, ignore_args=self._get_direct_parametrize_args(node)
@@ -1479,3 +1475,12 @@ class FixtureManager:
         for fixturedef in fixturedefs:
             if nodes.ischildnode(fixturedef.baseid, nodeid):
                 yield fixturedef
+
+
+def get_use_fixtures_for_node(node) -> Tuple[str, ...]:
+    """Returns the names of all the usefixtures() marks on the given node"""
+    return tuple(
+        str(name)
+        for mark in node.iter_markers(name="usefixtures")
+        for name in mark.args
+    )

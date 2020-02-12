@@ -7,6 +7,7 @@ import collections
 import datetime
 import os
 import platform
+import re
 import sys
 import time
 from functools import partial
@@ -29,7 +30,7 @@ from _pytest import nodes
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
 from _pytest.config import Config
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.main import Session
 from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import Path
@@ -37,8 +38,20 @@ from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
 REPORT_COLLECTING_RESOLUTION = 0.5
+RE_COLOR_ESCAPES = re.compile(r"\x1b\[[\d;]+m")
 
 _REPORTCHARS_DEFAULT = "fE"
+
+KNOWN_TYPES = (
+    "failed",
+    "passed",
+    "skipped",
+    "deselected",
+    "xfailed",
+    "xpassed",
+    "warnings",
+    "error",
+)
 
 
 def _getdimensions():
@@ -156,7 +169,7 @@ def pytest_addoption(parser):
         default=0,
         dest="verbose",
         help="increase verbosity.",
-    ),
+    )
     group._addoption(
         "-q",
         "--quiet",
@@ -164,7 +177,7 @@ def pytest_addoption(parser):
         default=0,
         dest="verbose",
         help="decrease verbosity.",
-    ),
+    )
     group._addoption(
         "--verbosity",
         dest="verbose",
@@ -351,6 +364,8 @@ class TerminalReporter:
         self._showfspath = None
 
         self.stats = {}  # type: Dict[str, List[Any]]
+        self._main_color = None  # type: Optional[str]
+        self._known_types = None  # type: Optional[List]
         self.startdir = config.invocation_dir
         if file is None:
             file = sys.stdout
@@ -469,6 +484,12 @@ class TerminalReporter:
     def line(self, msg, **kw):
         self._tw.line(msg, **kw)
 
+    def _add_stats(self, category: str, items: List) -> None:
+        set_main_color = category not in self.stats
+        self.stats.setdefault(category, []).extend(items[:])
+        if set_main_color:
+            self._set_main_color()
+
     def pytest_internalerror(self, excrepr):
         for line in str(excrepr).split("\n"):
             self.write_line("INTERNALERROR> " + line)
@@ -478,7 +499,6 @@ class TerminalReporter:
         # from _pytest.nodes import get_fslocation_from_item
         from _pytest.warnings import warning_record_to_str
 
-        warnings = self.stats.setdefault("warnings", [])
         fslocation = warning_message.filename, warning_message.lineno
         message = warning_record_to_str(warning_message)
 
@@ -486,7 +506,7 @@ class TerminalReporter:
         warning_report = WarningReport(
             fslocation=fslocation, message=message, nodeid=nodeid
         )
-        warnings.append(warning_report)
+        self._add_stats("warnings", [warning_report])
 
     def pytest_plugin_registered(self, plugin):
         if self.config.option.traceconfig:
@@ -497,7 +517,7 @@ class TerminalReporter:
             self.write_line(msg)
 
     def pytest_deselected(self, items):
-        self.stats.setdefault("deselected", []).extend(items)
+        self._add_stats("deselected", items)
 
     def pytest_runtest_logstart(self, nodeid, location):
         # ensure that the path is printed before the
@@ -518,7 +538,7 @@ class TerminalReporter:
             word, markup = word
         else:
             markup = None
-        self.stats.setdefault(category, []).append(rep)
+        self._add_stats(category, [rep])
         if not letter and not word:
             # probably passed setup/teardown
             return
@@ -560,6 +580,10 @@ class TerminalReporter:
                 self._tw.write(" " + line)
                 self.currentfspath = -2
 
+    @property
+    def _is_last_item(self):
+        return len(self._progress_nodeids_reported) == self._session.testscollected
+
     def pytest_runtest_logfinish(self, nodeid):
         assert self._session
         if self.verbosity <= 0 and self._show_progress_info:
@@ -569,15 +593,12 @@ class TerminalReporter:
             else:
                 progress_length = len(" [100%]")
 
-            main_color, _ = _get_main_color(self.stats)
-
             self._progress_nodeids_reported.add(nodeid)
-            is_last_item = (
-                len(self._progress_nodeids_reported) == self._session.testscollected
-            )
-            if is_last_item:
-                self._write_progress_information_filling_space(color=main_color)
+
+            if self._is_last_item:
+                self._write_progress_information_filling_space()
             else:
+                main_color, _ = self._get_main_color()
                 w = self._width_of_current_line
                 screen_width = self._tw.fullwidth
                 past_edge = w + progress_length + 1 >= screen_width
@@ -602,9 +623,8 @@ class TerminalReporter:
                 )
             return " [100%]"
 
-    def _write_progress_information_filling_space(self, color=None):
-        if not color:
-            color, _ = _get_main_color(self.stats)
+    def _write_progress_information_filling_space(self):
+        color, _ = self._get_main_color()
         msg = self._get_progress_information_message()
         w = self._width_of_current_line
         fill = self._tw.fullwidth - w - 1
@@ -629,9 +649,9 @@ class TerminalReporter:
 
     def pytest_collectreport(self, report: CollectReport) -> None:
         if report.failed:
-            self.stats.setdefault("error", []).append(report)
+            self._add_stats("error", [report])
         elif report.skipped:
-            self.stats.setdefault("skipped", []).append(report)
+            self._add_stats("skipped", [report])
         items = [x for x in report.result if isinstance(x, pytest.Item)]
         self._numcollected += len(items)
         if self.isatty:
@@ -1030,7 +1050,7 @@ class TerminalReporter:
 
     def summary_stats(self, session: Session) -> None:
         session_duration = time.time() - self._sessionstarttime
-        (parts, main_color) = build_summary_stats_line(self.stats)
+        (parts, main_color) = self.build_summary_stats_line()
         line_parts = []
 
         display_sep = self.verbosity >= 0
@@ -1138,6 +1158,54 @@ class TerminalReporter:
             for line in lines:
                 self.write_line(line)
 
+    def _get_main_color(self) -> Tuple[str, List[str]]:
+        if self._main_color is None or self._known_types is None or self._is_last_item:
+            self._set_main_color()
+            assert self._main_color
+            assert self._known_types
+        return self._main_color, self._known_types
+
+    def _determine_main_color(self, unknown_type_seen: bool) -> str:
+        stats = self.stats
+        if "failed" in stats or "error" in stats:
+            main_color = "red"
+        elif "warnings" in stats or "xpassed" in stats or unknown_type_seen:
+            main_color = "yellow"
+        elif "passed" in stats or not self._is_last_item:
+            main_color = "green"
+        else:
+            main_color = "yellow"
+        return main_color
+
+    def _set_main_color(self) -> Tuple[str, List[str]]:
+        unknown_types = []  # type: List[str]
+        for found_type in self.stats.keys():
+            if found_type:  # setup/teardown reports have an empty key, ignore them
+                if found_type not in KNOWN_TYPES and found_type not in unknown_types:
+                    unknown_types.append(found_type)
+        self._known_types = list(KNOWN_TYPES) + unknown_types
+        self._main_color = self._determine_main_color(bool(unknown_types))
+        return self._main_color, self._known_types
+
+    def build_summary_stats_line(self) -> Tuple[List[Tuple[str, Dict[str, bool]]], str]:
+        main_color, known_types = self._get_main_color()
+
+        parts = []
+        for key in known_types:
+            reports = self.stats.get(key, None)
+            if reports:
+                count = sum(
+                    1 for rep in reports if getattr(rep, "count_towards_summary", True)
+                )
+                color = _color_for_type.get(key, _color_for_type_default)
+                markup = {color: True, "bold": color == main_color}
+                parts.append(("%d %s" % _make_plural(count, key), markup))
+
+        if not parts:
+            parts = [("no tests ran", {_color_for_type_default: True})]
+
+        return parts, main_color
+
 
 def _get_pos(config, rep):
     nodeid = config.cwd_relative_nodeid(rep.nodeid)
@@ -1179,6 +1247,14 @@ def _get_pos(config, rep):
     return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
 
 
+def _wcswidth(s: str) -> int:
+    """wcswidth that ignores color escape codes."""
+    from wcwidth import wcswidth
+
+    s = RE_COLOR_ESCAPES.sub("", s)
+    return wcswidth(s)  # type: ignore[no-any-return]  # noqa: F723
+
+
 def _get_line_with_reprcrash_message(config, rep, termwidth):
     """Get summary line for a report, trying to add reprcrash message."""
     verbose_word = rep._get_verbose_word(config)
@@ -1187,9 +1263,8 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
     line = "{} {}".format(verbose_word, pos)
 
     if termwidth is not None:
-        from wcwidth import wcswidth
-
-        len_line = wcswidth(line)
+        len_line = _wcswidth(line)
+        assert len_line != -1, repr(line)
         ellipsis, len_ellipsis = "...", 3
         if len_line > termwidth - len_ellipsis:
             # No space for an additional message.
@@ -1215,18 +1290,22 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             msg = msg[len(implicit_prefix) + 1 :]
 
         sep = " - "
+        len_msg = _wcswidth(msg)
+        if len_msg == -1:
+            msg = repr(msg)
+            len_msg = _wcswidth(msg)
+            assert len_msg != -1, repr(msg)
+
         if termwidth is None:
             return line + sep + msg
 
         len_sep = 3
-        len_msg = wcswidth(msg)
-
         max_len_msg = termwidth - len_line - len_sep
         if max_len_msg >= len_ellipsis:
             if len_msg > max_len_msg:
                 max_len_msg -= len_ellipsis
                 msg = msg[:max_len_msg]
-                while wcswidth(msg) > max_len_msg:
+                while _wcswidth(msg) > max_len_msg:
                     msg = msg[:-1]
                 msg += ellipsis
             line += sep + msg
@@ -1275,50 +1354,6 @@ def _make_plural(count, noun):
     noun = noun.replace("warnings", "warning")
 
     return count, noun + "s" if count != 1 else noun
-
-
-def _get_main_color(stats) -> Tuple[str, List[str]]:
-    known_types = (
-        "failed passed skipped deselected xfailed xpassed warnings error".split()
-    )
-    unknown_type_seen = False
-    for found_type in stats.keys():
-        if found_type not in known_types:
-            if found_type:  # setup/teardown reports have an empty key, ignore them
-                known_types.append(found_type)
-                unknown_type_seen = True
-
-    # main color
-    if "failed" in stats or "error" in stats:
-        main_color = "red"
-    elif "warnings" in stats or "xpassed" in stats or unknown_type_seen:
-        main_color = "yellow"
-    elif "passed" in stats:
-        main_color = "green"
-    else:
-        main_color = "yellow"
-
-    return main_color, known_types
-
-
-def build_summary_stats_line(stats):
-    main_color, known_types = _get_main_color(stats)
-
-    parts = []
-    for key in known_types:
-        reports = stats.get(key, None)
-        if reports:
-            count = sum(
-                1 for rep in reports if getattr(rep, "count_towards_summary", True)
-            )
-            color = _color_for_type.get(key, _color_for_type_default)
-            markup = {color: True, "bold": color == main_color}
-            parts.append(("%d %s" % _make_plural(count, key), markup))
-
-    if not parts:
-        parts = [("no tests ran", {_color_for_type_default: True})]
-
-    return parts, main_color
 
 
 def _plugin_nameversions(plugininfo) -> List[str]:

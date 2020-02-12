@@ -10,16 +10,17 @@ import py
 
 import _pytest._code
 import pytest
-from _pytest import main
 from _pytest import outcomes
 from _pytest import reports
 from _pytest import runner
+from _pytest.compat import TYPE_CHECKING
+from _pytest.config import ExitCode
 from _pytest.outcomes import Exit
 from _pytest.outcomes import Failed
 from _pytest.outcomes import OutcomeException
 from _pytest.outcomes import Skipped
 
-if False:  # TYPE_CHECKING
+if TYPE_CHECKING:
     from typing import Type
 
 
@@ -692,7 +693,7 @@ def test_pytest_fail_notrace_non_ascii(testdir) -> None:
 def test_pytest_no_tests_collected_exit_status(testdir) -> None:
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(["*collected 0 items*"])
-    assert result.ret == main.ExitCode.NO_TESTS_COLLECTED
+    assert result.ret == ExitCode.NO_TESTS_COLLECTED
 
     testdir.makepyfile(
         test_foo="""
@@ -703,12 +704,12 @@ def test_pytest_no_tests_collected_exit_status(testdir) -> None:
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(["*collected 1 item*"])
     result.stdout.fnmatch_lines(["*1 passed*"])
-    assert result.ret == main.ExitCode.OK
+    assert result.ret == ExitCode.OK
 
     result = testdir.runpytest("-k nonmatch")
     result.stdout.fnmatch_lines(["*collected 1 item*"])
     result.stdout.fnmatch_lines(["*1 deselected*"])
-    assert result.ret == main.ExitCode.NO_TESTS_COLLECTED
+    assert result.ret == ExitCode.NO_TESTS_COLLECTED
 
 
 def test_exception_printing_skip() -> None:

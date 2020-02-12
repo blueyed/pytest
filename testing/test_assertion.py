@@ -73,10 +73,20 @@ class TestImportHookInstallation:
         result.stdout.fnmatch_lines(
             [
                 ">       r.assertoutcome(passed=1)",
-                "E       AssertionError: ([],",
-                "E          [],",
-                "E          [<TestReport 'test_dummy_failure.py::test' when='call' outcome='failed'>])",
-                "E       assert {'failed': 1, 'passed': 0, 'skipped': 0} == {'failed': 0, 'passed': 1, 'skipped': 0}",
+                "E       AssertionError: ([[][]],",
+                "E          [[][]],",
+                "E          [[]<TestReport *>[]])*",
+                "E       assert {'failed': 1,... 'skipped': 0} == {'failed': 0,... 'skipped': 0}",
+                "E         Omitting 1 identical items, use -vv to show",
+                "E         Differing items:",
+                "E         Use -v to get the full diff",
+            ]
+        )
+        # XXX: unstable output.
+        result.stdout.fnmatch_lines_random(
+            [
+                "E         {'failed': 1} != {'failed': 0}",
+                "E         {'passed': 0} != {'passed': 1}",
             ]
         )
 
@@ -422,7 +432,7 @@ class TestAssert_reprcompare:
         assert len(expl) > 1
 
     def test_list_wrap_for_multiple_lines(self, monkeypatch):
-        monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 80)
+        monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
         long_d = "d" * 80
         l1 = ["a", "b", "c"]
         l2 = ["a", "b", "c", long_d]
@@ -453,7 +463,7 @@ class TestAssert_reprcompare:
         ]
 
     def test_list_wrap_for_width_rewrap_same_length(sel, monkeypatch):
-        monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 80)
+        monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
         long_a = "a" * 30
         long_b = "b" * 30
         long_c = "c" * 30
@@ -473,7 +483,7 @@ class TestAssert_reprcompare:
         ]
 
     def test_list_dont_wrap_strings(self, monkeypatch):
-        monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 80)
+        monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
         long_a = "a" * 10
         l1 = ["a"] + [long_a for _ in range(0, 7)]
         l2 = ["should not get wrapped"]
@@ -496,7 +506,9 @@ class TestAssert_reprcompare:
             "  ]",
         ]
 
-    def test_dict_wrap(self):
+    def test_dict_wrap(self, monkeypatch):
+        monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
+
         d1 = {"common": 1, "env": {"env1": 1}}
         d2 = {"common": 1, "env": {"env1": 1, "env2": 2}}
 
@@ -532,7 +544,7 @@ class TestAssert_reprcompare:
         ]
 
     def test_compare_eq_iterable_uses_terminal_width(self, monkeypatch):
-        monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 40)
+        monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 40)
         l1 = list(range(0, 12))
         l2 = list(range(0, 13))
 
@@ -557,7 +569,7 @@ class TestAssert_reprcompare:
             "+  12,",
             "  ]",
         ]
-        monkeypatch.setattr("_pytest.terminal._cached_terminal_width", 80)
+        monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
         diff = callequal(l1, l2, verbose=True)
         assert diff == [
             "[0, 1, 2, 3, 4, 5, ...] == [0, 1, 2, 3, 4, 5, ...]",
@@ -1058,7 +1070,7 @@ class TestTruncateExplanation:
         # test assert_truncate_level ini option.
         result = testdir.runpytest("-o", "assert_truncate_level=1")
         result.stdout.fnmatch_lines(
-            ["E         ...Full output truncated (2 lines hidden), use '-vv' to show"]
+            ["*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines]
         )
         result = testdir.runpytest("-o", "assert_truncate_level=0")
         result.stdout.fnmatch_lines(["* 6*"])
@@ -1071,7 +1083,7 @@ class TestTruncateExplanation:
         monkeypatch.setenv("CI", "")
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(
-            ["E         ...Full output truncated (2 lines hidden), use '-vv' to show"]
+            ["*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines]
         )
 
         monkeypatch.setenv("CI", "True")

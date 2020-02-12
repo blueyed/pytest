@@ -9,7 +9,7 @@ from collections import Counter
 from collections import defaultdict
 from collections.abc import Sequence
 from functools import partial
-from textwrap import dedent
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -21,10 +21,11 @@ import _pytest
 from _pytest import fixtures
 from _pytest import nodes
 from _pytest._code import filter_traceback
+from _pytest._code.code import ExceptionInfo
+from _pytest._code.source import getfslineno
 from _pytest.compat import ascii_escaped
 from _pytest.compat import get_default_arg_names
 from _pytest.compat import get_real_func
-from _pytest.compat import getfslineno
 from _pytest.compat import getimfunc
 from _pytest.compat import getlocation
 from _pytest.compat import is_generator
@@ -37,6 +38,7 @@ from _pytest.compat import STRING_TYPES
 from _pytest.config import hookimpl
 from _pytest.deprecated import FUNCARGNAMES
 from _pytest.mark import MARK_GEN
+from _pytest.mark import ParameterSet
 from _pytest.mark.structures import get_unpacked_marks
 from _pytest.mark.structures import Mark
 from _pytest.mark.structures import normalize_mark_list
@@ -505,9 +507,7 @@ class Module(nodes.File, PyCollector):
         try:
             mod = self.fspath.pyimport(ensuresyspath=importmode)
         except SyntaxError:
-            raise self.CollectError(
-                _pytest._code.ExceptionInfo.from_current().getrepr(style="short")
-            )
+            raise self.CollectError(ExceptionInfo.from_current().getrepr(style="short"))
         except self.fspath.ImportMismatchError:
             e = sys.exc_info()[1]
             raise self.CollectError(
@@ -520,8 +520,6 @@ class Module(nodes.File, PyCollector):
                 "unique basename for your test file modules" % e.args
             )
         except ImportError:
-            from _pytest._code.code import ExceptionInfo
-
             exc_info = ExceptionInfo.from_current()
             if self.config.getoption("verbose") < 2:
                 exc_info.traceback = exc_info.traceback.filter(filter_traceback)
@@ -768,47 +766,6 @@ class Instance(PyCollector):
         return self.obj
 
 
-class FunctionMixin(PyobjMixin):
-    """ mixin for the code common to Function and Generator.
-    """
-
-    def setup(self):
-        """ perform setup for this test function. """
-        if isinstance(self.parent, Instance):
-            self.parent.newinstance()
-            self.obj = self._getobj()
-
-    def _prunetraceback(self, excinfo):
-        if hasattr(self, "_obj") and not self.config.getoption("fulltrace", False):
-            code = _pytest._code.Code(get_real_func(self.obj))
-            path, firstlineno = code.path, code.firstlineno
-            traceback = excinfo.traceback
-            ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
-            if ntraceback == traceback:
-                ntraceback = ntraceback.cut(path=path)
-                if ntraceback == traceback:
-                    ntraceback = ntraceback.filter(filter_traceback)
-                    if not ntraceback:
-                        ntraceback = traceback
-
-            ntraceback = ntraceback.filter()
-            if ntraceback:
-                excinfo.traceback = ntraceback
-            # issue364: mark all but first and last frames to
-            # only show a single-line message for each frame
-            if self.config.getoption("tbstyle", "auto") == "auto":
-                if len(excinfo.traceback) > 2:
-                    for entry in excinfo.traceback[1:-1]:
-                        entry.set_repr_style("short")
-
-    def repr_failure(self, excinfo, outerr=None):
-        assert outerr is None, "XXX outerr usage is deprecated"
-        style = self.config.getoption("tbstyle", "auto")
-        if style == "auto":
-            style = "long"
-        return self._repr_failure_py(excinfo, style=style)
-
-
 def hasinit(obj):
     init = getattr(obj, "__init__", None)
     if init:
@@ -971,7 +928,6 @@ class Metafunc:
             to set a dynamic scope using test context or configuration.
         """
         from _pytest.fixtures import scope2index
-        from _pytest.mark import ParameterSet
 
         argnames, parameters = ParameterSet._for_parametrize(
             argnames,
@@ -994,6 +950,8 @@ class Metafunc:
         self._validate_if_using_arg_names(argnames, indirect)
 
         arg_values_types = self._resolve_arg_value_types(argnames, indirect)
+
+        self._validate_explicit_parameters(argnames, indirect)
 
         # Use any already (possibly) generated ids with parametrize Marks.
         if _param_mark and _param_mark._param_ids_from:
@@ -1030,7 +988,9 @@ class Metafunc:
                 newcalls.append(newcallspec)
         self._calls = newcalls
 
-    def _resolve_arg_ids(self, argnames, ids, parameters, item):
+    def _resolve_arg_ids(
+        self, argnames: List[str], ids, parameters: List[ParameterSet], item: nodes.Item
+    ):
         """Resolves the actual ids for the given argnames, based on the ``ids`` parameter given
         to ``parametrize``.
 
@@ -1083,7 +1043,7 @@ class Metafunc:
                     )
         return new_ids
 
-    def _resolve_arg_value_types(self, argnames, indirect):
+    def _resolve_arg_value_types(self, argnames: List[str], indirect) -> Dict[str, str]:
         """Resolves if each parametrized argument must be considered a parameter to a fixture or a "funcarg"
         to the function, based on the ``indirect`` parameter of the parametrized() call.
 
@@ -1144,6 +1104,37 @@ class Metafunc:
                         "In {}: function uses no {} '{}'".format(func_name, name, arg),
                         pytrace=False,
                     )
+
+    def _validate_explicit_parameters(self, argnames, indirect):
+        """
+        The argnames in *parametrize* should either be declared explicitly via
+        indirect list or in the function signature
+
+        :param List[str] argnames: list of argument names passed to ``parametrize()``.
+        :param indirect: same ``indirect`` parameter of ``parametrize()``.
+        :raise ValueError: if validation fails
+        """
+        if isinstance(indirect, bool) and indirect is True:
+            return
+        parametrized_argnames = list()
+        funcargnames = _pytest.compat.getfuncargnames(self.function)
+        if isinstance(indirect, Sequence):
+            for arg in argnames:
+                if arg not in indirect:
+                    parametrized_argnames.append(arg)
+        elif indirect is False:
+            parametrized_argnames = argnames
+
+        usefixtures = fixtures.get_use_fixtures_for_node(self.definition)
+
+        for arg in parametrized_argnames:
+            if arg not in funcargnames and arg not in usefixtures:
+                func_name = self.function.__name__
+                msg = (
+                    'In function "{func_name}":\n'
+                    'Parameter "{arg}" should be declared explicitly via indirect or in function itself'
+                ).format(func_name=func_name, arg=arg)
+                fail(msg, pytrace=False)
 
 
 def _find_parametrized_scope(argnames, arg2fixturedefs, indirect):
@@ -1286,7 +1277,7 @@ def _show_fixtures_per_test(config, session):
         else:
             funcargspec = argname
         tw.line(funcargspec, green=True)
-        fixture_doc = fixture_def.func.__doc__
+        fixture_doc = inspect.getdoc(fixture_def.func)
         if fixture_doc:
             write_docstring(tw, fixture_doc)
         else:
@@ -1371,7 +1362,7 @@ def _showfixtures_main(config, session):
             tw.write(" -- %s" % bestrel, yellow=True)
         tw.write("\n")
         loc = getlocation(fixturedef.func, curdir)
-        doc = fixturedef.func.__doc__ or ""
+        doc = inspect.getdoc(fixturedef.func)
         if doc:
             write_docstring(tw, doc)
         else:
@@ -1380,21 +1371,11 @@ def _showfixtures_main(config, session):
 
 
 def write_docstring(tw, doc, indent="    "):
-    doc = doc.rstrip()
-    if "\n" in doc:
-        firstline, rest = doc.split("\n", 1)
-    else:
-        firstline, rest = doc, ""
-
-    if firstline.strip():
-        tw.line(indent + firstline.strip())
-
-    if rest:
-        for line in dedent(rest).split("\n"):
-            tw.write(indent + line + "\n")
+    for line in doc.split("\n"):
+        tw.write(indent + line + "\n")
 
 
-class Function(FunctionMixin, nodes.Item):
+class Function(PyobjMixin, nodes.Item):
     """ a Function Item is responsible for setting up and executing a
     Python test function.
     """
@@ -1491,9 +1472,41 @@ class Function(FunctionMixin, nodes.Item):
         """ execute the underlying test function. """
         self.ihook.pytest_pyfunc_call(pyfuncitem=self)
 
-    def setup(self):
-        super().setup()
+    def setup(self) -> None:
+        if isinstance(self.parent, Instance):
+            self.parent.newinstance()
+            self.obj = self._getobj()
         fixtures.fillfixtures(self)
+
+    def _prunetraceback(self, excinfo: ExceptionInfo) -> None:
+        if hasattr(self, "_obj") and not self.config.getoption("fulltrace", False):
+            code = _pytest._code.Code(get_real_func(self.obj))
+            path, firstlineno = code.path, code.firstlineno
+            traceback = excinfo.traceback
+            ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
+            if ntraceback == traceback:
+                ntraceback = ntraceback.cut(path=path)
+                if ntraceback == traceback:
+                    ntraceback = ntraceback.filter(filter_traceback)
+                    if not ntraceback:
+                        ntraceback = traceback
+
+            ntraceback = ntraceback.filter()
+            if ntraceback:
+                excinfo.traceback = ntraceback
+            # issue364: mark all but first and last frames to
+            # only show a single-line message for each frame
+            if self.config.getoption("tbstyle", "auto") == "auto":
+                if len(excinfo.traceback) > 2:
+                    for entry in excinfo.traceback[1:-1]:
+                        entry.set_repr_style("short")
+
+    def repr_failure(self, excinfo, outerr=None):
+        assert outerr is None, "XXX outerr usage is deprecated"
+        style = self.config.getoption("tbstyle", "auto")
+        if style == "auto":
+            style = "long"
+        return self._repr_failure_py(excinfo, style=style)
 
 
 class FunctionDefinition(Function):

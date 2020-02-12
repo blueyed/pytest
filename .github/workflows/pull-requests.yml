@@ -1,0 +1,74 @@
+# Jobs only for pull requests.
+# Keep the steps in sync with .github/workflows/main.yml.
+name: PR only
+
+on:
+  pull_request:
+    branches:
+      - my-master
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [
+          "mypy-diff",
+        ]
+
+        include:
+          - name: "mypy-diff"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "mypy-diff"
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python }}
+
+    # Caching.
+    - name: set PY_CACHE_KEY
+      run: echo "::set-env name=PY_CACHE_KEY::$(python --version --version | sha256sum | cut -d' ' -f1)"
+    - name: Cache .tox
+      uses: actions/cache@v1
+      with:
+        path: ~/work/pytest/pytest/.tox/${{ matrix.tox_env }}
+        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
+    - name: Cache .pre-commit
+      if: (matrix.tox_env == 'linting')
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
+    - name: Install tox
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      run: |
+        python -m pip --version
+        python -m pip install git+https://github.com/blueyed/tox@master
+
+    - name: Setup tox environment
+      run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}
+
+    - name: Test
+      env:
+        PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
+        COLUMNS: "120"
+      run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
+
+    - name: Prepare coverage token
+      if: (contains(matrix.tox_env, '-coverage') && ( github.repository == 'blueyed/pytest' || github.event_name == 'pull_request' ))
+      run: |
+        python scripts/append_codecov_token.py
+
+    - name: Report coverage
+      if: (contains(matrix.tox_env, '-coverage'))
+      env:
+        CODECOV_NAME: ${{ matrix.name }}
+      run: bash scripts/report-coverage.sh -F GHA,${{ runner.os }}
