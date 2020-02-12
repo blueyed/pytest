@@ -944,7 +944,7 @@ def test_color_yes(testdir, color_mapping):
     p1 = testdir.makepyfile(
         """
         def fail():
-            assert 0
+            assert 0, "multi-\\nline error"
 
         def test_this():
             fail()
@@ -970,8 +970,10 @@ def test_color_yes(testdir, color_mapping):
                 "_ _ * _ _*",
                 "",
                 "    {kw}def{hl-reset} {function}fail{hl-reset}():",
-                ">       {kw}assert{hl-reset} {number}0{hl-reset}",
-                "{bold}{red}E       assert 0{reset}",
+                ">       {kw}assert{hl-reset} {number}0{hl-reset}, *{hl-reset}",
+                "{bold}{red}E       AssertionError: multi-{reset}",
+                "{bold}{red}E   {reset}      line error",
+                "{bold}{red}E   {reset}    assert 0",
                 "",
                 "{bold}test_color_yes.py{reset}:2: AssertionError",
                 "{red}=*= {red}{bold}1 failed{reset}{red} in *s{reset}{red} =*={reset}",
@@ -992,8 +994,10 @@ def test_color_yes(testdir, color_mapping):
                 "test_color_yes.py:5: in test_this",
                 "    fail()",
                 "test_color_yes.py:2: in fail",
-                "    {kw}assert{hl-reset} {number}0{hl-reset}",
-                "{bold}{red}E   assert 0{reset}",
+                "    {kw}assert{hl-reset} {number}0{hl-reset}, *",
+                "{bold}{red}E   AssertionError: multi-{reset}",
+                "{bold}{red}E   {reset}  line error",
+                "{bold}{red}E   {reset}assert 0",
                 "{red}=*= {red}{bold}1 failed{reset}{red} in *s{reset}{red} =*={reset}",
             ]
         )
