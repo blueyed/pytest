@@ -155,9 +155,11 @@ def test_pformat_consistent():
     assert _pformat_consistent("a") == "'a'"
     # via pprint.PrettyPrinter._dispatch.
     assert _pformat_consistent("a" * 10, width=5) == "'aaaaaaaaaa'"
+    assert _pformat_consistent("foo bar", width=5) == "('foo '\n 'bar')"
 
 
 def test_pformat_dispatch():
     assert _pformat_dispatch("a") == "'a'"
     # via pprint.PrettyPrinter._dispatch.
     assert _pformat_dispatch("a" * 10, width=5) == "'aaaaaaaaaa'"
+    assert _pformat_dispatch("foo bar", width=5) == "('foo '\n 'bar')"
