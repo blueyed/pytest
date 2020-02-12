@@ -3,6 +3,7 @@ import bdb
 import os
 import sys
 from time import time
+from types import FrameType
 from typing import Callable
 from typing import Dict
 from typing import List
@@ -124,24 +125,7 @@ def pytest_runtest_setup(item):
 
 def pytest_runtest_call(item):
     _update_current_test_var(item, "call")
-    try:
-        del sys.last_type
-        del sys.last_value
-        del sys.last_traceback
-    except AttributeError:
-        pass
-    try:
-        item.runtest()
-    except Exception:
-        # Store trace info to allow postmortem debugging
-        type, value, tb = sys.exc_info()
-        assert tb is not None
-        tb = tb.tb_next  # Skip *this* frame
-        sys.last_type = type
-        sys.last_value = value
-        sys.last_traceback = tb
-        del type, value, tb  # Get rid of these in this frame
-        raise
+    item.runtest()
 
 
 def pytest_runtest_teardown(item, nextitem):
@@ -228,7 +212,7 @@ class CallInfo:
         return self._result
 
     @classmethod
-    def from_call(cls, func, when, reraise=None) -> "CallInfo":
+    def from_call(cls, func, when, reraise=None, merge_frame: Optional[FrameType] = None) -> "CallInfo":
         #: context of invocation: one of "setup", "call",
         #: "teardown", "memocollect"
         start = time()
@@ -240,6 +224,26 @@ class CallInfo:
             if reraise is not None and excinfo.errisinstance(reraise):
                 raise
             result = None
+
+            # Merge with frame's stack.
+            if sys.version_info >= (3, 7):
+                from types import TracebackType
+
+                merge_frame = excinfo._merge_frame = sys._getframe()
+                exc_info = excinfo._excinfo
+                assert exc_info
+                tb = exc_info[2]
+                f = merge_frame
+                while f:
+                    tb = TracebackType(tb, f, tb_lasti=f.f_lasti, tb_lineno=f.f_lineno)
+                    f = f.f_back
+                exc_info = exc_info[:2] + (tb,)
+            else:
+                exc_info = excinfo._excinfo
+
+            # Save original exception, to be used with e.g. pdb.pm().
+            sys.last_type, sys.last_value, sys.last_traceback = exc_info
+
         stop = time()
         return cls(start=start, stop=stop, when=when, result=result, excinfo=excinfo)
 

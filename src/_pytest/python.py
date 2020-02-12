@@ -789,6 +789,15 @@ class FunctionMixin(PyobjMixin):
             code = _pytest._code.Code(get_real_func(self.obj))
             path, firstlineno = code.path, code.firstlineno
             traceback = excinfo.traceback
+
+            # XXX: remove any entries from the full tb previously ignored
+            # already.  Without this, it would include e.g. src/pytest.py:101
+            # or /usr/lib/python3.7/runpy.py:193 (previously unknown).
+            # The cutting needs some fix for generators anyway IIRC.
+            if excinfo._merge_frame:
+                while traceback[0]._rawentry.tb_frame is not excinfo._merge_frame:
+                    traceback.pop(0)
+
             ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
             if ntraceback == traceback:
                 ntraceback = ntraceback.cut(path=path)

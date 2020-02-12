@@ -103,7 +103,8 @@ class TestPDB:
         )
         assert rep.failed
         assert len(pdblist) == 1
-        tb = _pytest._code.Traceback(pdblist[0][0])
+        postmortem_tb = pdblist[0][0]
+        tb = _pytest._code.Traceback(postmortem_tb)
         assert len(tb) == 2
         assert tb[-1].name == "inner"
         assert tb[-2].name == "test_func"
@@ -111,15 +112,16 @@ class TestPDB:
         # Check values being set for post_mortem.
         assert sys.last_type == AssertionError
         assert type(sys.last_value) == AssertionError
-        assert sys.last_traceback != pdblist[0][0]
 
-        # XXX: cut at CallInfo.from_call..
-        tb = sys.last_traceback
-        assert tb.tb_frame.f_code.co_name == "from_call"
-
-        assert pdblist[0][0].tb_frame.f_code.co_name == "test_func"
-        assert pdblist[0][0].tb_next.tb_frame.f_code.co_name == "inner"
-        assert pdblist[0][0].tb_next.tb_next is None
+        if sys.version_info >= (3, 7):
+            assert sys.last_traceback != postmortem_tb
+            # Traceback goes back to first frame.
+            f = sys._getframe()
+            while f.f_back:
+                f = f.f_back
+            assert sys.last_traceback.tb_frame == f
+        else:
+            assert sys.last_traceback.tb_frame.f_code.co_name == "from_call"
 
     def test_pdb_on_xfail(self, testdir, pdblist):
         rep = runpdb_and_get_report(

@@ -453,12 +453,15 @@ class ExceptionInfo(Generic[_E]):
     _excinfo = attr.ib(type=Optional[Tuple["Type[_E]", "_E", TracebackType]])
     _striptext = attr.ib(type=str, default="")
     _traceback = attr.ib(type=Optional[Traceback], default=None)
+    _merge_frame = attr.ib(type=Optional[FrameType], default=None)
 
     @classmethod
     def from_exc_info(
         cls,
         exc_info: Tuple["Type[_E]", "_E", TracebackType],
         exprinfo: Optional[str] = None,
+        *,
+        merge_frame: Optional[FrameType] = None,
     ) -> "ExceptionInfo[_E]":
         """returns an ExceptionInfo for an existing exc_info tuple.
 
@@ -479,11 +482,11 @@ class ExceptionInfo(Generic[_E]):
             if exprinfo and exprinfo.startswith(cls._assert_start_repr):
                 _striptext = "AssertionError: "
 
-        return cls(exc_info, _striptext)
+        return cls(exc_info, _striptext, merge_frame=merge_frame)
 
     @classmethod
     def from_current(
-        cls, exprinfo: Optional[str] = None
+        cls, exprinfo: Optional[str] = None, *, merge_frame: Optional[FrameType] = None
     ) -> "ExceptionInfo[BaseException]":
         """returns an ExceptionInfo matching the current traceback
 
@@ -501,7 +504,7 @@ class ExceptionInfo(Generic[_E]):
         assert tup[1] is not None, "no current exception"
         assert tup[2] is not None, "no current exception"
         exc_info = (tup[0], tup[1], tup[2])
-        return ExceptionInfo.from_exc_info(exc_info, exprinfo)
+        return ExceptionInfo.from_exc_info(exc_info, exprinfo, merge_frame=merge_frame)
 
     @classmethod
     def for_later(cls) -> "ExceptionInfo[_E]":
