@@ -16,7 +16,7 @@ import py
 
 import _pytest.config
 import pytest
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.pytester import Testdir
 from _pytest.reports import BaseReport
 from _pytest.terminal import _folded_skips

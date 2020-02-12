@@ -30,7 +30,7 @@ from _pytest import nodes
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
 from _pytest.config import Config
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.main import Session
 from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import Path
@@ -169,7 +169,7 @@ def pytest_addoption(parser):
         default=0,
         dest="verbose",
         help="increase verbosity.",
-    ),
+    )
     group._addoption(
         "-q",
         "--quiet",
@@ -177,7 +177,7 @@ def pytest_addoption(parser):
         default=0,
         dest="verbose",
         help="decrease verbosity.",
-    ),
+    )
     group._addoption(
         "--verbosity",
         dest="verbose",
