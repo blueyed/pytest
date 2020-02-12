@@ -129,7 +129,12 @@ class ConsistentPrettyPrinter(pprint.PrettyPrinter):
 
     def format(self, object, context, maxlevels, level):
         """Wraps pprint._safe_repr for consistent quotes with string reprs."""
-        return _wrapped_safe_repr(object, context, maxlevels, level, self._sort_dicts)
+        try:
+            sort_dicts = self._sort_dicts
+        except AttributeError:
+            return _wrapped_safe_repr(object, context, maxlevels, level)
+        else:
+            return _wrapped_safe_repr(object, context, maxlevels, level, sort_dicts)
 
 
 def _wrapped_repr(obj: object) -> str:
