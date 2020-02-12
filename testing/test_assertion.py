@@ -553,12 +553,12 @@ class TestAssert_reprcompare:
         # (via saferepr for verbose=1)
         list_verbose1 = callequal(["foo'"], ["foo"], verbose=1)
         assert list_verbose1 == [
-            '["foo\'"] == ["foo"]',
-            'At index 0 diff: "foo\'" != "foo"',
+            "['foo\\''] == ['foo']",
+            "At index 0 diff: 'foo\\'' != 'foo'",
             "Full diff:",
-            '- ["foo\'"]',
-            "?      -",
-            '+ ["foo"]',
+            "- ['foo\\'']",
+            "?      --",
+            "+ ['foo']",
         ]
         # (via safeformat for verbose=2).
         assert callequal(["foo'"], ["foo"], verbose=2) == list_verbose1
@@ -566,7 +566,7 @@ class TestAssert_reprcompare:
         # TODO: after / affected by https://github.com/pytest-dev/pytest/pull/6702?
         str_verbose1 = callequal("foo'\nbar", "foo\nbar", verbose=1)
         assert str_verbose1 == [
-            '"foo\'\\nbar" == "foo\\nbar"',
+            "'foo\\'\\nbar' == 'foo\\nbar'",
             "- foo'",
             "?    -",
             "+ foo",

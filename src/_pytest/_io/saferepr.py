@@ -97,7 +97,7 @@ def saferepr(obj: Any, maxsize: int = 240) -> str:
 
 def _consistent_str_repr(obj: object) -> str:
     if isinstance(obj, str):
-        return '"' + repr("'" + obj)[2:]
+        return "'" + repr('"' + obj)[2:]
     return repr(obj)
 
 
@@ -113,7 +113,7 @@ def rebind_globals(func, newglobals):
 
 def _wrapped_safe_repr(obj: object, *args, **kwargs) -> Tuple[str, bool, bool]:
     if isinstance(obj, str):
-        return '"' + repr("'" + obj)[2:], True, False
+        return "'" + repr('"' + obj)[2:], True, False
     return _new_safe_repr(obj, *args, **kwargs)
 
 
@@ -125,9 +125,25 @@ _new_safe_repr = rebind_globals(
 
 
 class ConsistentPrettyPrinter(pprint.PrettyPrinter):
+    # _dispatch[str.__repr__] = _wrapped_pprint_str
+
     def format(self, object, context, maxlevels, level):
         """Wraps pprint._safe_repr for consistent quotes with string reprs."""
         return _wrapped_safe_repr(object, context, maxlevels, level, self._sort_dicts)
+
+
+def _wrapped_repr(obj: object) -> str:
+    if isinstance(obj, str):
+        return "'" + repr('"' + obj)[2:]
+    return repr(obj)
+
+
+func = ConsistentPrettyPrinter._dispatch[str.__repr__]  # type: ignore[attr-defined]  # noqa: F821
+newglobals = func.__globals__.copy()  # type: ignore[attr-defined]  # noqa: F821
+newglobals["repr"] = _wrapped_repr
+ConsistentPrettyPrinter._dispatch[str.__repr__] = rebind_globals(  # type: ignore[attr-defined]  # noqa: F821
+    func, newglobals
+)
 
 
 def _pformat_consistent(
@@ -138,7 +154,7 @@ def _pformat_consistent(
     ).pformat(object)
 
 
-class AlwaysDispatchingPrettyPrinter(pprint.PrettyPrinter):
+class AlwaysDispatchingPrettyPrinter(ConsistentPrettyPrinter):
     """PrettyPrinter that always dispatches (regardless of width)."""
 
     def _format(self, object, stream, indent, allowance, context, level):

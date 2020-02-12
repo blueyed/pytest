@@ -1,4 +1,6 @@
 import pytest
+from _pytest._io.saferepr import _pformat_consistent
+from _pytest._io.saferepr import _pformat_dispatch
 from _pytest._io.saferepr import saferepr
 
 
@@ -147,3 +149,15 @@ def test_unicode():
     val = "£€"
     reprval = "'£€'"
     assert saferepr(val) == reprval
+
+
+def test_pformat_consistent():
+    assert _pformat_consistent("a") == "'a'"
+    # via pprint.PrettyPrinter._dispatch.
+    assert _pformat_consistent("a" * 10, width=5) == "'aaaaaaaaaa'"
+
+
+def test_pformat_dispatch():
+    assert _pformat_dispatch("a") == "'a'"
+    # via pprint.PrettyPrinter._dispatch.
+    assert _pformat_dispatch("a" * 10, width=5) == "'aaaaaaaaaa'"
