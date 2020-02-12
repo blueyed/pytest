@@ -19,13 +19,7 @@ class OutcomeException(BaseException):
         contain info about test and collection outcomes.
     """
 
-    def __init__(
-        self,
-        msg: Optional[str] = None,
-        pytrace: bool = True,
-        *,
-        short_msg: Optional[str] = None
-    ) -> None:
+    def __init__(self, msg: Optional[str] = None, pytrace: bool = True,) -> None:
         if msg is not None and not isinstance(msg, str):
             error_msg = (
                 "{} expected string as 'msg' parameter, got '{}' instead.\n"
@@ -35,11 +29,8 @@ class OutcomeException(BaseException):
         BaseException.__init__(self, msg)
         self.msg = msg
         self.pytrace = pytrace
-        self.short_msg = short_msg
 
     def __repr__(self) -> str:
-        if self.short_msg:
-            return "<{} short_msg={!r}>".format(self.__class__.__name__, self.short_msg)
         msg = self.msg
         if msg:
             lines = msg.split("\n", maxsplit=1)
@@ -129,9 +120,7 @@ def skip(msg: str = "", *, allow_module_level: bool = False) -> "NoReturn":
 skip.Exception = Skipped  # type: ignore
 
 
-def fail(
-    msg: str = "", pytrace: bool = True, *, short_msg: Optional[str] = None
-) -> "NoReturn":
+def fail(msg: str = "", pytrace: bool = True) -> "NoReturn":
     """
     Explicitly fail an executing test with the given message.
 
@@ -140,7 +129,7 @@ def fail(
         python traceback will be reported.
     """
     __tracebackhide__ = True
-    raise Failed(msg=msg, pytrace=pytrace, short_msg=short_msg)
+    raise Failed(msg=msg, pytrace=pytrace)
 
 
 # Ignore type because of https://github.com/python/mypy/issues/2087.
