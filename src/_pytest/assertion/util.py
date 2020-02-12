@@ -14,6 +14,8 @@ from typing import Tuple
 
 import _pytest._code
 from _pytest import outcomes
+from _pytest._io.saferepr import _consistent_str_repr
+from _pytest._io.saferepr import _pformat_consistent
 from _pytest._io.saferepr import _pformat_dispatch
 from _pytest._io.saferepr import safeformat
 from _pytest._io.saferepr import saferepr
@@ -285,8 +287,8 @@ def _compare_eq_iterable(
 
     width = get_terminal_width()
 
-    left_formatting = pprint.pformat(left, width=width).splitlines()
-    right_formatting = pprint.pformat(right, width=width).splitlines()
+    left_formatting = _pformat_consistent(left, width=width).splitlines()
+    right_formatting = _pformat_consistent(right, width=width).splitlines()
 
     # Re-format for different output lengths.
     lines_left = len(left_formatting)
@@ -330,8 +332,8 @@ def _compare_eq_sequence(
                 left_value = left[i]
                 right_value = right[i]
 
-            left_repr = repr(left_value)
-            right_repr = repr(right_value)
+            left_repr = _consistent_str_repr(left_value)
+            right_repr = _consistent_str_repr(right_value)
             if (
                 not _gets_full_diff("==", left, right, verbose)
                 and len(left_repr) > 10
