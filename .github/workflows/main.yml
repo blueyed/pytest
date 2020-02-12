@@ -6,11 +6,13 @@ on:
   push:
     branches:
       - my-master
+      - "[0-9]+.[0-9]+.x"
     tags:
       - "*"
   pull_request:
     branches:
       - my-master
+      - "[0-9]+.[0-9]+.x"
 
 jobs:
   tests:
