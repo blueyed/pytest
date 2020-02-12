@@ -1066,18 +1066,31 @@ class ReprEntry(TerminalRepr):
     @staticmethod
     def _color_error_lines(tw: TerminalWriter, lines: Sequence[str]) -> None:
         bold_before = False
+        seen_indent_lines = []  # type: List[str]
+        seen_source_lines = []  # type: List[str]
         for line in lines:
             if line.startswith("E   "):
+                if seen_source_lines:
+                    tw._write_source(seen_source_lines, seen_indent_lines)
+                    seen_indent_lines = []
+                    seen_source_lines = []
+
                 if bold_before:
                     markup = tw.markup("E   ", bold=True, red=True)
                     markup += tw.markup(line[4:])
                 else:
                     markup = tw.markup(line, bold=True, red=True)
                     bold_before = True
+                tw.line(markup)
             else:
                 bold_before = False
-                markup = line
-            tw.line(markup)
+                seen_indent_lines.append(line[:4])
+                seen_source_lines.append(line[4:])
+
+        if seen_source_lines:
+            tw._write_source(seen_source_lines, seen_indent_lines)
+            seen_indent_lines = []
+            seen_source_lines = []
 
     def toterminal(self, tw: TerminalWriter) -> None:
         if self.style == "short":

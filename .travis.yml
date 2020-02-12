@@ -36,3 +36,4 @@ script:
 branches:
   only:
     - my-master
+    - /^\d+\.\d+\.x$/
