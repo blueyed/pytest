@@ -2,9 +2,11 @@ import inspect
 import warnings
 from collections import namedtuple
 from collections.abc import MutableMapping
+from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Set
+from typing import Union
 
 import attr
 
@@ -276,7 +278,7 @@ def get_unpacked_marks(obj):
     return normalize_mark_list(mark_list)
 
 
-def normalize_mark_list(mark_list):
+def normalize_mark_list(mark_list: Iterable[Union[Mark, MarkDecorator]]) -> List[Mark]:
     """
     normalizes marker decorating helpers to mark objects
 
