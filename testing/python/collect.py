@@ -1227,7 +1227,7 @@ def test_collecterror_with_fulltrace(testdir):
             ">   assert 0",
             "E   assert 0",
             "",
-            "test_collecterror_with_fulltrace.py:1: AssertionError",
+            "test_collecterror_with_fulltrace.py:1: assert 0",
             "*! Interrupted: 1 error during collection !*",
         ]
     )

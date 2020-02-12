@@ -1341,7 +1341,7 @@ def test_traceback_failure(testdir):
             "E       assert 3 == 2",
             "E        +  where 2 = g()",
             "",
-            "*test_traceback_failure.py:4: AssertionError",
+            "*test_traceback_failure.py:4: assert 3 == 2...",
         ]
     )
 
@@ -1362,7 +1362,7 @@ def test_traceback_failure(testdir):
             "E       assert 3 == 2",
             "E        +  where 2 = g()",
             "",
-            "*test_traceback_failure.py:4: AssertionError",
+            "*test_traceback_failure.py:4: assert 3 == 2...",
         ]
     )
 
@@ -1450,14 +1450,16 @@ def test_AssertionError_message(testdir):
             "E       AssertionError: (1, 2)",
             "E       assert 0",
             "",
-            "test_AssertionError_message.py:3: AssertionError",
+            "test_AssertionError_message.py:3: AssertionError: (1, 2)...",
             "    def test_bytes():",
             ">       assert 0, b'b' * 80",
-            "E       AssertionError: (b'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'",
+            "E       AssertionError: (b'{}'".format("b" * 76),
             "E          b'bbbb')",
             "E       assert 0",
             "",
-            "test_AssertionError_message.py:6: AssertionError",
+            "test_AssertionError_message.py:6: AssertionError: (b'{}'...".format(
+                "b" * 76
+            ),
             "*= 2 failed in *",
         ]
     )

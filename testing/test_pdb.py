@@ -405,7 +405,7 @@ class TestPDB:
         child.expect("Pdb")
         child.sendline("c")
         rest = child.read().decode("utf-8")
-        assert "AssertionError" in rest
+        assert "assert 0" in rest
         assert "1 failed" in rest
         assert "def test_1" in rest
         assert "hello17" in rest  # out is captured
