@@ -14,9 +14,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        name: [
-          # "mypy-diff",
-        ]
+        # name: [
+        #   "mypy-diff",
+        # ]
 
         include:
           - name: "mypy-diff"
