@@ -7,10 +7,14 @@ import re
 import sys
 import textwrap
 from io import StringIO
+from typing import Dict
+from typing import List
+from typing import Tuple
 
 import pluggy
 import py
 
+import _pytest.config
 import pytest
 from _pytest.main import ExitCode
 from _pytest.pytester import Testdir
@@ -18,7 +22,7 @@ from _pytest.reports import BaseReport
 from _pytest.terminal import _folded_skips
 from _pytest.terminal import _get_line_with_reprcrash_message
 from _pytest.terminal import _plugin_nameversions
-from _pytest.terminal import build_summary_stats_line
+from _pytest.terminal import _wcswidth
 from _pytest.terminal import getreportopt
 from _pytest.terminal import TerminalReporter
 
@@ -929,7 +933,7 @@ def test_color_yes(testdir):
                 ">       fail()",
                 "",
                 "{bold}test_color_yes.py{reset}:5: ",
-                "_ _ * _ _ ",
+                "_ _ * _ _*",
                 "",
                 "    def fail():",
                 ">       assert 0",
@@ -1430,6 +1434,12 @@ def test_terminal_summary_warnings_header_once(testdir):
     assert stdout.count("=== warnings summary ") == 1
 
 
+@pytest.fixture(scope="session")
+def tr() -> TerminalReporter:
+    config = _pytest.config._prepareconfig()
+    return TerminalReporter(config)
+
+
 @pytest.mark.parametrize(
     "exp_color, exp_line, stats_arg",
     [
@@ -1560,26 +1570,47 @@ def test_terminal_summary_warnings_header_once(testdir):
         ),
     ],
 )
-def test_summary_stats(exp_line, exp_color, stats_arg):
+def test_summary_stats(
+    tr: TerminalReporter,
+    exp_line: List[Tuple[str, Dict[str, bool]]],
+    exp_color: str,
+    stats_arg: Dict[str, List],
+) -> None:
+    tr.stats = stats_arg
+
+    # Fake "_is_last_item" to be True.
+    class fake_session:
+        testscollected = 0
+
+    tr._session = fake_session  # type: ignore[assignment]  # noqa: F821
+    assert tr._is_last_item
+
+    # Reset cache.
+    tr._main_color = None
+
     print("Based on stats: %s" % stats_arg)
     print('Expect summary: "{}"; with color "{}"'.format(exp_line, exp_color))
-    (line, color) = build_summary_stats_line(stats_arg)
+    (line, color) = tr.build_summary_stats_line()
     print('Actually got:   "{}"; with color "{}"'.format(line, color))
     assert line == exp_line
     assert color == exp_color
 
 
-def test_skip_counting_towards_summary():
+def test_skip_counting_towards_summary(tr):
     class DummyReport(BaseReport):
         count_towards_summary = True
 
     r1 = DummyReport()
     r2 = DummyReport()
-    res = build_summary_stats_line({"failed": (r1, r2)})
+    tr.stats = {"failed": (r1, r2)}
+    tr._main_color = None
+    res = tr.build_summary_stats_line()
     assert res == ([("2 failed", {"bold": True, "red": True})], "red")
 
     r1.count_towards_summary = False
-    res = build_summary_stats_line({"failed": (r1, r2)})
+    tr.stats = {"failed": (r1, r2)}
+    tr._main_color = None
+    res = tr.build_summary_stats_line()
     assert res == ([("1 failed", {"bold": True, "red": True})], "red")
 
 
@@ -1681,6 +1712,11 @@ class TestProgressOutputStyle:
     def test_colored_progress(self, testdir, monkeypatch):
         monkeypatch.setenv("PY_COLORS", "1")
         testdir.makepyfile(
+            test_axfail="""
+                import pytest
+                @pytest.mark.xfail
+                def test_axfail(): assert 0
+            """,
             test_bar="""
                 import pytest
                 @pytest.mark.parametrize('i', range(10))
@@ -1705,9 +1741,22 @@ class TestProgressOutputStyle:
             [
                 line.format(**RE_COLORS)
                 for line in [
-                    r"test_bar.py ({green}\.{reset}){{10}}{green} \s+ \[ 50%\]{reset}",
-                    r"test_foo.py ({green}\.{reset}){{5}}{yellow} \s+ \[ 75%\]{reset}",
+                    r"test_axfail.py {yellow}x{reset}{green} \s+ \[  4%\]{reset}",
+                    r"test_bar.py ({green}\.{reset}){{10}}{green} \s+ \[ 52%\]{reset}",
+                    r"test_foo.py ({green}\.{reset}){{5}}{yellow} \s+ \[ 76%\]{reset}",
                     r"test_foobar.py ({red}F{reset}){{5}}{red} \s+ \[100%\]{reset}",
+                ]
+            ]
+        )
+
+        # Only xfail should have yellow progress indicator.
+        result = testdir.runpytest("test_axfail.py")
+        result.stdout.re_match_lines(
+            [
+                line.format(**RE_COLORS)
+                for line in [
+                    r"test_axfail.py {yellow}x{reset}{yellow} \s+ \[100%\]{reset}",
+                    r"^{yellow}=+ ({yellow}{bold}|{bold}{yellow})1 xfailed{reset}{yellow} in ",
                 ]
             ]
         )
@@ -1978,6 +2027,16 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 28, "FAILED some::nodeid - 😄...")
     check("😄😄😄😄😄\n2nd line", 29, "FAILED some::nodeid - 😄😄...")
 
+    # Color escape codes.
+    check("with \x1b[31mcolor", 30, "FAILED some::nodeid - with ...")
+    check("with \x1b[31mcolor", 50, "FAILED some::nodeid - with \x1b[31mcolor")
+    # Non-printable (kept).
+    check("with \0NULL", 30, "FAILED some::nodeid - with ...")
+    check("with \0NULL", 50, "FAILED some::nodeid - with \0NULL")
+    # Non-printable (via repr).
+    check("with \bBS", 25, "FAILED some::nodeid - ...")
+    check("with \bBS", 50, "FAILED some::nodeid - 'with \\x08BS'")
+
     # NOTE: constructed, not sure if this is supported.
     mocked_pos = "nodeid::😄::withunicode"
     check("😄😄😄😄😄\n2nd line", 29, "FAILED nodeid::😄::withunicode")
@@ -1985,6 +2044,47 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 41, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 42, "FAILED nodeid::😄::withunicode - 😄😄😄...")
     check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄\\n2nd line")
+
+
+@pytest.mark.parametrize(
+    "input,expected",
+    (
+        ("", 0),
+        ("foo", 3),
+        ("😄", 2),
+        # Color escape sequence.
+        ("\x1b[31mred", 3),
+        # Invalid/overlapping escape codes.
+        ("\x1b[0\x1b[31mminvalid", -1),
+        # Other escape codes.
+        ("\0", 0),
+        ("\b", -1),
+    ),
+    ids=repr,
+)
+def test_wcswidth(input, expected):
+    assert _wcswidth(input) == expected
+
+
+@pytest.mark.parametrize("ci", (None, "true"))
+def test_summary_with_nonprintable(ci, testdir: Testdir) -> None:
+    testdir.monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 100)
+    if ci:
+        testdir.monkeypatch.setenv("CI", ci)
+        expected = r"'AssertionError: \x1b[31mred\x00\x08!!\\nassert 0'"
+    else:
+        testdir.monkeypatch.delenv("CI", raising=False)
+        expected = r"'AssertionError: \x1b[31mred\x00\x08!!\\nasser..."
+    p1 = testdir.makepyfile(r"def test(): assert 0, '\x1b[31mred\0\b!!'")
+    result = testdir.runpytest("-rf", str(p1), tty=True)
+    result.stdout.fnmatch_lines(
+        [
+            "test_summary_with_nonprintable.py:1: AssertionError",
+            "*= short test summary info =*",
+            "FAILED test_summary_with_nonprintable.py:1::test - " + expected,
+            "*= 1 failed in *=",
+        ]
+    )
 
 
 @pytest.mark.parametrize("arg", (None, "--tb=native", "--full-trace"))
@@ -2109,6 +2209,9 @@ def test_getdimensions(monkeypatch):
     monkeypatch.setattr("_pytest.terminal._cached_terminal_width_sighandler", False)
     assert get_terminal_width() == 80
     assert calls == [0, 2, 1]
+
+    # Do not mess with the terminal plugin.
+    monkeypatch.undo()
 
 
 def test_sigwinch(testdir, monkeypatch):

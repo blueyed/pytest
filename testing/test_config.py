@@ -870,7 +870,7 @@ def test_load_initial_conftest_last_ordering(_config_for_test):
     pm.register(m)
     hc = pm.hook.pytest_load_initial_conftests
     values = hc._nonwrappers + hc._wrappers
-    expected = ["_pytest.config", "test_config", "_pytest.capture"]
+    expected = ["_pytest.config", m.__module__, "_pytest.capture"]
     assert [x.function.__module__ for x in values] == expected
 
 
@@ -1264,16 +1264,9 @@ def test_help_and_version_after_argument_error(testdir):
 
 
 def test_help_formatter_uses_py_get_terminal_width(monkeypatch):
-    import _pytest.terminal
     from _pytest.config.argparsing import DropShorterLongHelpFormatter
 
-    monkeypatch.setattr(_pytest.terminal, "_cached_terminal_width", None)
-
-    monkeypatch.setenv("COLUMNS", "90")
-    formatter = DropShorterLongHelpFormatter("prog")
-    assert formatter._width == 90
-
-    monkeypatch.setattr(_pytest.terminal, "_cached_terminal_width", 160)
+    monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 160)
     formatter = DropShorterLongHelpFormatter("prog")
     assert formatter._width == 160
 
@@ -1537,7 +1530,7 @@ def test_report_implicit_args(testdir, monkeypatch):
     result.stdout.fnmatch_lines(
         [
             "implicit args: '-vv -k bar' (PYTEST_ADDOPTS)",
-            "explicit args: -v -m 'foo and bar' *test_report_implicit_args.py --basetemp=*",
+            "explicit args: -v -m 'foo and bar' *test_report_implicit_args.py* *--basetemp=*",
         ]
     )
     result = testdir.runpytest()

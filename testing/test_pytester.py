@@ -459,17 +459,26 @@ def test_testdir_run_timeout_expires(testdir) -> None:
 
 def test_linematcher_with_nonlist() -> None:
     """Test LineMatcher with regard to passing in a set (accidentally)."""
-    lm = LineMatcher([])
+    from _pytest._code.source import Source
 
-    with pytest.raises(AssertionError):
-        lm.fnmatch_lines(set())
-    with pytest.raises(AssertionError):
-        lm.fnmatch_lines({})
+    lm = LineMatcher([])
+    with pytest.raises(TypeError, match="invalid type for lines2: set"):
+        lm.fnmatch_lines(set())  # type: ignore[arg-type]  # noqa: F821
+    with pytest.raises(TypeError, match="invalid type for lines2: dict"):
+        lm.fnmatch_lines({})  # type: ignore[arg-type]  # noqa: F821
+    with pytest.raises(TypeError, match="invalid type for lines2: set"):
+        lm.re_match_lines(set())  # type: ignore[arg-type]  # noqa: F821
+    with pytest.raises(TypeError, match="invalid type for lines2: dict"):
+        lm.re_match_lines({})  # type: ignore[arg-type]  # noqa: F821
+    with pytest.raises(TypeError, match="invalid type for lines2: Source"):
+        lm.fnmatch_lines(Source())  # type: ignore[arg-type]  # noqa: F821
     lm.fnmatch_lines([])
     lm.fnmatch_lines(())
-
-    assert lm._getlines({}) == {}
-    assert lm._getlines(set()) == set()
+    lm.fnmatch_lines("")
+    assert lm._getlines({}) == {}  # type: ignore[arg-type,comparison-overlap]  # noqa: F821
+    assert lm._getlines(set()) == set()  # type: ignore[arg-type,comparison-overlap]  # noqa: F821
+    assert lm._getlines(Source()) == []
+    assert lm._getlines(Source("pass\npass")) == ["pass", "pass"]
 
 
 def test_linematcher_match_failure() -> None:
@@ -515,8 +524,28 @@ def test_linematcher_fnmatch_lines():
     ]
 
 
+def test_linematcher_consecutive():
+    lm = LineMatcher(["1", "", "2"])
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["1", "2"], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "exact match: '1'",
+        "no consecutive match: '2'",
+        "   with: ''",
+    ]
+
+    lm.re_match_lines(["1", r"\d?", "2"], consecutive=True)
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.re_match_lines(["1", r"\d", "2"], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "exact match: '1'",
+        r"no consecutive match: '\\d'",
+        "    with: ''",
+    ]
+
+
 @pytest.mark.parametrize("function", ["no_fnmatch_line", "no_re_match_line"])
-def test_no_matching(function) -> None:
+def test_linematcher_no_matching(function) -> None:
     if function == "no_fnmatch_line":
         good_pattern = "*.py OK*"
         bad_pattern = "*X.py OK*"
@@ -564,7 +593,7 @@ def test_no_matching(function) -> None:
     func(bad_pattern)  # bad pattern does not match any line: passes
 
 
-def test_no_matching_after_match() -> None:
+def test_linematcher_no_matching_after_match() -> None:
     lm = LineMatcher(["1", "2", "3"])
     lm.fnmatch_lines(["1", "3"])
     with pytest.raises(Failed) as e:
@@ -573,17 +602,36 @@ def test_no_matching_after_match() -> None:
 
 
 def test_pytester_addopts_before_testdir(request, monkeypatch) -> None:
-    orig = os.environ.get("PYTEST_ADDOPTS", None)
     monkeypatch.setenv("PYTEST_ADDOPTS", "--orig-unused")
+    # Requesting the fixture dynamically / instantiating Testdir does not
+    # change the env via its monkeypatch instance.
     testdir = request.getfixturevalue("testdir")
-    assert "PYTEST_ADDOPTS" not in os.environ
+    assert os.environ["PYTEST_ADDOPTS"] == "--orig-unused"
+
+    assert testdir.monkeypatch is not monkeypatch
+    testdir.monkeypatch.setenv("PYTEST_ADDOPTS", "-p pytester")
+
+    p1 = testdir.makepyfile(
+        """
+        import os
+
+        def test(testdir):
+            assert "PYTEST_ADDOPTS" not in os.environ
+
+        def test2():
+            assert os.environ.get("PYTEST_ADDOPTS") == "-p pytester"
+        """
+    )
+    result = testdir.runpytest(str(p1))
+    assert result.ret == 0
+
+    # Finalizer undos always, although a context is used via
+    # pytest_runtest_call.
     testdir.finalize()
     assert os.environ.get("PYTEST_ADDOPTS") == "--orig-unused"
-    monkeypatch.undo()
-    assert os.environ.get("PYTEST_ADDOPTS") == orig
 
 
-def test_testdir_terminal_width(request, monkeypatch):
+def test_testdir_terminal_width(monkeypatch):
     """testdir does not set COLUMNS, but _cached_terminal_width."""
     from _pytest.terminal import get_terminal_width
 
@@ -595,16 +643,34 @@ def test_testdir_terminal_width(request, monkeypatch):
     assert get_terminal_width() == 1234
     monkeypatch.delenv("COLUMNS")
 
-    testdir = request.getfixturevalue("testdir")
-    assert get_terminal_width() == 80
-    assert "COLUMNS" not in os.environ
-    testdir.finalize()
-    assert get_terminal_width() == 1234
-    assert "COLUMNS" not in os.environ
-
     monkeypatch.undo()
     assert os.environ.get("COLUMNS") == orig_env
     assert get_terminal_width() == orig_width
+
+
+def test_testdir_terminal_width_inner(testdir, monkeypatch):
+    import _pytest.terminal
+
+    assert _pytest.terminal.get_terminal_width() == 80
+    monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 1234)
+
+    p1 = testdir.makepyfile(
+        """
+        import os
+        import _pytest.terminal
+
+        def test1():
+            assert _pytest.terminal.get_terminal_width() == 1234
+
+        def test2(testdir):
+            assert _pytest.terminal.get_terminal_width() == 80
+            testdir.finalize()
+            assert _pytest.terminal.get_terminal_width() == 1234
+        """
+    )
+    result = testdir.runpytest("-p", "pytester", str(p1))
+    assert result.ret == 0
+    monkeypatch.undo()
 
 
 def test_run_stdin(testdir) -> None:
@@ -714,6 +780,68 @@ def test_runtest_inprocess_stdin(testdir: Testdir, monkeypatch: MonkeyPatch) -> 
     """
     )
     result = testdir.runpytest(str(p1), "-s", stdin=None)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+
+def test_runtest_inprocess_tty(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is True
+            assert sys.stdout.isatty() is True
+            assert sys.stderr.isatty() is True
+    """
+    )
+    result = testdir.runpytest(str(p1), "-s", tty=True)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is False
+            assert sys.stdout.isatty() is True
+            assert sys.stderr.isatty() is True
+    """
+    )
+    result = testdir.runpytest(str(p1), "-s", tty=True, stdin=False)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is False
+            assert sys.stdout.isatty() is False
+            assert sys.stderr.isatty() is False
+    """
+    )
+    result = testdir.runpytest(str(p1), tty=True)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+
+    id_stdin = id(sys.stdin)
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            assert sys.stdin.isatty() is False
+            assert sys.stdout.isatty() is False
+            assert sys.stderr.isatty() is False
+            assert id(sys.stdin) == {}
+    """.format(
+            id_stdin
+        )
+    )
+    result = testdir.runpytest(str(p1), "-s", tty=False)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
