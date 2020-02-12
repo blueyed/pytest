@@ -1,6 +1,6 @@
 language: python
-dist: xenial
-python: '3.7.4'
+dist: trusty
+python: '3.5.1'
 cache: false
 
 env:
@@ -21,8 +21,6 @@ jobs:
     - env:
         - TOXENV=py35-coverage
         - PYTEST_ADDOPTS="-k 'test_raises_cyclic_reference or test_supports_breakpoint_module_global'"
-      python: '3.5.1'
-      dist: trusty
       before_install:
         - python -m pip install -U pip==19.3.1
         # Work around https://github.com/jaraco/zipp/issues/40.
