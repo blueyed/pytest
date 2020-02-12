@@ -15,14 +15,14 @@ jobs:
       fail-fast: false
       matrix:
         name: [
-          # "mypy-diff",
+          "mypy-diff",
         ]
 
-        include:
-          - name: "mypy-diff"
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "mypy-diff"
+        # include:
+        #   - name: "mypy-diff"
+        #     python: "3.8"
+        #     os: ubuntu-latest
+        #     tox_env: "mypy-diff"
 
     steps:
     - uses: actions/checkout@v1
