@@ -99,7 +99,7 @@ def test_as_errors(testdir, pyfile_with_warnings, method):
     result.stdout.fnmatch_lines(
         [
             "E       UserWarning: user warning",
-            "as_errors_module.py:3: UserWarning",
+            "as_errors_module.py:3: UserWarning: user warning",
             "* 1 failed in *",
         ]
     )

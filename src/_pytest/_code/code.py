@@ -807,8 +807,10 @@ class FormattedExcinfo:
             lines.extend(s)
             if short:
                 message = "in %s" % (entry.name)
+            elif excinfo:
+                message = excinfo.exconly(tryshort=True)
             else:
-                message = excinfo and excinfo.typename or ""
+                message = ""
             path = self._makepath(entry.path)
             filelocrepr = ReprFileLocation(str(path), entry.lineno + 1, message)
             localsrepr = None

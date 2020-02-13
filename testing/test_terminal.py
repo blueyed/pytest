@@ -942,7 +942,7 @@ def test_color_yes(testdir):
                 ">       assert 0",
                 "{bold}{red}E       assert 0{reset}",
                 "",
-                "{bold}test_color_yes.py{reset}:2: AssertionError",
+                "{bold}test_color_yes.py{reset}:2: assert 0",
                 "{red}=*= {red}{bold}1 failed{reset}{red} in *s{reset}{red} =*={reset}",
             ]
         ]
@@ -1137,7 +1137,7 @@ class TestGenericReporting:
         result.stdout.fnmatch_lines(
             [
                 "*def test_1():*",
-                "test_maxfailures_veryquiet.py:1: AssertionError",
+                "test_maxfailures_veryquiet.py:1: assert 0",
                 "!! stopping after 1 failure !!",
             ]
         )
@@ -2063,7 +2063,7 @@ def test_summary_with_nonprintable(ci, testdir: Testdir) -> None:
     result = testdir.runpytest("-rf", str(p1), tty=True)
     result.stdout.fnmatch_lines(
         [
-            "test_summary_with_nonprintable.py:1: AssertionError",
+            "test_summary_with_nonprintable.py:1: AssertionError: \x1b[31mred\0\b!!...",
             "*= short test summary info =*",
             "FAILED test_summary_with_nonprintable.py:1::test - " + expected,
             "*= 1 failed in *=",
@@ -2097,7 +2097,7 @@ def test_failed_pos(arg, testdir):
                 "*_ test _*",
                 ">   def test(): assert 0",
                 "E   assert 0",
-                "test_failed_pos.py:1: AssertionError",
+                "test_failed_pos.py:1: assert 0",
                 "*= short test summary info =*",
                 "FAILED test_failed_pos.py:1::test - assert 0",
                 "*= 1 failed in *",
