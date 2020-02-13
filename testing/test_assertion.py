@@ -783,6 +783,26 @@ class TestAssert_reprcompare:
         msg = "\n".join(expl)
         assert msg
 
+    def test_compare_eq_sequence_aligns_long_index_diff(self):
+        diff = callequal(["a" * 40], ["a" * 20 + "x" + "a" * 19], verbose=0)
+        assert diff == [
+            "['aaaaaaaaaaa...aaaaaaaaaaaa'] == ['aaaaaaaaaaa...aaaaaaaaaaaa']",
+            "At index 0 diff:",
+            "'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' !=",
+            "'aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa'",
+            "Use -v to get the full diff",
+        ]
+        diff = callequal(["a" * 40], ["a" * 20 + "x" + "a" * 19], verbose=1)
+        assert diff == [
+            "['aaaaaaaaaaa...aaaaaaaaaaaa'] == ['aaaaaaaaaaa...aaaaaaaaaaaa']",
+            "At index 0 diff: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' != 'aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa'",
+            "Full diff:",
+            "- ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']",
+            "?                       ^",
+            "+ ['aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa']",
+            "?                       ^",
+        ]
+
 
 class TestAssert_reprcompare_dataclass:
     @pytest.mark.skipif(sys.version_info < (3, 7), reason="Dataclasses in Python3.7+")
