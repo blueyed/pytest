@@ -1259,15 +1259,9 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             return line
 
     try:
-        msg = rep.longrepr.reprcrash.short_msg
-        assert msg is None or "\n" not in msg, repr(msg)
+        msg = rep.longrepr.reprcrash.message
     except AttributeError:
         msg = None
-    if msg is None:
-        try:
-            msg = rep.longrepr.reprcrash.message
-        except AttributeError:
-            msg = None
 
     if msg is not None:
         # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.

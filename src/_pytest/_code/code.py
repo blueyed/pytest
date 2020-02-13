@@ -594,8 +594,7 @@ class ExceptionInfo(Generic[_E]):
         exconly = self.exconly(tryshort=True)
         entry = self.traceback.getcrashentry()
         path, lineno = entry.frame.code.raw.co_filename, entry.lineno
-        short_msg = getattr(self.value, "short_msg", None)
-        return ReprFileLocation(path, lineno + 1, exconly, short_msg=short_msg)
+        return ReprFileLocation(path, lineno + 1, exconly)
 
     def getrepr(
         self,
@@ -1110,14 +1109,11 @@ class ReprFileLocation(TerminalRepr):
     path = attr.ib(type=str)
     lineno = attr.ib(type=int)
     message = attr.ib(type=str)
-    short_msg = attr.ib(type=Optional[str], default=None, kw_only=True)
 
     def __attrs_post_init__(self):
         assert type(self.path) == str
 
     def _get_short_msg(self) -> str:
-        if self.short_msg:
-            return self.short_msg
         msg = self.message
         i = msg.find("\n")
         if i != -1:

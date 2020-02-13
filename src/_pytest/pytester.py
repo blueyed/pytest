@@ -38,6 +38,7 @@ from _pytest.main import Session
 from _pytest.monkeypatch import MonkeyPatch
 from _pytest.nodes import Collector
 from _pytest.nodes import Item
+from _pytest.outcomes import Failed
 from _pytest.pathlib import Path
 from _pytest.python import Function
 from _pytest.python import Module
@@ -1409,6 +1410,18 @@ class LineComp:
         return LineMatcher(lines1).fnmatch_lines(lines2)
 
 
+# TODO: toterminal method that can apply colors?
+class LineMatcherFailed(Failed):
+    def __init__(self, *, msg: str, log_output: List[str]):
+        self._log_text = log_output
+        if log_output:
+            # TODO: info about (not) matched line number or similar?
+            #       It is good to have a newline after "Log:", but there
+            #       is much space there.  Maybe at least a "===" "heading"?
+            msg = "{}\nLog:\n{}".format(msg, "\n".join(log_output))
+        super().__init__(msg=msg)
+
+
 class LineMatcher:
     """Flexible matching of text.
 
@@ -1551,12 +1564,11 @@ class LineMatcher:
                     break
                 else:
                     if consecutive and started:
-                        msg = "no consecutive match: {!r}".format(line)
-                        self._log(msg)
-                        self._log(
-                            "{:>{width}}".format("with:", width=wnick), repr(nextline)
+                        self._fail(
+                            "no consecutive match: {!r} with {!r}".format(
+                                line, nextline,
+                            )
                         )
-                        self._fail(msg)
                     if not nomatchprinted:
                         self._log(
                             "{:>{width}}".format("nomatch:", width=wnick), repr(line)
@@ -1565,8 +1577,7 @@ class LineMatcher:
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
                 extralines.append(nextline)
             else:
-                msg = "remains unmatched: {!r}".format(line)
-                self._log(msg)
+                msg = "unmatched: {!r}".format(line)
                 self._fail(msg)
         self._log_output = []
 
@@ -1600,10 +1611,7 @@ class LineMatcher:
         wnick = len(match_nickname) + 1
         for line in self.lines:
             if match_func(line, pat):
-                msg = "{}: {!r}".format(match_nickname, pat)
-                self._log(msg)
-                self._log("{:>{width}}".format("with:", width=wnick), repr(line))
-                self._fail(msg)
+                self._fail("{}: {!r} with {!r}".format(match_nickname, pat, line))
             else:
                 if not nomatch_printed:
                     self._log("{:>{width}}".format("nomatch:", width=wnick), repr(pat))
@@ -1613,9 +1621,9 @@ class LineMatcher:
 
     def _fail(self, msg: str) -> None:
         __tracebackhide__ = True
-        log_text = self._log_text
+        log_output = self._log_output
         self._log_output = []
-        pytest.fail(log_text, short_msg=msg)
+        raise LineMatcherFailed(msg=msg, log_output=log_output)
 
     def str(self) -> str:
         """Return the entire original text."""

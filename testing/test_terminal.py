@@ -809,23 +809,27 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
             "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: "
             + ("this_failed" * 8)
             + "\\nassert 0",
-            "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: 'last_unmatched'",
+            # TODO: no Log here?  (via tryshort?)
+            "FAILED test_fail_extra_reporting.py:9::test_linematcher"
+            " - LineMatcherFailed: unmatched: 'last_unmatched'"
+            "\\nLog:\\nnomatch: '2'\\n    and: '1'\\nexact match: '2'\\nnomatch: 'last_unmatched'\\n    and: '3'",
         ]
     else:
         msgs = [
             "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: this_faile...",
-            "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: ...",
+            "FAILED test_fail_extra_reporting.py:9::test_linematcher - LineMatcherFailed: ...",
         ]
 
     lm.fnmatch_lines(
         [
             '>       LineMatcher(["1", "2", "3"]).fnmatch_lines(["2", "last_unmatched"])',
-            "E       Failed: nomatch: '2'",
+            "E       LineMatcherFailed: unmatched: 'last_unmatched'",
+            "E       Log:",
+            "E       nomatch: '2'",
             "E           and: '1'",
             "E       exact match: '2'",
             "E       nomatch: 'last_unmatched'",
             "E           and: '3'",
-            "E       remains unmatched: 'last_unmatched'",
             "*test summary*",
         ]
         + msgs
