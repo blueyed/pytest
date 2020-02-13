@@ -1267,41 +1267,43 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
         try:
             msg = rep.longrepr.reprcrash.message
         except AttributeError:
-            return line
+            msg = None
 
-    if msg is None:
-        return line
+    if msg is not None:
+        # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
+        implicit_prefix = verbose_word.lower() + ":"
+        if msg[: len(implicit_prefix)].lower() == implicit_prefix:
+            msg = msg[len(implicit_prefix) + 1 :]
 
-    # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
-    implicit_prefix = verbose_word.lower() + ":"
-    if msg[: len(implicit_prefix)].lower() == implicit_prefix:
-        msg = msg[len(implicit_prefix) + 1 :]
+        # TODO: up
+        trans = str.maketrans({"\r": "\\r", "\n": "\\n"})
 
-    sep = " - "
-    trans_nls = str.maketrans({"\r": "\\r", "\n": "\\n"})
-    if termwidth is None:
-        msg_trans = msg.translate(trans_nls)
-        if wcswidth(msg_trans) == -1:
-            msg_trans = repr(msg)
-        return line + sep + msg_trans
+        sep = " - "
+        if termwidth is None:
+            msg_trans = msg.translate(trans)
+            if wcswidth(msg_trans) == -1:
+                msg_trans = repr(msg)
+            return line + sep + msg_trans
 
-    max_len_msg = termwidth - len_line - len(sep)
-    max_msg = msg.translate(trans_nls)
-    len_msg = wcswidth(max_msg)
-    if len_msg == -1:
-        # Non-printable/escape characters (except for newlines).
-        max_msg = repr(msg)
+        max_len_msg = termwidth - len_line - len(sep)
+        # XXX: cannot be easily optimized?
+        # max_msg = msg[:max_len_msg + 1].translate(trans)
+        max_msg = msg.translate(trans)
         len_msg = wcswidth(max_msg)
-        assert len_msg != -1, repr(max_msg, msg)
+        if len_msg == -1:
+            # Non-printable/escape characters (except for newlines).
+            max_msg = repr(msg)
+            len_msg = wcswidth(max_msg)
+            assert len_msg != -1, repr(max_msg, msg)
 
-    if max_len_msg >= len_ellipsis:
-        if len_msg > max_len_msg:
-            max_len_msg -= len_ellipsis
-            max_msg = max_msg[:max_len_msg]
-            while wcswidth(max_msg) > max_len_msg:
-                max_msg = max_msg[:-1]
-            max_msg += ellipsis
-        line += sep + max_msg
+        if max_len_msg >= len_ellipsis:
+            if len_msg > max_len_msg:
+                max_len_msg -= len_ellipsis
+                max_msg = max_msg[:max_len_msg]
+                while wcswidth(max_msg) > max_len_msg:
+                    max_msg = max_msg[:-1]
+                max_msg += ellipsis
+            line += sep + max_msg
     return line
 
 
