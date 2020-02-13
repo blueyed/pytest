@@ -316,7 +316,7 @@ def _compare_eq_sequence(
             left_repr = repr(left_value)
             right_repr = repr(right_value)
             gets_full_diff = verbose > 0  # via _compare_eq_iterable later.
-            if not gets_full_diff and (len(left_repr) > 10 or len(right_repr) > 10):
+            if not gets_full_diff and len(left_repr) > 10 and len(right_repr) > 10:
                 explanation += [
                     "At index {} diff:".format(i),
                     "{} !=".format(left_repr),
