@@ -938,13 +938,17 @@ class FormattedExcinfo:
 
 
 class TerminalRepr:
+    _cached_str = None
+
     def __str__(self) -> str:
         # FYI this is called from pytest-xdist's serialization of exception
         # information.
-        io = StringIO()
-        tw = TerminalWriter(file=io)
-        self.toterminal(tw)
-        return io.getvalue().strip()
+        if self._cached_str is None:
+            io = StringIO()
+            tw = TerminalWriter(file=io)
+            self.toterminal(tw)
+            self._cached_str = io.getvalue().strip()
+        return self._cached_str
 
     def __repr__(self) -> str:
         return "<{} instance at {:0x}>".format(self.__class__, id(self))
