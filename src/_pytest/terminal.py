@@ -1275,35 +1275,32 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
         if msg[: len(implicit_prefix)].lower() == implicit_prefix:
             msg = msg[len(implicit_prefix) + 1 :]
 
-        # TODO: up
-        trans = str.maketrans({"\r": "\\r", "\n": "\\n"})
-
         sep = " - "
+        trans_nls = str.maketrans({"\r": "\\r", "\n": "\\n"})
         if termwidth is None:
-            msg_trans = msg.translate(trans)
+            msg_trans = msg.translate(trans_nls)
             if wcswidth(msg_trans) == -1:
                 msg_trans = repr(msg)
             return line + sep + msg_trans
 
         max_len_msg = termwidth - len_line - len(sep)
-        # XXX: cannot be easily optimized?
-        # max_msg = msg[:max_len_msg + 1].translate(trans)
-        max_msg = msg.translate(trans)
-        len_msg = wcswidth(max_msg)
+        orig_msg = msg
+        msg = msg.translate(trans_nls)
+        len_msg = wcswidth(msg)
         if len_msg == -1:
             # Non-printable/escape characters (except for newlines).
-            max_msg = repr(msg)
-            len_msg = wcswidth(max_msg)
-            assert len_msg != -1, repr(max_msg, msg)
+            msg = repr(orig_msg)
+            len_msg = wcswidth(msg)
+            assert len_msg != -1, repr(msg, orig_msg)
 
         if max_len_msg >= len_ellipsis:
             if len_msg > max_len_msg:
                 max_len_msg -= len_ellipsis
-                max_msg = max_msg[:max_len_msg]
-                while wcswidth(max_msg) > max_len_msg:
-                    max_msg = max_msg[:-1]
-                max_msg += ellipsis
-            line += sep + max_msg
+                msg = msg[:max_len_msg]
+                while wcswidth(msg) > max_len_msg:
+                    msg = msg[:-1]
+                msg += ellipsis
+            line += sep + msg
     return line
 
 
