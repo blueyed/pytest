@@ -1197,7 +1197,9 @@ def test_reprcompare_escape_sequences():
     )
     assert detail == [
         "['\\x1b[31mred'] == ['\\x1b[31mgreen']",
-        "At index 0 diff: '\\x1b[31mred' != '\\x1b[31mgreen'",
+        "At index 0 diff:",
+        "'\\x1b[31mred' !=",
+        "'\\x1b[31mgreen'",
         "Use -v to get the full diff",
     ]
     config = mock_config(verbose=2)
