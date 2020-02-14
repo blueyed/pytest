@@ -793,7 +793,8 @@ def test_runtest_inprocess_stdin(testdir: Testdir, monkeypatch: MonkeyPatch) -> 
     assert result.ret == 0
 
     # stdin=None uses sys.stdin.
-    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(b"42\n")))
+    stdin = io.TextIOWrapper(io.BytesIO(b"42\nmore"))
+    monkeypatch.setattr(sys, "stdin", stdin)
     p1 = testdir.makepyfile(
         """
         def test():
@@ -803,6 +804,7 @@ def test_runtest_inprocess_stdin(testdir: Testdir, monkeypatch: MonkeyPatch) -> 
     result = testdir.runpytest(str(p1), "-s", stdin=None)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
+    assert not stdin.closed
 
 
 def test_runtest_inprocess_tty(testdir: Testdir) -> None:
