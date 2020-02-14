@@ -129,10 +129,15 @@ def isiterable(obj: Any) -> bool:
         return False
 
 
+def _gets_full_diff(op: str, left: Any, right: Any, verbose: int) -> bool:
+    # via _compare_eq_iterable
+    return verbose > 0 and op == "==" and isiterable(left) and isiterable(right)
+
+
 def assertrepr_compare(config, op: str, left: Any, right: Any) -> Optional[List[str]]:
     """Return specialised explanations for some operators/operands"""
     verbose = config.getoption("verbose")
-    if verbose > 1:
+    if verbose > 1 and not _gets_full_diff(op, left, right, verbose):
         left_repr = safeformat(left)
         right_repr = safeformat(right)
     else:
@@ -325,8 +330,11 @@ def _compare_eq_sequence(
 
             left_repr = repr(left_value)
             right_repr = repr(right_value)
-            gets_full_diff = verbose > 0  # via _compare_eq_iterable later.
-            if not gets_full_diff and len(left_repr) > 10 and len(right_repr) > 10:
+            if (
+                not _gets_full_diff("==", left, right, verbose)
+                and len(left_repr) > 10
+                and len(right_repr) > 10
+            ):
                 explanation += [
                     "At index {} diff:".format(i),
                     "{} !=".format(left_repr),
