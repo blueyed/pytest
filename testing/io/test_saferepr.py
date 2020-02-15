@@ -151,15 +151,9 @@ def test_unicode():
     assert saferepr(val) == reprval
 
 
-def test_pformat_consistent():
-    assert _pformat_consistent("a") == "'a'"
+@pytest.mark.parametrize("func", (_pformat_consistent, _pformat_dispatch))
+def test_consistent_quotes(func):
+    assert func("a") == "'a'"
     # via pprint.PrettyPrinter._dispatch.
-    assert _pformat_consistent("a" * 10, width=5) == "'aaaaaaaaaa'"
-    assert _pformat_consistent("foo bar", width=5) == "('foo '\n 'bar')"
-
-
-def test_pformat_dispatch():
-    assert _pformat_dispatch("a") == "'a'"
-    # via pprint.PrettyPrinter._dispatch.
-    assert _pformat_dispatch("a" * 10, width=5) == "'aaaaaaaaaa'"
-    assert _pformat_dispatch("foo bar", width=5) == "('foo '\n 'bar')"
+    assert func("a" * 10, width=5) == "'aaaaaaaaaa'"
+    assert func("foo bar", width=5) == "('foo '\n 'bar')"
