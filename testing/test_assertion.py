@@ -725,18 +725,28 @@ class TestAssert_reprcompare:
             def __repr__(self):
                 raise ValueError(42)
 
-        expl = callequal([], [A()])
-        assert "ValueError" in "".join(expl)
-        expl = callequal({}, {"1": A()}, verbose=2)
-        assert expl[0].startswith("{} == <[ValueError")
-        assert "raised in repr" in expl[0]
-        assert expl[1:] == [
+        expected_expl = [
             "(pytest_assertion plugin: representation of details failed:"
             " {}:{}: ValueError: 42.".format(
                 __file__, A.__repr__.__code__.co_firstlineno + 1
             ),
             " Probably an object has a faulty __repr__.)",
         ]
+
+        expl = callequal([], [A()])
+        assert expl[0].startswith("[] == [<[ValueError...")
+        assert "raised in repr" not in expl[0]
+
+        expl = callequal({}, {"1": A()}, verbose=1)
+        assert expl[0].startswith("{} == {'1': <[Value...")
+        assert "raised in repr" not in expl[0]
+        assert expl[1:] == expected_expl
+
+        # verbose=2 gets full repr with missing diff (because of crash).
+        expl = callequal({}, {"1": A()}, verbose=2)
+        assert expl[0].startswith("{} == <[ValueError")
+        assert "raised in repr" in expl[0]
+        assert expl[1:] == expected_expl
 
     def test_one_repr_empty(self):
         """

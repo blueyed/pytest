@@ -129,23 +129,14 @@ def isiterable(obj: Any) -> bool:
         return False
 
 
+def _gets_full_diff(op: str, left: Any, right: Any, verbose: int) -> bool:
+    # via _compare_eq_iterable
+    return verbose > 0 and op == "==" and isiterable(left) and isiterable(right)
+
+
 def assertrepr_compare(config, op: str, left: Any, right: Any) -> Optional[List[str]]:
     """Return specialised explanations for some operators/operands"""
     verbose = config.getoption("verbose")
-    if verbose > 1:
-        left_repr = safeformat(left)
-        right_repr = safeformat(right)
-    else:
-        # XXX: "15 chars indentation" is wrong
-        #      ("E       AssertionError: assert "); should use term width.
-        maxsize = (
-            80 - 15 - len(op) - 2
-        ) // 2  # 15 chars indentation, 1 space around op
-        left_repr = saferepr(left, maxsize=maxsize)
-        right_repr = saferepr(right, maxsize=maxsize)
-
-    summary = "{} {} {}".format(left_repr, op, right_repr)
-
     explanation = None
     try:
         if op == "==":
@@ -163,6 +154,7 @@ def assertrepr_compare(config, op: str, left: Any, right: Any) -> Optional[List[
                     explanation = _compare_eq_cls(left, right, verbose, type_fn)
                 elif verbose > 0:
                     explanation = _compare_eq_verbose(left, right)
+
                 if isiterable(left) and isiterable(right):
                     expl = _compare_eq_iterable(left, right, verbose)
                     if explanation is not None:
@@ -184,6 +176,21 @@ def assertrepr_compare(config, op: str, left: Any, right: Any) -> Optional[List[
 
     if not explanation:
         return None
+
+    # Summary.
+    has_full_diff = "Full diff:" in explanation
+    if verbose > 1 and not has_full_diff:
+        left_repr = safeformat(left)
+        right_repr = safeformat(right)
+    else:
+        # XXX: "15 chars indentation" is wrong
+        #      ("E       AssertionError: assert "); should use term width.
+        maxsize = (
+            80 - 15 - len(op) - 2
+        ) // 2  # 15 chars indentation, 1 space around op
+        left_repr = saferepr(left, maxsize=maxsize)
+        right_repr = saferepr(right, maxsize=maxsize)
+    summary = "{} {} {}".format(left_repr, op, right_repr)
 
     return [summary] + explanation
 
@@ -325,8 +332,11 @@ def _compare_eq_sequence(
 
             left_repr = repr(left_value)
             right_repr = repr(right_value)
-            gets_full_diff = verbose > 0  # via _compare_eq_iterable later.
-            if not gets_full_diff and len(left_repr) > 10 and len(right_repr) > 10:
+            if (
+                not _gets_full_diff("==", left, right, verbose)
+                and len(left_repr) > 10
+                and len(right_repr) > 10
+            ):
                 explanation += [
                     "At index {} diff:".format(i),
                     "{} !=".format(left_repr),
