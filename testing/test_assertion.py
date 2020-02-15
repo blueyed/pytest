@@ -1130,9 +1130,9 @@ class TestTruncateExplanation:
             ["*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines]
         )
         result = testdir.runpytest("-o", "assert_truncate_level=0")
-        result.stdout.fnmatch_lines(["* '6*"])
+        result.stdout.fnmatch_lines(["* 6*"])
         result = testdir.runpytest("-v", "-o", "assert_truncate_level=0")
-        result.stdout.fnmatch_lines(["* '6*"])
+        result.stdout.fnmatch_lines(["* 6*"])
 
         result = testdir.runpytest("-vv")
         result.stdout.fnmatch_lines(
