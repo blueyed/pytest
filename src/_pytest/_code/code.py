@@ -943,11 +943,15 @@ class TerminalRepr:
     def __str__(self) -> str:
         # FYI this is called from pytest-xdist's serialization of exception
         # information.
-        if self._cached_str is None:
+        if True:
             io = StringIO()
             tw = TerminalWriter(file=io)
             self.toterminal(tw)
-            self._cached_str = io.getvalue().strip()
+            new = io.getvalue().strip()
+        if self._cached_str is None:
+            self._cached_str = new
+        else:
+            assert self._cached_str == new, (self._cached_str, new)
         return self._cached_str
 
     def __repr__(self) -> str:
