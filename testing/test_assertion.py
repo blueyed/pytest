@@ -567,10 +567,10 @@ class TestAssert_reprcompare:
         str_verbose1 = callequal("foo'\nbar", "foo\nbar", verbose=1)
         assert str_verbose1 == [
             "'foo\\'\\nbar' == 'foo\\nbar'",
-            "- foo'",
-            "?    -",
-            "+ foo",
-            "  bar",
+            "Strings contain non-printable/escape characters, escaping them using repr()",
+            '- "foo\'\\n"',
+            "+ 'foo\\n'",
+            "  'bar'",
         ]
         assert callequal("foo'\nbar", "foo\nbar", verbose=2) == str_verbose1
 
