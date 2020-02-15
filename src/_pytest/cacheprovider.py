@@ -7,6 +7,7 @@ ignores the external pytest-cache
 import json
 import os
 from collections import OrderedDict
+from typing import Dict
 from typing import List
 
 import attr
@@ -294,6 +295,10 @@ class NFPlugin:
         self.config = config
         self.active = config.option.newfirst
         self.cached_nodeids = config.cache.get("cache/nodeids", [])
+        self.cached_fspaths = config.cache.get(
+            "cache/fspaths", {}
+        )  # type: Dict[str, Dict]
+        self.rootdir = Path(self.config.rootdir)
 
     def pytest_collection_modifyitems(
         self, session: Session, config: Config, items: List[nodes.Item]
@@ -314,10 +319,63 @@ class NFPlugin:
             for item in items:
                 if item.nodeid not in self.cached_nodeids:
                     new_items[item.nodeid] = item
+
         self.cached_nodeids.extend(new_items)
 
+        keyword = config.option.nodeid_keyword.lstrip()
+        if keyword:
+            items[:] = [x for x in items if keyword in x.nodeid]
+
     def _get_increasing_order(self, items):
-        return sorted(items, key=lambda item: item.fspath.mtime(), reverse=True)
+        return sorted(
+            items,
+            key=lambda item: self.cached_fspaths[item.fspath]["mtime"],
+            reverse=True,
+        )
+
+    def pytest_ignore_collect(self, path, config):
+        ppath = Path(path)
+        if ppath.is_dir():
+            return
+
+        try:
+            relpath = str(ppath.relative_to(self.rootdir))
+        except ValueError:
+            relpath = str(ppath)
+
+        if relpath not in self.cached_fspaths:
+            # unknown/new: collect, but set mtime
+            self.cached_fspaths[relpath] = {"mtime": path.mtime()}  # XXX
+            return
+
+        mtime = path.mtime()
+        if mtime != self.cached_fspaths[relpath]["mtime"]:
+            self.cached_fspaths[relpath]["mtime"] = mtime
+            return
+
+        keyword = config.option.nodeid_keyword.lstrip()
+        if not keyword:
+            return
+
+        try:
+            nodeids_by_path = self._nodeids_by_path
+        except AttributeError:
+            self._nodeids_by_path = {}
+            for x in self.cached_nodeids:
+                fspath, _, rest = x.partition("::")
+                self._nodeids_by_path.setdefault(fspath, []).append(rest)
+            nodeids_by_path = self._nodeids_by_path
+        try:
+            nodeids = nodeids_by_path[relpath]
+        except KeyError:
+            return
+
+        if any(keyword in x for x in nodeids):
+            return
+
+        config.hook.pytest_deselected(items=nodeids)
+
+        return True
 
     def pytest_sessionfinish(self, session):
         config = self.config
@@ -325,6 +383,7 @@ class NFPlugin:
             return
 
         config.cache.set("cache/nodeids", self.cached_nodeids)
+        config.cache.set("cache/fspaths", self.cached_fspaths)
 
 
 def pytest_addoption(parser):
@@ -389,6 +448,7 @@ def pytest_addoption(parser):
         dest="cache_readonly",
         help="do not update cache.",
     )
+    group._addoption("-K", action="store", dest="nodeid_keyword", default="")
 
 
 def pytest_cmdline_main(config):
