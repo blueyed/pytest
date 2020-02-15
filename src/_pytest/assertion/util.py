@@ -137,20 +137,6 @@ def _gets_full_diff(op: str, left: Any, right: Any, verbose: int) -> bool:
 def assertrepr_compare(config, op: str, left: Any, right: Any) -> Optional[List[str]]:
     """Return specialised explanations for some operators/operands"""
     verbose = config.getoption("verbose")
-    if verbose > 1 and not _gets_full_diff(op, left, right, verbose):
-        left_repr = safeformat(left)
-        right_repr = safeformat(right)
-    else:
-        # XXX: "15 chars indentation" is wrong
-        #      ("E       AssertionError: assert "); should use term width.
-        maxsize = (
-            80 - 15 - len(op) - 2
-        ) // 2  # 15 chars indentation, 1 space around op
-        left_repr = saferepr(left, maxsize=maxsize)
-        right_repr = saferepr(right, maxsize=maxsize)
-
-    summary = "{} {} {}".format(left_repr, op, right_repr)
-
     explanation = None
     try:
         if op == "==":
@@ -168,6 +154,7 @@ def assertrepr_compare(config, op: str, left: Any, right: Any) -> Optional[List[
                     explanation = _compare_eq_cls(left, right, verbose, type_fn)
                 elif verbose > 0:
                     explanation = _compare_eq_verbose(left, right)
+
                 if isiterable(left) and isiterable(right):
                     expl = _compare_eq_iterable(left, right, verbose)
                     if explanation is not None:
@@ -189,6 +176,21 @@ def assertrepr_compare(config, op: str, left: Any, right: Any) -> Optional[List[
 
     if not explanation:
         return None
+
+    # Summary.
+    has_full_diff = "Full diff:" in explanation
+    if verbose > 1 and not has_full_diff:
+        left_repr = safeformat(left)
+        right_repr = safeformat(right)
+    else:
+        # XXX: "15 chars indentation" is wrong
+        #      ("E       AssertionError: assert "); should use term width.
+        maxsize = (
+            80 - 15 - len(op) - 2
+        ) // 2  # 15 chars indentation, 1 space around op
+        left_repr = saferepr(left, maxsize=maxsize)
+        right_repr = saferepr(right, maxsize=maxsize)
+    summary = "{} {} {}".format(left_repr, op, right_repr)
 
     return [summary] + explanation
 
