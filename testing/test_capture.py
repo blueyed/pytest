@@ -1515,3 +1515,102 @@ def test_encodedfile_writelines(tmpfile: BinaryIO) -> None:
     tmpfile.close()
     with pytest.raises(ValueError):
         ef.read()
+
+
+def test_suspend_on_read_from_stdin(testdir):
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test():
+            print("out_stderr", file=sys.stderr)
+            print("prompt_1")
+            assert input() == "input_1"
+
+            print("prompt_2")
+            assert sys.stdin.read() == "input_2\\nsecond_line\\n"
+
+            print("prompt_3")
+            assert sys.stdin.readline() == "input_3\\n"
+
+            print("prompt_4")
+            assert sys.stdin.readlines() == ["input_4\\n", "second_line\\n"]
+
+            print("after_" + "input: OK")
+
+            print("is_atty: %d" % sys.stdin.isatty())
+    """
+    )
+    child = testdir.spawn_pytest("-o capture_suspend_on_stdin=1 %s" % p1)
+    child.expect("prompt_1")
+    assert child.before.decode().splitlines()[-4:] == [
+        "test_suspend_on_read_from_stdin.py === Suspending capturing due to stdin being read from ===",
+        "=== stderr ===",
+        "out_stderr",
+        "=== stdout ===",
+    ]
+    child.sendline("input_1")
+
+    child.expect("prompt_2")
+    child.sendline("input_2")
+    child.sendline("second_line")
+    child.sendeof()
+
+    child.expect("prompt_3")
+    child.sendline("input_3")
+
+    child.expect("prompt_4")
+    child.sendline("input_4")
+    child.sendline("second_line")
+    child.sendeof()
+
+    child.expect("after_input: OK")
+    rest = child.read().decode("utf8")
+    assert "is_atty: 1" in rest
+    assert "= 1 passed in " in rest
+
+
+@pytest.mark.parametrize("method", ("fd", "sys"))
+def test_sysstdincapture(method, testdir):
+    p1 = testdir.makepyfile(
+        """
+        import pytest
+        from _pytest.capture import CaptureManager, MultiCapture, SysStdinCapture
+
+        def test_inner():
+            method = {method!r}
+
+            capman = CaptureManager(method, suspend_on_stdin=True)
+            multicapture = capman._getcapture(method)
+            in_ = multicapture.in_
+            if method == "sys":
+                f = in_.tmpfile
+            else:
+                f = in_.syscapture.tmpfile
+            assert isinstance(f, SysStdinCapture)
+
+            assert not f.isatty()
+
+            assert f.read() == ""
+            assert f.readlines() == []
+
+            # XXX: fails on py2.
+            # > next(iter_f)
+            # E IOError: readline() should have returned an str object, not 'str'
+            import sys
+            if sys.version_info > (3,):
+                iter_f = iter(f)
+                with pytest.raises(StopIteration):
+                    next(iter_f)
+
+            assert f.fileno() == 0
+            f.close()
+        """.format(
+            method=method
+        )
+    )
+    result = testdir.runpytest_subprocess(
+        str(p1), "-s"  # Pass through stdin, we're not testing suspending here.
+    )
+    assert result.ret == 0
+    assert "1 passed in" in result.stdout.str()

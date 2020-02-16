@@ -36,6 +36,12 @@ def pytest_addoption(parser):
         dest="capture",
         help="shortcut for --capture=no.",
     )
+    parser.addini(
+        "capture_suspend_on_stdin",
+        "Suspend capturing when stdin is being read from (default: 1 if connected to tty).",
+        type="bool",
+        default=None,
+    )
 
 
 @pytest.hookimpl(hookwrapper=True)
@@ -46,7 +52,10 @@ def pytest_load_initial_conftests(early_config, parser, args):
     _colorama_workaround()
     _readline_workaround()
     pluginmanager = early_config.pluginmanager
-    capman = CaptureManager(ns.capture)
+    suspend_on_stdin = early_config.getini("capture_suspend_on_stdin")
+    if suspend_on_stdin is None:
+        suspend_on_stdin = sys.stdin.isatty()
+    capman = CaptureManager(ns.capture, suspend_on_stdin)
     pluginmanager.register(capman, "capturemanager")
 
     # make sure that capturemanager is properly reset at final shutdown
@@ -75,10 +84,11 @@ class CaptureManager:
       case special handling is needed to ensure the fixtures take precedence over the global capture.
     """
 
-    def __init__(self, method):
+    def __init__(self, method, suspend_on_stdin=False):
         self._method = method
         self._global_capturing = None
         self._current_item = None
+        self._suspend_on_stdin = suspend_on_stdin
 
     def __repr__(self):
         return "<CaptureManager _method={!r} _global_capturing={!r} _current_item={!r}>".format(
@@ -87,9 +97,32 @@ class CaptureManager:
 
     def _getcapture(self, method):
         if method == "fd":
-            return MultiCapture(out=True, err=True, Capture=FDCapture)
+            if self._suspend_on_stdin:
+
+                def in_(fd, multicapture):
+                    assert fd == 0, fd
+                    syscapture = SysCapture(
+                        fd, tmpfile=SysStdinCapture(multicapture=multicapture)
+                    )
+                    return FDCapture(0, stdin_syscapture=syscapture)
+
+            else:
+                in_ = True
+            return MultiCapture(out=True, err=True, in_=in_, Capture=FDCapture)
+
         elif method == "sys":
-            return MultiCapture(out=True, err=True, Capture=SysCapture)
+            if self._suspend_on_stdin:
+
+                def in_(fd, multicapture):
+                    assert fd == 0, fd
+                    return SysCapture(
+                        fd, tmpfile=SysStdinCapture(multicapture=multicapture)
+                    )
+
+            else:
+                in_ = True
+            return MultiCapture(out=True, err=True, in_=in_, Capture=SysCapture)
+
         elif method == "no":
             return MultiCapture(out=False, err=False, in_=False)
         raise ValueError("unknown capturing method: %r" % method)  # pragma: no cover
@@ -451,7 +484,10 @@ class MultiCapture:
 
     def __init__(self, out=True, err=True, in_=True, Capture=None):
         if in_:
-            self.in_ = Capture(0)
+            if in_ is True:
+                self.in_ = Capture(0)
+            else:
+                self.in_ = in_(0, multicapture=self)
         if out:
             self.out = Capture(1)
         if err:
@@ -538,7 +574,7 @@ class FDCaptureBinary:
     EMPTY_BUFFER = b""
     _state = None
 
-    def __init__(self, targetfd, tmpfile=None):
+    def __init__(self, targetfd, tmpfile=None, stdin_syscapture=None):
         self.targetfd = targetfd
         try:
             self.targetfd_save = os.dup(self.targetfd)
@@ -551,7 +587,10 @@ class FDCaptureBinary:
             if targetfd == 0:
                 assert not tmpfile, "cannot set tmpfile with stdin"
                 tmpfile = open(os.devnull, "r")
-                self.syscapture = SysCapture(targetfd)
+                if stdin_syscapture is None:
+                    self.syscapture = SysCapture(targetfd)
+                else:
+                    self.syscapture = stdin_syscapture
             else:
                 if tmpfile is None:
                     f = TemporaryFile()
@@ -695,12 +734,71 @@ class SysCaptureBinary(SysCapture):
         return res
 
 
+class SysStdinCapture(CaptureIO):
+    """Wrap CaptureIO to suspend on read."""
+
+    def __init__(self, multicapture, *args):
+        self.multicapture = multicapture
+        assert isinstance(multicapture, MultiCapture), multicapture
+
+        super(SysStdinCapture, self).__init__(*args)
+
+    def __repr__(self):
+        return "<SysStdinCapture multicapture=%r>" % (self.multicapture,)
+
+    @property
+    def _syscapture(self):
+        try:
+            return self.multicapture.in_.syscapture
+        except AttributeError:
+            return self.multicapture.in_
+
+    def _suspend_on_read(self, method, *args):
+        # TODO: would be nice to have this in the original order, not split
+        # by stdout/stderr.  Let's have stderr first at least, given that
+        # prompts go to stdout usually.
+
+        # self.multicapture.pop_outerr_to_orig()
+        self.multicapture.out.writeorg(
+            "=== Suspending capturing due to stdin being read from ===\n"
+        )
+        out, err = self.multicapture.readouterr()
+        if err:
+            # NOTE: this writes to stderr.  Not sure about this.
+            self.multicapture.err.writeorg("=== stderr ===\n")
+            self.multicapture.err.writeorg(err)
+        if out:
+            self.multicapture.out.writeorg("=== stdout ===\n")
+            self.multicapture.out.writeorg(out)
+        self.multicapture.suspend_capturing(in_=True)
+
+        f = getattr(self._syscapture._old, method)
+        r = f(*args)
+        return r
+
+    def isatty(self):
+        return self._syscapture._old.isatty()
+
+    def read(self, *args):
+        return self._suspend_on_read("read", *args)
+
+    def readline(self, *args):
+        return self._suspend_on_read("readline", *args)
+
+    def readlines(self, *args):  # Required for py2.
+        return self._suspend_on_read("readlines", *args)
+
+    def fileno(self):
+        return self._syscapture._old.fileno()
+
+
 class DontReadFromInput:
     encoding = None
 
     def read(self, *args):
         raise IOError(
-            "pytest: reading from stdin while output is captured!  Consider using `-s`."
+            "pytest: reading from stdin while output is captured!\n"
+            "Consider using `-s` or `-o capture_suspend_on_stdin=1`."
         )
 
     readline = read
