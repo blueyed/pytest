@@ -539,11 +539,12 @@ class FDCaptureBinary:
         self.targetfd = targetfd
         try:
             self.targetfd_save = os.dup(self.targetfd)
-        except OSError:
+        except OSError as exc:
             self.start = lambda: None
             self.done = lambda: None
             self.tmpfile = None
             self.targetfd_save = None
+            self._state = "failed ({})".format(exc)
         else:
             self.start = self._start
             self.done = self._done
@@ -592,9 +593,9 @@ class FDCaptureBinary:
     def _done(self):
         """ stop capturing, restore streams, return original capture file,
         seeked to position zero. """
-        targetfd_save = self.__dict__.pop("targetfd_save")
-        os.dup2(targetfd_save, self.targetfd)
-        os.close(targetfd_save)
+        os.dup2(self.targetfd_save, self.targetfd)
+        os.close(self.targetfd_save)
+        self.targetfd_save = None
         self.syscapture.done()
         self.tmpfile.close()
         self._state = "done"

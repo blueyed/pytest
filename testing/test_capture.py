@@ -1173,22 +1173,33 @@ class TestStdCaptureFDinvalidFD:
             def StdCaptureFD(out=True, err=True, in_=True):
                 return capture.MultiCapture(out, err, in_, Capture=capture.FDCapture)
 
+            try:
+                os.dup(-1)
+            except OSError as exc:
+                exp_state = "failed ({})".format(exc)
+
             def test_stdout():
                 os.close(1)
                 cap = StdCaptureFD(out=True, err=False, in_=False)
-                assert repr(cap.out) == "<FDCapture 1 oldfd=None _state=None tmpfile=None>"
+                assert repr(cap.out) == (
+                    "<FDCapture 1 oldfd=None _state={!r} tmpfile=None>".format(exp_state)
+                )
                 cap.stop_capturing()
 
             def test_stderr():
                 os.close(2)
                 cap = StdCaptureFD(out=False, err=True, in_=False)
-                assert repr(cap.err) == "<FDCapture 2 oldfd=None _state=None tmpfile=None>"
+                assert repr(cap.err) == (
+                    "<FDCapture 2 oldfd=None _state={!r} tmpfile=None>".format(exp_state)
+                )
                 cap.stop_capturing()
 
             def test_stdin():
                 os.close(0)
                 cap = StdCaptureFD(out=False, err=False, in_=True)
-                assert repr(cap.in_) == "<FDCapture 0 oldfd=None _state=None tmpfile=None>"
+                assert repr(cap.in_) == (
+                    "<FDCapture 0 oldfd=None _state={!r} tmpfile=None>".format(exp_state)
+                )
                 cap.stop_capturing()
         """
         )
