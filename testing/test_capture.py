@@ -933,7 +933,7 @@ class TestFDCapture:
         fd = tmpfile.fileno()
         cap = capture.FDCapture(fd)
         cap.done()
-        pytest.raises(ValueError, cap.start)
+        pytest.raises(ValueError, cap.start, match="cannot start after state 'done'")
 
     def test_stderr(self):
         cap = capture.FDCapture(2)

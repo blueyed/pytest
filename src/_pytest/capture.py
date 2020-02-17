@@ -575,9 +575,11 @@ class FDCaptureBinary:
 
     def _start(self):
         """ Start capturing on targetfd using memorized tmpfile. """
+        if self._state is not None:
+            raise ValueError("cannot start after state {!r}".format(self._state))
         try:
             os.fstat(self.targetfd_save)
-        except (AttributeError, OSError):
+        except OSError:
             raise ValueError("saved filedescriptor not valid anymore")
         os.dup2(self.tmpfile_fd, self.targetfd)
         self.syscapture.start()
@@ -601,6 +603,8 @@ class FDCaptureBinary:
         self._state = "done"
 
     def suspend(self):
+        if self.targetfd_save is None:
+            raise AttributeError()
         self.syscapture.suspend()
         os.dup2(self.targetfd_save, self.targetfd)
         self._state = "suspended"
