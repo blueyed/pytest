@@ -1098,10 +1098,13 @@ class Testdir(Generic[AnyStr]):
                 if not stdin or stdin is CLOSE_STDIN:
                     tmpfile = None
                 else:
-                    from _pytest.capture import safe_text_dupfile
+                    tmpfile = stdin
+                    orig_close = stdin.close
 
-                    tmpfile = safe_text_dupfile(stdin, mode="wb+")
-                    tmpfile.close = lambda: None
+                    def ignore_close():
+                        stdin.close = orig_close
+
+                    tmpfile.close = ignore_close
             else:
                 tmpfile = CaptureIO()
             if tmpfile and tty is not None:

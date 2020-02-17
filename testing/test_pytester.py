@@ -874,6 +874,33 @@ def test_runtest_inprocess_stdin(testdir: Testdir, monkeypatch: MonkeyPatch) -> 
     assert result.ret == 0
 
     # stdin=None uses sys.stdin.
+    mock_stdin_fd, write_to_stdin_fd = os.pipe()
+    os.write(write_to_stdin_fd, b"a\nb\nmore")
+    monkeypatch.setattr(sys, "stdin", os.fdopen(mock_stdin_fd))
+    p1 = testdir.makepyfile(
+        """
+        def test(testdir):
+            import os
+            assert os.read({mock_stdin_fd}, 2) == b"a\\n"
+
+            p1 = testdir.makepyfile(
+                '''
+                def test():
+                    import os
+                    assert os.read({mock_stdin_fd}, 2) == b"b\\\\n"
+                '''
+            )
+            assert testdir.runpytest(str(p1), "-s", stdin=None).ret == 0
+        """.format(
+            mock_stdin_fd=mock_stdin_fd,
+        )
+    )
+    result = testdir.runpytest(str(p1), "-s", "-p", "pytester", stdin=None)
+    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    assert result.ret == 0
+    assert os.read(mock_stdin_fd, 4) == b"more"
+    os.close(mock_stdin_fd)
+
     stdin = io.TextIOWrapper(io.BytesIO(b"42\nmore"))
     monkeypatch.setattr(sys, "stdin", stdin)
     p1 = testdir.makepyfile(
