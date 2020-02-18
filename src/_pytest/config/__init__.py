@@ -133,6 +133,10 @@ def main(args=None, plugins=None) -> Union[int, ExitCode]:
         tw = TerminalWriter(sys.stderr)
         for msg in e.args:
             tw.line("ERROR: {}\n".format(msg), red=True)
+        if "--fulltrace" in sys.argv or "--full-trace" in sys.argv:
+            import traceback
+
+            traceback.print_exc(file=sys.stderr)
         return ExitCode.USAGE_ERROR
 
 
