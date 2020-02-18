@@ -1284,7 +1284,9 @@ def test_usageerror_with_fulltrace(testdir):
     assert result.stdout.lines == []
     assert result.ret == ExitCode.USAGE_ERROR
 
-    result = testdir.runpytest_subprocess("--help", "--fulltrace")
+    args = ["--help", "--fulltrace"]
+    testdir.monkeypatch.setattr(sys, "argv", [sys.executable] + args)
+    result = testdir.runpytest(args)
     assert result.stderr.lines[0:3] == [
         "ERROR: " + expected_error,
         "",
@@ -1292,10 +1294,6 @@ def test_usageerror_with_fulltrace(testdir):
     ]
     result.stderr.fnmatch_lines(
         [
-            "argparse.ArgumentError: argument --foo: conflicting option string: --foo",
-            "During handling of the above exception, another exception occurred:",
-            "_pytest.config.exceptions.UsageError: " + expected_error,
-            "During handling of the above exception, another exception occurred:",
             "argparse.ArgumentError: argument --foo: conflicting option string: --foo",
             "During handling of the above exception, another exception occurred:",
             "_pytest.config.exceptions.UsageError: " + expected_error,
