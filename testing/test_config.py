@@ -1263,6 +1263,48 @@ def test_help_and_version_after_argument_error(testdir):
     assert result.ret == ExitCode.USAGE_ERROR
 
 
+def test_usageerror_with_fulltrace(testdir):
+    testdir.makeconftest(
+        """
+        def pytest_addoption(parser):
+            group = parser.getgroup('group1')
+            group.addoption("--foo")
+            group = parser.getgroup('group2')
+            group.addoption("--foo")
+        """
+    )
+    expected_error = (
+        "option group group2: argument --foo: conflicting option string: --foo"
+    )
+    result = testdir.runpytest("--help")
+    assert result.stderr.lines == [
+        "ERROR: " + expected_error,
+        "",
+    ]
+    assert result.stdout.lines == []
+    assert result.ret == ExitCode.USAGE_ERROR
+
+    result = testdir.runpytest_subprocess("--help", "--fulltrace")
+    assert result.stderr.lines[0:3] == [
+        "ERROR: " + expected_error,
+        "",
+        "Traceback (most recent call last):",
+    ]
+    result.stderr.fnmatch_lines(
+        [
+            "argparse.ArgumentError: argument --foo: conflicting option string: --foo",
+            "During handling of the above exception, another exception occurred:",
+            "_pytest.config.exceptions.UsageError: " + expected_error,
+            "During handling of the above exception, another exception occurred:",
+            "argparse.ArgumentError: argument --foo: conflicting option string: --foo",
+            "During handling of the above exception, another exception occurred:",
+            "_pytest.config.exceptions.UsageError: " + expected_error,
+        ]
+    )
+    assert result.stdout.lines == []
+    assert result.ret == ExitCode.USAGE_ERROR
+
+
 def test_help_formatter_uses_py_get_terminal_width(monkeypatch):
     from _pytest.config.argparsing import DropShorterLongHelpFormatter
 
