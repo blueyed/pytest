@@ -70,7 +70,7 @@ jobs:
           - name: "windows-py37"
             python: "3.7"
             os: windows-latest
-            tox_env: "py37-coverage"
+            tox_env: "py37-xdist-coverage"
             script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
@@ -106,7 +106,7 @@ jobs:
     - name: Cache .tox
       uses: actions/cache@v1
       with:
-        path: ~/work/pytest/pytest/.tox/${{ matrix.tox_env }}
+        path: ${{ env.GITHUB_WORKSPACE }}/pytest/pytest/.tox/${{ matrix.tox_env }}
         key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting')
