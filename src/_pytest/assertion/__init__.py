@@ -10,6 +10,7 @@ from _pytest.assertion import rewrite
 from _pytest.assertion import truncate
 from _pytest.assertion import util
 from _pytest.compat import TYPE_CHECKING
+from _pytest.config import Config
 from _pytest.config import hookimpl
 
 if TYPE_CHECKING:
@@ -172,6 +173,6 @@ def pytest_sessionfinish(session):
 
 
 def pytest_assertrepr_compare(
-    config, op: str, left: Any, right: Any
+    config: Config, op: str, left: Any, right: Any
 ) -> Optional[List[str]]:
     return util.assertrepr_compare(config=config, op=op, left=left, right=right)
