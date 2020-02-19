@@ -724,6 +724,18 @@ def test_run_stdin(testdir) -> None:
     assert result.ret == 0
 
 
+def test_runpytest_subprocess_stdin(testdir) -> None:
+    p1 = testdir.makepyfile(r"def test(): print('\ninput=%r' % input())")
+
+    result = testdir.runpytest_subprocess(str(p1), "-s")
+    result.stdout.fnmatch_lines(
+        ["E   EOFError: EOF when reading a line", "=* 1 failed in *"]
+    )
+
+    result = testdir.runpytest_subprocess(str(p1), "-s", stdin=b"input\n2ndline")
+    result.stdout.fnmatch_lines(["input='input'", "=* 1 passed in *"])
+
+
 def test_runtest_inprocess_stdin(testdir: Testdir, monkeypatch: MonkeyPatch) -> None:
     import io
 
