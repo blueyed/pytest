@@ -70,7 +70,7 @@ jobs:
           - name: "windows-py37"
             python: "3.7"
             os: windows-latest
-            tox_env: "py37-coverage"
+            tox_env: "py37-xdist-coverage"
             script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
