@@ -353,12 +353,12 @@ class TestAssert_reprcompare:
         right = "foo\neggs\nbar"
         diff = callequal(left, right)
         assert diff == [
-            "'foo\\nspam\\nbar' == 'foo\\neggs\\nbar'",
-            "Strings contain non-printable/escape characters, escaping them using repr()",
-            "  'foo\\n'",
-            "- 'spam\\n'",
-            "+ 'eggs\\n'",
-            "  'bar'",
+            r"'foo\nspam\nbar' == 'foo\neggs\nbar'",
+            # r"NOTE: Strings contain different line-endings. Escaping them using repr().",
+            r"  foo",
+            r"- spam",
+            r"+ eggs",
+            r"  bar",
         ]
 
     def test_bytes_diff_normal(self):
@@ -1093,7 +1093,7 @@ class TestTruncateExplanation:
 
         line_count = 7
         line_len = 100
-        expected_truncated_lines = 3
+        expected_truncated_lines = 2
         testdir.makepyfile(
             r"""
             def test_many_lines():
@@ -1111,17 +1111,16 @@ class TestTruncateExplanation:
         # without -vv, truncate the message showing a few diff lines only
         result.stdout.fnmatch_lines(
             [
-                ">       assert a == b",
-                "E       AssertionError: assert '000000000000...6666666666666' == '000000000000...6666666666666'",
-                "E         Skipping 91 identical leading characters in diff, use -v to show",
-                "E         Strings contain non-printable/escape characters, escaping them using repr()",
-                "E           '000000000\\n'",
-                "E         - '1*\\n'",
-                "E           '2*\\n'",
-                "E         - '3*\\n'",
-                "E           '4*\\...",
-                "E         ",
-                "*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines,
+                r">       assert a == b",
+                r"E       AssertionError: assert '000000000000...6666666666666' == '000000000000...6666666666666'",
+                r"E         Skipping 91 identical leading characters in diff, use -v to show",
+                r"E           000000000",
+                r"E         - 1*",
+                r"E           2*",
+                r"E         - 3*",
+                r"E           4*",
+                r"E         ",
+                r"*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines,
             ]
         )
 
@@ -1131,12 +1130,27 @@ class TestTruncateExplanation:
             ["*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines]
         )
         result = testdir.runpytest("-o", "assert_truncate_level=0")
-        result.stdout.fnmatch_lines(["* '6*"])
+        result.stdout.fnmatch_lines(["* 6*"])
         result = testdir.runpytest("-v", "-o", "assert_truncate_level=0")
-        result.stdout.fnmatch_lines(["* '6*"])
+        result.stdout.fnmatch_lines(["* 6*"])
 
         result = testdir.runpytest("-vv")
-        result.stdout.fnmatch_lines(["* '6*"])
+        result.stdout.fnmatch_lines(
+            [
+                r">       assert a == b",
+                r"E       AssertionError: assert ('0*0\n'\n * '5*5\n'\n '6*6')"
+                r" == ('0*0\n'\n '2*2\n'\n '4*4\n'\n '6*6')",
+                r"E           0*0",
+                r"E         - 1*1",
+                r"E           2*2",
+                r"E         - 3*3",
+                r"E           4*4",
+                r"E         - 5*5",
+                r"E           6*6",
+                r"",
+            ],
+            consecutive=True,
+        )
 
         monkeypatch.setenv("CI", "")
         result = testdir.runpytest()
@@ -1146,7 +1160,7 @@ class TestTruncateExplanation:
 
         monkeypatch.setenv("CI", "True")
         result = testdir.runpytest()
-        result.stdout.fnmatch_lines(["* '6*"])
+        result.stdout.fnmatch_lines(["* 6*"])
 
 
 def test_python25_compile_issue257(testdir):
@@ -1198,42 +1212,14 @@ def test_reprcompare_whitespaces():
     ]
 
 
-def test_reprcompare_escape_sequences():
-    config = mock_config()
-    detail = plugin.pytest_assertrepr_compare(
-        config, "==", "\x1b[31mred", "\x1b[31mgreen"
-    )
-    assert detail == [
-        "'\\x1b[31mred' == '\\x1b[31mgreen'",
-        "Strings contain non-printable/escape characters, escaping them using repr()",
-        "- '\\x1b[31mred'",
-        "?            ^",
-        "+ '\\x1b[31mgreen'",
-        "?          +  ^^",
-    ]
-
-    detail = plugin.pytest_assertrepr_compare(
-        config, "==", ["\x1b[31mred"], ["\x1b[31mgreen"]
-    )
-    assert detail == [
-        "['\\x1b[31mred'] == ['\\x1b[31mgreen']",
-        "At index 0 diff:",
-        "'\\x1b[31mred' !=",
-        "'\\x1b[31mgreen'",
-        "Use -v to get the full diff",
-    ]
-    config = mock_config(verbose=2)
-    detail = plugin.pytest_assertrepr_compare(
-        config, "==", ["\x1b[31mred"], ["\x1b[31mgreen"]
-    )
-    assert detail == [
-        "['\\x1b[31mred'] == ['\\x1b[31mgreen']",
-        "At index 0 diff: '\\x1b[31mred' != '\\x1b[31mgreen'",
-        "Full diff:",
-        "- ['\\x1b[31mred']",
-        "?             ^",
-        "+ ['\\x1b[31mgreen']",
-        "?           +  ^^",
+def test_reprcompare_zerowidth_and_non_printable():
+    assert callequal("\x00\x1b[31mred", "\x1b[31mgreen") == [
+        r"'\x00\x1b[31mred' == '\x1b[31mgreen'",
+        r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
+        r"- '\x00\x1b[31mred'",
+        r"?  ----          ^",
+        r"+ '\x1b[31mgreen'",
+        r"?          +  ^^",
     ]
 
 
@@ -1497,12 +1483,55 @@ def test_diff_newline_at_end(testdir):
     result.stdout.fnmatch_lines(
         r"""
         *assert 'asdf' == 'asdf\n'
-        E         Strings contain non-printable/escape characters, escaping them using repr()
-        *  - 'asdf'
-        *  + 'asdf\n'
-        *  ?      ++
+        E       AssertionError: assert 'asdf' == 'asdf\n'
+        E         NOTE: Strings contain different line-endings. Escaping them using repr().
+        *  - asdf
+        *  + asdf\n
+        *  ?     ++
     """
     )
+
+
+def test_diff_different_line_endings():
+    assert callequal("asdf\n", "asdf", verbose=2) == [
+        r"'asdf\n' == 'asdf'",
+        r"NOTE: Strings contain different line-endings. Escaping them using repr().",
+        r"- asdf\n",
+        r"?     --",
+        r"+ asdf",
+        r"- ",
+    ]
+
+    assert callequal("line1\r\nline2", "line1\nline2", verbose=2) == [
+        r"'line1\r\nline2' == 'line1\nline2'",
+        r"NOTE: Strings contain different line-endings. Escaping them using repr().",
+        r"- line1\r\n",
+        r"?       --",
+        r"+ line1\n",
+        r"  line2",
+    ]
+
+    # Only '\r' is considered non-printable
+    assert callequal("line1\r\nline2", "line1\nline2\r", verbose=2) == [
+        r"'line1\r\nline2' == 'line1\nline2\r'",
+        r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
+        r"  'line1'",
+        r"- 'line2'",
+        r"+ 'line2\r'",
+        r"?       ++",
+    ]
+
+    # More on left.
+    assert callequal("line1\r\nline2\r\nline3\r\n", "line1\nline2", verbose=2) == [
+        r"'line1\r\nline2\r\nline3\r\n' == 'line1\nline2'",
+        r"NOTE: Strings contain different line-endings. Escaping them using repr().",
+        r"- line1\r\n",
+        r"?       --",
+        r"+ line1\n",
+        r"  line2",
+        r"- line3",
+        r"- ",
+    ]
 
 
 @pytest.mark.filterwarnings("default")

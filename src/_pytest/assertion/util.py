@@ -1,7 +1,9 @@
 """Utilities for assertion debugging"""
 import collections.abc
+import itertools
 import os
 import pprint
+import re
 from typing import AbstractSet
 from typing import Any
 from typing import Callable
@@ -202,7 +204,7 @@ def _diff_text(left: str, right: str, verbose: int = 0) -> List[str]:
     characters which are identical to keep the diff minimal.
     """
     from difflib import ndiff
-    from wcwidth import wcswidth
+    from wcwidth import wcwidth
 
     explanation = []  # type: List[str]
 
@@ -230,21 +232,44 @@ def _diff_text(left: str, right: str, verbose: int = 0) -> List[str]:
                 ]
                 left = left[:-i]
                 right = right[:-i]
-    keepends = True
     if left.isspace() or right.isspace():
         left = repr(str(left))
         right = repr(str(right))
         explanation += ["Strings contain only whitespace, escaping them using repr()"]
 
-    left_lines = left.splitlines(keepends)
-    right_lines = right.splitlines(keepends)
+    left_split = len(left) and re.split("(\r?\n)", left) or []
+    left_lines = left_split[::2]
+    right_split = len(right) and re.split("(\r?\n)", right) or []
+    right_lines = right_split[::2]
 
-    if any(wcswidth(x) == -1 for x in left_lines + right_lines):
+    if any(
+        wcwidth(ch) <= 0
+        for ch in [ch for lines in left_lines + right_lines for ch in lines]
+    ):
         left_lines = [repr(x) for x in left_lines]
         right_lines = [repr(x) for x in right_lines]
         explanation += [
-            "Strings contain non-printable/escape characters, escaping them using repr()"
+            "NOTE: Strings contain non-printable characters. Escaping them using repr()."
         ]
+    else:
+        max_split = min(len(left_lines), len(right_lines)) + 1
+        left_ends = left_split[1:max_split:2]
+        right_ends = right_split[1:max_split:2]
+        if left_ends != right_ends:
+            explanation += [
+                "NOTE: Strings contain different line-endings. Escaping them using repr()."
+            ]
+            for idx, (left_line, right_line, left_end, right_end) in enumerate(
+                itertools.zip_longest(
+                    left_lines, right_lines, left_ends, right_ends, fillvalue=None
+                )
+            ):
+                if left_end == right_end:
+                    continue
+                if left_end is not None:
+                    left_lines[idx] += repr(left_end)[1:-1]
+                if right_end is not None:
+                    right_lines[idx] += repr(right_end)[1:-1]
 
     explanation += [line.strip("\n") for line in ndiff(left_lines, right_lines)]
     return explanation
