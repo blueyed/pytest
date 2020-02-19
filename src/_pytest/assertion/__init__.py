@@ -2,6 +2,8 @@
 support for presenting detailed information in failing assertions.
 """
 import sys
+from typing import Any
+from typing import List
 from typing import Optional
 
 from _pytest.assertion import rewrite
@@ -169,5 +171,7 @@ def pytest_sessionfinish(session):
             assertstate.hook.set_session(None)
 
 
-def pytest_assertrepr_compare(config, op, left, right):
+def pytest_assertrepr_compare(
+    config, op: str, left: Any, right: Any
+) -> Optional[List[str]]:
     return util.assertrepr_compare(config=config, op=op, left=left, right=right)
