@@ -16,11 +16,14 @@ import py
 
 import _pytest.config
 import pytest
+from _pytest._code.code import ReprFileLocation
 from _pytest.main import ExitCode
 from _pytest.pytester import Testdir
 from _pytest.reports import BaseReport
+from _pytest.reports import TestReport
 from _pytest.terminal import _folded_skips
 from _pytest.terminal import _get_line_with_reprcrash_message
+from _pytest.terminal import _get_pos
 from _pytest.terminal import _plugin_nameversions
 from _pytest.terminal import getreportopt
 from _pytest.terminal import TerminalReporter
@@ -1973,7 +1976,6 @@ def test_line_with_reprcrash(monkeypatch):
     from wcwidth import wcswidth
 
     import _pytest.terminal
-    from _pytest._code.code import ReprFileLocation
 
     mocked_verbose_word = "FAILED"
 
@@ -2051,6 +2053,50 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 41, "FAILED nodeid::😄::withunicode - 😄😄...")
     check("😄😄😄😄😄\n2nd line", 42, "FAILED nodeid::😄::withunicode - 😄😄😄...")
     check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄\\n2nd line")
+
+
+def test__get_pos() -> None:
+    rep = TestReport(
+        "nodeid_without_testname",
+        location=("loc", 1, ""),
+        keywords=(),
+        outcome="failed",
+        longrepr=None,
+        when="call",
+    )
+
+    class config:
+        class option:
+            fulltrace = False
+
+        def cwd_relative_nodeid(nodeid):
+            assert nodeid == rep.nodeid
+            return nodeid
+
+    def check(config: object, rep: object) -> str:
+        return _get_pos(config, rep)  # type: ignore[arg-type]  # noqa: F821
+
+    assert check(config, rep) == "nodeid_without_testname"
+    rep.nodeid = "path::testname"
+    assert not rep.longrepr
+    assert check(config, rep) == "path::testname"
+
+    class longrepr:
+        reprcrash = ReprFileLocation(path="path", lineno=2, message="msg")
+
+    rep.longrepr = longrepr  # type: ignore[assignment]  # noqa: F821
+    config.invocation_dir = py.path.local()  # type: ignore[attr-defined]  # noqa: F821
+    assert check(config, rep) == "path:2::testname"
+
+    # Windows path with different path as in nodeid.
+    assert rep.longrepr
+    rep.longrepr.reprcrash.path = r"windows\path.py"
+    assert check(config, rep) == r"path::testname (windows\path.py:2)"
+
+    # Windows path with same path as in nodeid.
+    rep.nodeid = "windows/path.py::testname"
+    rep.longrepr.reprcrash.path = r"windows\path.py"
+    assert check(config, rep) == "windows/path.py:2::testname"
 
 
 @pytest.mark.parametrize("ci", (None, "true"))
