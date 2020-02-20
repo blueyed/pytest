@@ -1203,13 +1203,15 @@ class TerminalReporter:
         return parts, main_color
 
 
-def _get_pos(config, rep):
+def _get_pos(config: Config, rep: TestReport) -> str:
     nodeid = config.cwd_relative_nodeid(rep.nodeid)
     path, _, testname = nodeid.partition("::")
     if not testname:
         return nodeid
 
     # Append location (line number).
+    if not rep.longrepr:
+        return nodeid
     if config.option.fulltrace:
         try:
             testloc = rep.longrepr.reprcrash
@@ -1232,14 +1234,11 @@ def _get_pos(config, rep):
 
     assert isinstance(testloc.path, str), testloc.path
     testloc_path = Path(testloc.path)
-    try:
-        testloc_path = testloc_path.relative_to(str(config.invocation_dir))
-    except ValueError:
-        pass
+    if testloc_path.is_absolute():
+        testloc_path = _shorten_path(testloc_path, Path(str(config.invocation_dir)))
 
-    if str(testloc_path) == path:
+    if str(testloc_path).replace("\\", nodes.SEP) == path:
         return "%s:%d::%s" % (path, testloc.lineno, testname)
-
     return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
 
 
