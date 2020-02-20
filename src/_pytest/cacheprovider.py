@@ -204,7 +204,7 @@ class LFPlugin:
                 skip_it = Path(path) not in self.last_failed_paths()
                 if skip_it:
                     self._skipped_files += 1
-                return skip_it
+                    return True
 
     def pytest_report_collectionfinish(self):
         if self.active and self.config.getoption("verbose") >= 0:
