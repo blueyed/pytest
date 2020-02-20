@@ -498,21 +498,31 @@ def _compare_eq_cls(
 
 
 def _notin_text(term: str, text: str, verbose: int = 0) -> List[str]:
+    from wcwidth import wcwidth
+
     index = text.find(term)
     head = text[:index]
     tail = text[index + len(term) :]
     correct_text = head + tail
-    diff = _diff_text(correct_text, text, verbose)
+
     newdiff = ["%s is contained here:" % saferepr(term, maxsize=42)]
-    for line in diff:
-        if line.startswith("Skipping"):
-            continue
-        if line.startswith("- "):
-            continue
-        if line.startswith("+ "):
-            newdiff.append("  " + line[2:])
-        else:
-            newdiff.append(line)
+    if any(
+        wcwidth(ch) <= 0
+        for ch in [ch for lines in [term, correct_text] for ch in lines]
+    ):
+        newdiff = [
+            "NOTE: Strings contain non-printable characters. Escaping them using repr()."
+        ] + newdiff
+        text = repr(text)
+        indent = " " * (index + 1)
+        marker = "+" * (len(repr(term)) - 2)
+    else:
+        indent = " " * index
+        marker = "+" * len(term)
+    newdiff += [
+        "  " + text,
+        "? " + indent + marker,
+    ]
     return newdiff
 
 
