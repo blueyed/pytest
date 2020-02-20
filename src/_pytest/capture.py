@@ -152,6 +152,13 @@ class CaptureManager:
     def _capturing_for_request(
         self, request: FixtureRequest
     ) -> Generator["CaptureFixture", None, None]:
+        """
+        Context manager that creates a ``CaptureFixture`` instance for the
+        given ``request``, ensuring there is only a single one being requested
+        at the same time.
+
+        This is used as a helper with ``capsys``, ``capfd`` etc.
+        """
         if self._capture_fixture:
             other_name = next(
                 k
@@ -431,6 +438,7 @@ CaptureResult = collections.namedtuple("CaptureResult", ["out", "err"])
 class MultiCapture:
     out = err = in_ = None
     _state = None
+    _in_suspended = False
 
     def __init__(self, out=True, err=True, in_=True, Capture=None):
         if in_:
@@ -442,11 +450,7 @@ class MultiCapture:
 
     def __repr__(self):
         return "<MultiCapture out={!r} err={!r} in_={!r} _state={!r} _in_suspended={!r}>".format(
-            self.out,
-            self.err,
-            self.in_,
-            self._state,
-            getattr(self, "_in_suspended", "<UNSET>"),
+            self.out, self.err, self.in_, self._state, self._in_suspended,
         )
 
     def start_capturing(self):
@@ -483,9 +487,9 @@ class MultiCapture:
             self.out.resume()
         if self.err:
             self.err.resume()
-        if hasattr(self, "_in_suspended"):
+        if self._in_suspended:
             self.in_.resume()
-            del self._in_suspended
+            self._in_suspended = False
 
     def stop_capturing(self):
         """ stop capturing and reset capturing streams """
@@ -548,8 +552,12 @@ class FDCaptureBinary:
             self.tmpfile_fd = tmpfile.fileno()
 
     def __repr__(self):
-        return "<FDCapture {} oldfd={} _state={!r}>".format(
-            self.targetfd, getattr(self, "targetfd_save", None), self._state
+        return "<{} {} oldfd={} _state={!r} tmpfile={}>".format(
+            self.__class__.__name__,
+            self.targetfd,
+            getattr(self, "targetfd_save", "<UNSET>"),
+            self._state,
+            hasattr(self, "tmpfile") and repr(self.tmpfile) or "<UNSET>",
         )
 
     def _start(self):
@@ -614,8 +622,9 @@ class FDCapture(FDCaptureBinary):
 
 
 class SysCapture:
+    class CLOSE_STDIN:
+        pass
 
-    CLOSE_STDIN = object
     EMPTY_BUFFER = str()
     _state = None
 
@@ -634,8 +643,12 @@ class SysCapture:
         self.tmpfile = tmpfile
 
     def __repr__(self):
-        return "<SysCapture {} _old={!r}, tmpfile={!r} _state={!r}>".format(
-            self.name, self._old, self.tmpfile, self._state
+        return "<{} {} _old={} _state={!r} tmpfile={!r}>".format(
+            self.__class__.__name__,
+            self.name,
+            hasattr(self, "_old") and repr(self._old) or "<UNSET>",
+            self._state,
+            self.tmpfile,
         )
 
     def start(self):

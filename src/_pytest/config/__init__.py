@@ -799,6 +799,11 @@ class Config:
             kwargs=dict(parser=self._parser, pluginmanager=self.pluginmanager)
         )
 
+        if TYPE_CHECKING:
+            from _pytest.cacheprovider import Cache
+
+            self.cache = None  # type: Optional[Cache]
+
     @property
     def invocation_dir(self):
         """Backward compatibility"""

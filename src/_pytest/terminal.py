@@ -24,6 +24,7 @@ import attr
 import pluggy
 import py
 from more_itertools import collapse
+from wcwidth import wcswidth
 
 import pytest
 from _pytest import nodes
@@ -39,6 +40,17 @@ from _pytest.reports import TestReport
 
 REPORT_COLLECTING_RESOLUTION = 0.5
 RE_COLOR_ESCAPES = re.compile(r"\x1b\[[\d;]+m")
+
+KNOWN_TYPES = (
+    "failed",
+    "passed",
+    "skipped",
+    "deselected",
+    "xfailed",
+    "xpassed",
+    "warnings",
+    "error",
+)
 
 _REPORTCHARS_DEFAULT = "fE"
 
@@ -369,9 +381,7 @@ class TerminalReporter:
         self.startdir = config.invocation_dir
         if file is None:
             file = sys.stdout
-        self._tw = _pytest.config.create_terminal_writer(config, file)
-        # self.writer will be deprecated in pytest-3.4
-        self.writer = self._tw
+        self.writer = self._tw = _pytest.config.create_terminal_writer(config, file)
         self.currentfspath = None  # type: Any
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup
@@ -1177,7 +1187,7 @@ class TerminalReporter:
             main_color = "yellow"
         return main_color
 
-    def _set_main_color(self) -> Tuple[str, List[str]]:
+    def _set_main_color(self) -> None:
         unknown_types = []  # type: List[str]
         for found_type in self.stats.keys():
             if found_type:  # setup/teardown reports have an empty key, ignore them
@@ -1185,7 +1195,6 @@ class TerminalReporter:
                     unknown_types.append(found_type)
         self._known_types = list(KNOWN_TYPES) + unknown_types
         self._main_color = self._determine_main_color(bool(unknown_types))
-        return self._main_color, self._known_types
 
     def build_summary_stats_line(self) -> Tuple[List[Tuple[str, Dict[str, bool]]], str]:
         main_color, known_types = self._get_main_color()
@@ -1247,14 +1256,6 @@ def _get_pos(config, rep):
     return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
 
 
-def _wcswidth(s: str) -> int:
-    """wcswidth that ignores color escape codes."""
-    from wcwidth import wcswidth
-
-    s = RE_COLOR_ESCAPES.sub("", s)
-    return wcswidth(s)  # type: ignore[no-any-return]  # noqa: F723
-
-
 def _get_line_with_reprcrash_message(config, rep, termwidth):
     """Get summary line for a report, trying to add reprcrash message."""
     verbose_word = rep._get_verbose_word(config)
@@ -1263,7 +1264,7 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
     line = "{} {}".format(verbose_word, pos)
 
     if termwidth is not None:
-        len_line = _wcswidth(line)
+        len_line = wcswidth(line)
         assert len_line != -1, repr(line)
         ellipsis, len_ellipsis = "...", 3
         if len_line > termwidth - len_ellipsis:
@@ -1271,17 +1272,9 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             return line
 
     try:
-        msg = rep.longrepr.reprcrash.short_msg
-        assert msg is None or "\n" not in msg, repr(msg)
+        msg = rep.longrepr.reprcrash.message
     except AttributeError:
         msg = None
-    if msg is None:
-        try:
-            msg = rep.longrepr.reprcrash.message
-        except AttributeError:
-            msg = None
-        else:
-            msg = msg.replace("\r", "\\r").replace("\n", "\\n")
 
     if msg is not None:
         # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
@@ -1290,22 +1283,28 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             msg = msg[len(implicit_prefix) + 1 :]
 
         sep = " - "
-        len_msg = _wcswidth(msg)
-        if len_msg == -1:
-            msg = repr(msg)
-            len_msg = _wcswidth(msg)
-            assert len_msg != -1, repr(msg)
-
+        trans_nls = str.maketrans({"\r": "\\r", "\n": "\\n"})
         if termwidth is None:
-            return line + sep + msg
+            msg_trans = msg.translate(trans_nls)
+            if wcswidth(msg_trans) == -1:
+                msg_trans = repr(msg)
+            return line + sep + msg_trans
 
-        len_sep = 3
-        max_len_msg = termwidth - len_line - len_sep
+        max_len_msg = termwidth - len_line - len(sep)
+        orig_msg = msg
+        msg = msg.translate(trans_nls)
+        len_msg = wcswidth(msg)
+        if len_msg == -1:
+            # Non-printable/escape characters (except for newlines).
+            msg = repr(orig_msg)
+            len_msg = wcswidth(msg)
+            assert len_msg != -1, repr(msg, orig_msg)
+
         if max_len_msg >= len_ellipsis:
             if len_msg > max_len_msg:
                 max_len_msg -= len_ellipsis
                 msg = msg[:max_len_msg]
-                while _wcswidth(msg) > max_len_msg:
+                while wcswidth(msg) > max_len_msg:
                     msg = msg[:-1]
                 msg += ellipsis
             line += sep + msg

@@ -29,6 +29,7 @@ from _pytest.fixtures import FixtureLookupErrorRepr
 from _pytest.mark.structures import Mark
 from _pytest.mark.structures import MarkDecorator
 from _pytest.mark.structures import NodeKeywords
+from _pytest.outcomes import fail
 from _pytest.outcomes import Failed
 
 if TYPE_CHECKING:
@@ -111,6 +112,10 @@ class NodeMeta(type):
                 )
 
         return super().__call__(*args, **kwargs)
+
+    def _create(self, *k, **kw):
+        """For compatibility with pytest upstream."""
+        return super().__call__(*k, **kw)
 
 
 class Node(metaclass=NodeMeta):
@@ -220,7 +225,7 @@ class Node(metaclass=NodeMeta):
 
     # methods for ordering nodes
     @property
-    def nodeid(self):
+    def nodeid(self) -> str:
         """ a ::-separated string denoting its collection tree address. """
         return self._nodeid
 
@@ -332,7 +337,7 @@ class Node(metaclass=NodeMeta):
         fulltrace = self.config.getoption("fulltrace", False)
         if (
             not fulltrace
-            and isinstance(excinfo.value, Failed)
+            and isinstance(excinfo.value, fail.Exception)
             and not excinfo.value.pytrace
         ):
             return str(excinfo.value)
@@ -538,6 +543,9 @@ class Item(Node):
         #: user properties is a list of tuples (name, value) that holds user
         #: defined properties for this test.
         self.user_properties = []  # type: List[Tuple[str, Any]]
+
+    def runtest(self) -> None:
+        raise NotImplementedError("runtest must be implemented by Item subclass")
 
     def add_report_section(self, when: str, key: str, content: str) -> None:
         """

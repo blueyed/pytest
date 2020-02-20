@@ -198,7 +198,8 @@ def pytest_ignore_collect(path, config):
     This hook is consulted for all files and directories prior to calling
     more specific hooks.
 
-    Stops at first non-None result, see :ref:`firstresult`
+    Stops at first non-None result, see :ref:`firstresult`, i.e. you should
+    only return `False` if the file should never get ignored (by other hooks).
 
     :param path: a :py:class:`py.path.local` - the path to analyze
     :param _pytest.config.Config config: pytest config object
@@ -423,9 +424,9 @@ def pytest_fixture_setup(fixturedef, request):
 
 
 def pytest_fixture_post_finalizer(fixturedef, request):
-    """ called after fixture teardown, but before the cache is cleared so
-    the fixture result cache ``fixturedef.cached_result`` can
-    still be accessed."""
+    """Called after fixture teardown, but before the cache is cleared, so
+    the fixture result ``fixturedef.cached_result`` is still available (not
+    ``None``)."""
 
 
 # -------------------------------------------------------------------------

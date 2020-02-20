@@ -15,10 +15,7 @@ from _pytest import reports
 from _pytest import runner
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import ExitCode
-from _pytest.outcomes import Exit
-from _pytest.outcomes import Failed
 from _pytest.outcomes import OutcomeException
-from _pytest.outcomes import Skipped
 
 if TYPE_CHECKING:
     from typing import Type
@@ -399,7 +396,7 @@ class BaseFunctionalTests:
                     raise pytest.exit.Exception()
             """
             )
-        except Exit:
+        except pytest.exit.Exception:
             pass
         else:
             pytest.fail("did not raise")
@@ -562,15 +559,13 @@ def test_outcomeexception_passes_except_Exception() -> None:
 
 
 def test_pytest_exit() -> None:
-    assert Exit == pytest.exit.Exception  # type: ignore
-    with pytest.raises(Exit) as excinfo:
+    with pytest.raises(pytest.exit.Exception) as excinfo:
         pytest.exit("hello")
-    assert excinfo.errisinstance(Exit)
+    assert excinfo.errisinstance(pytest.exit.Exception)
 
 
 def test_pytest_fail() -> None:
-    assert Failed == pytest.fail.Exception  # type: ignore
-    with pytest.raises(Failed) as excinfo:
+    with pytest.raises(pytest.fail.Exception) as excinfo:
         pytest.fail("hello")
     s = excinfo.exconly(tryshort=True)
     assert s.startswith("Failed")
@@ -713,10 +708,10 @@ def test_pytest_no_tests_collected_exit_status(testdir) -> None:
 
 
 def test_exception_printing_skip() -> None:
-    assert Skipped == pytest.skip.Exception  # type: ignore
+    assert pytest.skip.Exception == pytest.skip.Exception
     try:
         pytest.skip("hello")
-    except Skipped:
+    except pytest.skip.Exception:
         excinfo = _pytest._code.ExceptionInfo.from_current()
         s = excinfo.exconly(tryshort=True)
         assert s.startswith("Skipped")
@@ -733,7 +728,7 @@ def test_importorskip(monkeypatch) -> None:
         assert sysmod is sys
         # path = pytest.importorskip("os.path")
         # assert path == os.path
-        excinfo = pytest.raises(Skipped, f)
+        excinfo = pytest.raises(pytest.skip.Exception, f)
         assert excinfo is not None
         excrepr = excinfo.getrepr()
         assert excrepr is not None
@@ -747,11 +742,11 @@ def test_importorskip(monkeypatch) -> None:
         mod = types.ModuleType("hello123")
         mod.__version__ = "1.3"  # type: ignore
         monkeypatch.setitem(sys.modules, "hello123", mod)
-        with pytest.raises(Skipped):
+        with pytest.raises(pytest.skip.Exception):
             pytest.importorskip("hello123", minversion="1.3.1")
         mod2 = pytest.importorskip("hello123", minversion="1.3")
         assert mod2 == mod
-    except Skipped:
+    except pytest.skip.Exception:
         raise NotImplementedError(
             "spurious skip: {}".format(_pytest._code.ExceptionInfo.from_current())
         )
@@ -769,9 +764,9 @@ def test_importorskip_dev_module(monkeypatch) -> None:
         monkeypatch.setitem(sys.modules, "mockmodule", mod)
         mod2 = pytest.importorskip("mockmodule", minversion="0.12.0")
         assert mod2 == mod
-        with pytest.raises(Skipped):
+        with pytest.raises(pytest.skip.Exception):
             pytest.importorskip("mockmodule1", minversion="0.14.0")
-    except Skipped:
+    except pytest.skip.Exception:
         raise NotImplementedError(
             "spurious skip: {}".format(_pytest._code.ExceptionInfo.from_current())
         )

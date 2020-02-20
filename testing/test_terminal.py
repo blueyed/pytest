@@ -21,7 +21,6 @@ from _pytest.reports import BaseReport
 from _pytest.terminal import _folded_skips
 from _pytest.terminal import _get_line_with_reprcrash_message
 from _pytest.terminal import _plugin_nameversions
-from _pytest.terminal import _wcswidth
 from _pytest.terminal import getreportopt
 from _pytest.terminal import TerminalReporter
 
@@ -812,7 +811,8 @@ class TestTerminalFunctional:
 
 @pytest.mark.parametrize("tty", (True, False))
 @pytest.mark.parametrize("use_CI", (True, False))
-def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
+def test_fail_extra_reporting(tty: bool, use_CI: bool, testdir: Testdir):
+    monkeypatch = testdir.monkeypatch
     if use_CI:
         monkeypatch.setenv("CI", "true")
     else:
@@ -837,6 +837,8 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
     )
 
     if tty:
+        from _pytest.pytester import LineMatcher
+
         child = testdir.spawn_pytest("")
         lm = LineMatcher(child.read().decode().splitlines())
     else:
@@ -850,23 +852,27 @@ def test_fail_extra_reporting(tty, use_CI, testdir, monkeypatch, LineMatcher):
             "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: "
             + ("this_failed" * 8)
             + "\\nassert 0",
-            "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: 'last_unmatched'",
+            # TODO: no Log here?  (via tryshort?)
+            "FAILED test_fail_extra_reporting.py:9::test_linematcher"
+            " - LineMatcherFailed: unmatched: 'last_unmatched'"
+            "\\nLog:\\nnomatch: '2'\\n    and: '1'\\nexact match: '2'\\nnomatch: 'last_unmatched'\\n    and: '3'",
         ]
     else:
         msgs = [
             "FAILED test_fail_extra_reporting.py:4::test_this - AssertionError: this_faile...",
-            "FAILED test_fail_extra_reporting.py:9::test_linematcher - remains unmatched: ...",
+            "FAILED test_fail_extra_reporting.py:9::test_linematcher - LineMatcherFailed: ...",
         ]
 
     lm.fnmatch_lines(
         [
             '>       LineMatcher(["1", "2", "3"]).fnmatch_lines(["2", "last_unmatched"])',
-            "E       Failed: nomatch: '2'",
+            "E       LineMatcherFailed: unmatched: 'last_unmatched'",
+            "E       Log:",
+            "E       nomatch: '2'",
             "E           and: '1'",
             "E       exact match: '2'",
             "E       nomatch: 'last_unmatched'",
             "E           and: '3'",
-            "E       remains unmatched: 'last_unmatched'",
             "*test summary*",
         ]
         + msgs
@@ -975,7 +981,7 @@ def test_color_yes(testdir, color_mapping):
                 "{bold}{red}E   {reset}      line error",
                 "{bold}{red}E   {reset}    assert 0",
                 "",
-                "{bold}test_color_yes.py{reset}:2: AssertionError",
+                "{bold}test_color_yes.py{reset}:2: AssertionError: multi-...",
                 "{red}=*= {red}{bold}1 failed{reset}{red} in *s{reset}{red} =*={reset}",
             ]
         )
@@ -1196,7 +1202,7 @@ class TestGenericReporting:
         result.stdout.fnmatch_lines(
             [
                 "*def test_1():*",
-                "test_maxfailures_veryquiet.py:1: AssertionError",
+                "test_maxfailures_veryquiet.py:1: assert 0",
                 "!! stopping after 1 failure !!",
             ]
         )
@@ -1892,6 +1898,22 @@ class TestProgressOutputStyle:
                 r"\[gw\d\] \[\s*\d+%\] PASSED test_foobar.py::test_foobar\[1\]",
             ]
         )
+        output.stdout.fnmatch_lines_random(
+            [
+                line.translate(TRANS_FNMATCH)
+                for line in [
+                    "test_bar.py::test_bar[0] ",
+                    "test_foo.py::test_foo[0] ",
+                    "test_foobar.py::test_foobar[0] ",
+                    "[gw?] [  5%] PASSED test_*[?] ",
+                    "[gw?] [ 10%] PASSED test_*[?] ",
+                    "[gw?] [ 55%] PASSED test_*[?] ",
+                    "[gw?] [ 60%] PASSED test_*[?] ",
+                    "[gw?] [ 95%] PASSED test_*[?] ",
+                    "[gw?] [100%] PASSED test_*[?] ",
+                ]
+            ]
+        )
 
     def test_capture_no(self, many_tests_files, testdir):
         output = testdir.runpytest("-s")
@@ -2062,7 +2084,6 @@ def test_line_with_reprcrash(monkeypatch):
 
         assert actual == expected
         if actual != "{} {}".format(mocked_verbose_word, mocked_pos):
-            assert len(actual) <= width
             assert wcswidth(actual) <= width
 
     # AttributeError with message
@@ -2093,11 +2114,13 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 29, "FAILED some::nodeid - 😄😄...")
 
     # Color escape codes.
-    check("with \x1b[31mcolor", 30, "FAILED some::nodeid - with ...")
-    check("with \x1b[31mcolor", 50, "FAILED some::nodeid - with \x1b[31mcolor")
+    check("with some truncated \x1b[31mcolor", 29, "FAILED some::nodeid - 'wit...")
+    check("with \x1b[31mcolor", 30, "FAILED some::nodeid - 'with...")
+    check("with \x1b[31mcolor", 50, "FAILED some::nodeid - 'with \\x1b[31mcolor'")
     # Non-printable (kept).
+    check("with \0NULL", 29, "FAILED some::nodeid - with...")
     check("with \0NULL", 30, "FAILED some::nodeid - with ...")
-    check("with \0NULL", 50, "FAILED some::nodeid - with \0NULL")
+    check("with \0NULL", 31, "FAILED some::nodeid - with \0NULL")
     # Non-printable (via repr).
     check("with \bBS", 25, "FAILED some::nodeid - ...")
     check("with \bBS", 50, "FAILED some::nodeid - 'with \\x08BS'")
@@ -2111,40 +2134,20 @@ def test_line_with_reprcrash(monkeypatch):
     check("😄😄😄😄😄\n2nd line", 80, "FAILED nodeid::😄::withunicode - 😄😄😄😄😄\\n2nd line")
 
 
-@pytest.mark.parametrize(
-    "input,expected",
-    (
-        ("", 0),
-        ("foo", 3),
-        ("😄", 2),
-        # Color escape sequence.
-        ("\x1b[31mred", 3),
-        # Invalid/overlapping escape codes.
-        ("\x1b[0\x1b[31mminvalid", -1),
-        # Other escape codes.
-        ("\0", 0),
-        ("\b", -1),
-    ),
-    ids=repr,
-)
-def test_wcswidth(input, expected):
-    assert _wcswidth(input) == expected
-
-
 @pytest.mark.parametrize("ci", (None, "true"))
 def test_summary_with_nonprintable(ci, testdir: Testdir) -> None:
-    testdir.monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 100)
+    testdir.monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 99)
     if ci:
         testdir.monkeypatch.setenv("CI", ci)
-        expected = r"'AssertionError: \x1b[31mred\x00\x08!!\\nassert 0'"
+        expected = r"'AssertionError: \x1b[31mred\x00\x08!!\nassert 0'"
     else:
         testdir.monkeypatch.delenv("CI", raising=False)
-        expected = r"'AssertionError: \x1b[31mred\x00\x08!!\\nasser..."
+        expected = r"'AssertionError: \x1b[31mred\x00\x08!!\nasser..."
     p1 = testdir.makepyfile(r"def test(): assert 0, '\x1b[31mred\0\b!!'")
     result = testdir.runpytest("-rf", str(p1), tty=True)
     result.stdout.fnmatch_lines(
         [
-            "test_summary_with_nonprintable.py:1: AssertionError",
+            "test_summary_with_nonprintable.py:1: AssertionError: \x1b[31mred\0\b!!...",
             "*= short test summary info =*",
             "FAILED test_summary_with_nonprintable.py:1::test - " + expected,
             "*= 1 failed in *=",
@@ -2178,7 +2181,7 @@ def test_failed_pos(arg, testdir):
                 "*_ test _*",
                 ">   def test(): assert 0",
                 "E   assert 0",
-                "test_failed_pos.py:1: AssertionError",
+                "test_failed_pos.py:1: assert 0",
                 "*= short test summary info =*",
                 "FAILED test_failed_pos.py:1::test - assert 0",
                 "*= 1 failed in *",

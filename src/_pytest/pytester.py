@@ -38,6 +38,7 @@ from _pytest.main import Session
 from _pytest.monkeypatch import MonkeyPatch
 from _pytest.nodes import Collector
 from _pytest.nodes import Item
+from _pytest.outcomes import Failed
 from _pytest.pathlib import Path
 from _pytest.python import Function
 from _pytest.python import Module
@@ -589,7 +590,8 @@ class Testdir:
 
     __test__ = False
 
-    CLOSE_STDIN = object
+    class CLOSE_STDIN:
+        pass
 
     class TimeoutExpired(Exception):
         pass
@@ -996,7 +998,10 @@ class Testdir:
                 if not stdin or stdin is SysCapture.CLOSE_STDIN:
                     tmpfile = None
                 else:
-                    tmpfile = stdin
+                    from _pytest.capture import safe_text_dupfile
+
+                    tmpfile = safe_text_dupfile(stdin, mode="wb+")
+                    tmpfile.close = lambda: None
             else:
                 tmpfile = CaptureIO()
             if tmpfile and tty is not None:
@@ -1303,7 +1308,7 @@ class Testdir:
         """Run python -c "command", return a :py:class:`RunResult`."""
         return self.run(sys.executable, "-c", command)
 
-    def runpytest_subprocess(self, *args, timeout=None) -> RunResult:
+    def runpytest_subprocess(self, *args, stdin=CLOSE_STDIN, timeout=None) -> RunResult:
         """Run pytest as a subprocess with given arguments.
 
         Any plugins added to the :py:attr:`plugins` list will be added using the
@@ -1315,6 +1320,7 @@ class Testdir:
         :param args: the sequence of arguments to pass to the pytest subprocess
         :param timeout: the period in seconds after which to timeout and raise
             :py:class:`Testdir.TimeoutExpired`
+        :kwarg stdin: optional standard input.  Passed through to :func:`run`.
 
         Returns a :py:class:`RunResult`.
         """
@@ -1327,7 +1333,7 @@ class Testdir:
         if plugins:
             args = ("-p", plugins[0]) + args
         args = self._getpytestargs() + args
-        return self.run(*args, timeout=timeout)
+        return self.run(*args, timeout=timeout, stdin=stdin)
 
     def spawn_pytest(self, *args: str, **kwargs) -> "pexpect.spawn":
         """Run pytest using pexpect.
@@ -1409,6 +1415,18 @@ class LineComp:
         return LineMatcher(lines1).fnmatch_lines(lines2)
 
 
+# TODO: toterminal method that can apply colors?
+class LineMatcherFailed(Failed):
+    def __init__(self, *, msg: str, log_output: List[str]):
+        self._log_text = log_output
+        if log_output:
+            # TODO: info about (not) matched line number or similar?
+            #       It is good to have a newline after "Log:", but there
+            #       is much space there.  Maybe at least a "===" "heading"?
+            msg = "{}\nLog:\n{}".format(msg, "\n".join(log_output))
+        super().__init__(msg=msg)
+
+
 class LineMatcher:
     """Flexible matching of text.
 
@@ -1433,16 +1451,19 @@ class LineMatcher:
     def fnmatch_lines_random(self, lines2: Sequence[str]) -> None:
         """Check lines exist in the output in any order (using :func:`python:fnmatch.fnmatch`).
         """
+        __tracebackhide__ = True
         self._match_lines_random(lines2, fnmatch)
 
     def re_match_lines_random(self, lines2: Sequence[str]) -> None:
         """Check lines exist in the output in any order (using :func:`python:re.match`).
         """
+        __tracebackhide__ = True
         self._match_lines_random(lines2, lambda name, pat: bool(re.match(pat, name)))
 
     def _match_lines_random(
         self, lines2: Sequence[str], match_func: Callable[[str, str], bool]
     ) -> None:
+        __tracebackhide__ = True
         lines2 = self._getlines(lines2)
         for line in lines2:
             for x in self.lines:
@@ -1450,8 +1471,9 @@ class LineMatcher:
                     self._log("matched: ", repr(line))
                     break
             else:
-                self._log("line %r not found in output" % line)
-                raise ValueError(self._log_text)
+                msg = "line %r not found in output" % line
+                self._log(msg)
+                self._fail(msg)
 
     def get_lines_after(self, fnline: str) -> Sequence[str]:
         """Return all lines following the given line in the text.
@@ -1551,12 +1573,11 @@ class LineMatcher:
                     break
                 else:
                     if consecutive and started:
-                        msg = "no consecutive match: {!r}".format(line)
-                        self._log(msg)
-                        self._log(
-                            "{:>{width}}".format("with:", width=wnick), repr(nextline)
+                        self._fail(
+                            "no consecutive match: {!r} with {!r}".format(
+                                line, nextline,
+                            )
                         )
-                        self._fail(msg)
                     if not nomatchprinted:
                         self._log(
                             "{:>{width}}".format("nomatch:", width=wnick), repr(line)
@@ -1565,8 +1586,7 @@ class LineMatcher:
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
                 extralines.append(nextline)
             else:
-                msg = "remains unmatched: {!r}".format(line)
-                self._log(msg)
+                msg = "unmatched: {!r}".format(line)
                 self._fail(msg)
         self._log_output = []
 
@@ -1600,10 +1620,7 @@ class LineMatcher:
         wnick = len(match_nickname) + 1
         for line in self.lines:
             if match_func(line, pat):
-                msg = "{}: {!r}".format(match_nickname, pat)
-                self._log(msg)
-                self._log("{:>{width}}".format("with:", width=wnick), repr(line))
-                self._fail(msg)
+                self._fail("{}: {!r} with {!r}".format(match_nickname, pat, line))
             else:
                 if not nomatch_printed:
                     self._log("{:>{width}}".format("nomatch:", width=wnick), repr(pat))
@@ -1613,9 +1630,9 @@ class LineMatcher:
 
     def _fail(self, msg: str) -> None:
         __tracebackhide__ = True
-        log_text = self._log_text
+        log_output = self._log_output
         self._log_output = []
-        pytest.fail(log_text, short_msg=msg)
+        raise LineMatcherFailed(msg=msg, log_output=log_output)
 
     def str(self) -> str:
         """Return the entire original text."""

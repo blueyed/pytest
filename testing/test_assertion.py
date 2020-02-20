@@ -1,6 +1,9 @@
 import collections.abc as collections_abc
 import sys
 import textwrap
+from typing import Any
+from typing import List
+from typing import Optional
 
 import attr
 
@@ -312,9 +315,13 @@ class TestBinReprIntegration:
         result.stdout.fnmatch_lines(["*test_hello*FAIL*", "*test_check*PASS*"])
 
 
-def callequal(left, right, verbose=0):
+def callop(op: str, left: Any, right: Any, verbose: int = 0) -> Optional[List[str]]:
     config = mock_config(verbose=verbose)
-    return plugin.pytest_assertrepr_compare(config, "==", left, right)
+    return plugin.pytest_assertrepr_compare(config, op, left, right)
+
+
+def callequal(left: Any, right: Any, verbose: int = 0) -> Optional[List[str]]:
+    return callop("==", left, right, verbose)
 
 
 class TestAssert_reprcompare:
@@ -326,9 +333,7 @@ class TestAssert_reprcompare:
         assert len(summary) < 65
 
     def test_text_diff(self):
-        diff = callequal("spam", "eggs")[1:]
-        assert "- eggs" in diff
-        assert "+ spam" in diff
+        assert callequal("spam", "eggs") == ["'spam' == 'eggs'", "- eggs", "+ spam"]
 
     def test_text_skipping(self):
         lines = callequal("a" * 50 + "spam", "a" * 50 + "eggs")
@@ -345,8 +350,13 @@ class TestAssert_reprcompare:
         left = "foo\nspam\nbar"
         right = "foo\neggs\nbar"
         diff = callequal(left, right)
-        assert "- eggs" in diff
-        assert "+ spam" in diff
+        assert diff == [
+            r"'foo\nspam\nbar' == 'foo\neggs\nbar'",
+            r"  foo",
+            r"- eggs",
+            r"+ spam",
+            r"  bar",
+        ]
 
     def test_bytes_diff_normal(self):
         """Check special handling for bytes diff (#5260)"""
@@ -719,10 +729,28 @@ class TestAssert_reprcompare:
             def __repr__(self):
                 raise ValueError(42)
 
+        expected_expl = [
+            "(pytest_assertion plugin: representation of details failed:"
+            " {}:{}: ValueError: 42.".format(
+                __file__, A.__repr__.__code__.co_firstlineno + 1
+            ),
+            " Probably an object has a faulty __repr__.)",
+        ]
+
         expl = callequal([], [A()])
-        assert "ValueError" in "".join(expl)
-        expl = callequal({}, {"1": A()})
-        assert "faulty" in "".join(expl)
+        assert expl[0].startswith("[] == [<[ValueError...")
+        assert "raised in repr" not in expl[0]
+
+        expl = callequal({}, {"1": A()}, verbose=1)
+        assert expl[0].startswith("{} == {'1': <[Value...")
+        assert "raised in repr" not in expl[0]
+        assert expl[1:] == expected_expl
+
+        # verbose=2 gets full repr with missing diff (because of crash).
+        expl = callequal({}, {"1": A()}, verbose=2)
+        assert expl[0].startswith("{} == <[ValueError")
+        assert "raised in repr" in expl[0]
+        assert expl[1:] == expected_expl
 
     def test_one_repr_empty(self):
         """
@@ -744,10 +772,7 @@ class TestAssert_reprcompare:
     def test_unicode(self):
         left = "£€"
         right = "£"
-        expl = callequal(left, right)
-        assert expl[0] == "'£€' == '£'"
-        assert expl[1] == "- £"
-        assert expl[2] == "+ £€"
+        assert callequal(left, right) == ["'£€' == '£'", "- £", "+ £€"]
 
     def test_nonascii_text(self):
         """
@@ -774,6 +799,26 @@ class TestAssert_reprcompare:
             assert isinstance(line, str)
         msg = "\n".join(expl)
         assert msg
+
+    def test_compare_eq_sequence_aligns_long_index_diff(self):
+        diff = callequal(["a" * 40], ["a" * 20 + "x" + "a" * 19], verbose=0)
+        assert diff == [
+            "['aaaaaaaaaaa...aaaaaaaaaaaa'] == ['aaaaaaaaaaa...aaaaaaaaaaaa']",
+            "At index 0 diff:",
+            "'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' !=",
+            "'aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa'",
+            "Use -v to get the full diff",
+        ]
+        diff = callequal(["a" * 40], ["a" * 20 + "x" + "a" * 19], verbose=1)
+        assert diff == [
+            "['aaaaaaaaaaa...aaaaaaaaaaaa'] == ['aaaaaaaaaaa...aaaaaaaaaaaa']",
+            "At index 0 diff: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' != 'aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa'",
+            "Full diff:",
+            "- ['aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa']",
+            "?                       ^",
+            "+ ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']",
+            "?                       ^",
+        ]
 
 
 class TestAssert_reprcompare_dataclass:
@@ -1060,10 +1105,16 @@ class TestTruncateExplanation:
         # without -vv, truncate the message showing a few diff lines only
         result.stdout.fnmatch_lines(
             [
-                "*+ 1*",
-                "*+ 3*",
-                "*+ 5*",
-                "*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines,
+                r">       assert a == b",
+                r"E       AssertionError: assert '000000000000...6666666666666' == '000000000000...6666666666666'",
+                r"E         Skipping 91 identical leading characters in diff, use -v to show",
+                r"E           000000000",
+                r"E         + 1*",
+                r"E           2*",
+                r"E         + 3*",
+                r"E           4*",
+                r"E         ",
+                r"*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines,
             ]
         )
 
@@ -1078,7 +1129,22 @@ class TestTruncateExplanation:
         result.stdout.fnmatch_lines(["* 6*"])
 
         result = testdir.runpytest("-vv")
-        result.stdout.fnmatch_lines(["* 6*"])
+        result.stdout.fnmatch_lines(
+            [
+                r">       assert a == b",
+                r"E       AssertionError: assert ('0*0\n'\n * '5*5\n'\n '6*6')"
+                r" == ('0*0\n'\n '2*2\n'\n '4*4\n'\n '6*6')",
+                r"E           0*0",
+                r"E         + 1*1",
+                r"E           2*2",
+                r"E         + 3*3",
+                r"E           4*4",
+                r"E         + 5*5",
+                r"E           6*6",
+                r"",
+            ],
+            consecutive=True,
+        )
 
         monkeypatch.setenv("CI", "")
         result = testdir.runpytest()
@@ -1119,10 +1185,13 @@ def test_rewritten(testdir):
     assert testdir.runpytest().ret == 0
 
 
-def test_reprcompare_notin():
-    config = mock_config()
-    detail = plugin.pytest_assertrepr_compare(config, "not in", "foo", "aaafoobbb")[1:]
-    assert detail == ["'foo' is contained here:", "  aaafoobbb", "?    +++"]
+def test_reprcompare_notin() -> None:
+    assert callop("not in", "foo", "aaafoobbb") == [
+        "'foo' not in 'aaafoobbb'",
+        "'foo' is contained here:",
+        "  aaafoobbb",
+        "?    +++",
+    ]
 
 
 def test_reprcompare_whitespaces():
@@ -1134,6 +1203,17 @@ def test_reprcompare_whitespaces():
         r"- '\n'",
         r"+ '\r\n'",
         r"?  ++",
+    ]
+
+
+def test_reprcompare_zerowidth_and_non_printable():
+    assert callequal("\x00\x1b[31mred", "\x1b[31mgreen") == [
+        r"'\x00\x1b[31mred' == '\x1b[31mgreen'",
+        r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
+        r"- '\x1b[31mgreen'",
+        r"?          -  ^^",
+        r"+ '\x00\x1b[31mred'",
+        r"?  ++++          ^",
     ]
 
 
@@ -1261,7 +1341,7 @@ def test_traceback_failure(testdir):
             "E       assert 3 == 2",
             "E        +  where 2 = g()",
             "",
-            "*test_traceback_failure.py:4: AssertionError",
+            "*test_traceback_failure.py:4: assert 3 == 2...",
         ]
     )
 
@@ -1282,7 +1362,7 @@ def test_traceback_failure(testdir):
             "E       assert 3 == 2",
             "E        +  where 2 = g()",
             "",
-            "*test_traceback_failure.py:4: AssertionError",
+            "*test_traceback_failure.py:4: assert 3 == 2...",
         ]
     )
 
@@ -1370,14 +1450,16 @@ def test_AssertionError_message(testdir):
             "E       AssertionError: (1, 2)",
             "E       assert 0",
             "",
-            "test_AssertionError_message.py:3: AssertionError",
+            "test_AssertionError_message.py:3: AssertionError: (1, 2)...",
             "    def test_bytes():",
             ">       assert 0, b'b' * 80",
-            "E       AssertionError: (b'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'",
+            "E       AssertionError: (b'{}'".format("b" * 76),
             "E          b'bbbb')",
             "E       assert 0",
             "",
-            "test_AssertionError_message.py:6: AssertionError",
+            "test_AssertionError_message.py:6: AssertionError: (b'{}'...".format(
+                "b" * 76
+            ),
             "*= 2 failed in *",
         ]
     )
@@ -1395,11 +1477,55 @@ def test_diff_newline_at_end(testdir):
     result.stdout.fnmatch_lines(
         r"""
         *assert 'asdf' == 'asdf\n'
-        *  - asdf
-        *  ?     -
+        E       AssertionError: assert 'asdf' == 'asdf\n'
+        E         NOTE: Strings contain different line-endings. Escaping them using repr().
+        *  - asdf\n
+        *  ?     --
         *  + asdf
     """
     )
+
+
+def test_diff_different_line_endings():
+    assert callequal("asdf\n", "asdf", verbose=2) == [
+        r"'asdf\n' == 'asdf'",
+        r"NOTE: Strings contain different line-endings. Escaping them using repr().",
+        r"- asdf",
+        r"+ asdf\n",
+        r"?     ++",
+        r"+ ",
+    ]
+
+    assert callequal("line1\r\nline2", "line1\nline2", verbose=2) == [
+        r"'line1\r\nline2' == 'line1\nline2'",
+        r"NOTE: Strings contain different line-endings. Escaping them using repr().",
+        r"- line1\n",
+        r"+ line1\r\n",
+        r"?       ++",
+        r"  line2",
+    ]
+
+    # Only '\r' is considered non-printable
+    assert callequal("line1\r\nline2", "line1\nline2\r", verbose=2) == [
+        r"'line1\r\nline2' == 'line1\nline2\r'",
+        r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
+        r"  'line1'",
+        r"- 'line2\r'",
+        r"?       --",
+        r"+ 'line2'",
+    ]
+
+    # More on left.
+    assert callequal("line1\r\nline2\r\nline3\r\n", "line1\nline2", verbose=2) == [
+        r"'line1\r\nline2\r\nline3\r\n' == 'line1\nline2'",
+        r"NOTE: Strings contain different line-endings. Escaping them using repr().",
+        r"- line1\n",
+        r"+ line1\r\n",
+        r"?       ++",
+        r"  line2",
+        r"+ line3",
+        r"+ ",
+    ]
 
 
 @pytest.mark.filterwarnings("default")
