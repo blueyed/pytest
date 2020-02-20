@@ -41,6 +41,17 @@ from _pytest.reports import TestReport
 REPORT_COLLECTING_RESOLUTION = 0.5
 RE_COLOR_ESCAPES = re.compile(r"\x1b\[[\d;]+m")
 
+KNOWN_TYPES = (
+    "failed",
+    "passed",
+    "skipped",
+    "deselected",
+    "xfailed",
+    "xpassed",
+    "warnings",
+    "error",
+)
+
 _REPORTCHARS_DEFAULT = "fE"
 
 KNOWN_TYPES = (
@@ -370,9 +381,7 @@ class TerminalReporter:
         self.startdir = config.invocation_dir
         if file is None:
             file = sys.stdout
-        self._tw = _pytest.config.create_terminal_writer(config, file)
-        # self.writer will be deprecated in pytest-3.4
-        self.writer = self._tw
+        self.writer = self._tw = _pytest.config.create_terminal_writer(config, file)
         self.currentfspath = None  # type: Any
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup
@@ -1178,7 +1187,7 @@ class TerminalReporter:
             main_color = "yellow"
         return main_color
 
-    def _set_main_color(self) -> Tuple[str, List[str]]:
+    def _set_main_color(self) -> None:
         unknown_types = []  # type: List[str]
         for found_type in self.stats.keys():
             if found_type:  # setup/teardown reports have an empty key, ignore them
@@ -1186,7 +1195,6 @@ class TerminalReporter:
                     unknown_types.append(found_type)
         self._known_types = list(KNOWN_TYPES) + unknown_types
         self._main_color = self._determine_main_color(bool(unknown_types))
-        return self._main_color, self._known_types
 
     def build_summary_stats_line(self) -> Tuple[List[Tuple[str, Dict[str, bool]]], str]:
         main_color, known_types = self._get_main_color()

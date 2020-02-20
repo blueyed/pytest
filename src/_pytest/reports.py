@@ -6,6 +6,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+import attr
 import py
 
 from _pytest._code.code import ExceptionChainRepr
@@ -283,8 +284,7 @@ class TestReport(BaseReport):
             if not isinstance(excinfo, ExceptionInfo):
                 outcome = "failed"
                 longrepr = excinfo
-            # Type ignored -- see comment where skip.Exception is defined.
-            elif excinfo.errisinstance(skip.Exception):  # type: ignore
+            elif excinfo.errisinstance(skip.Exception):
                 outcome = "skipped"
                 r = excinfo._getreprcrash()
                 longrepr = (str(r.path), r.lineno, r.message)
@@ -375,8 +375,8 @@ def _report_to_json(report):
                 entry_data["data"][key] = value.__dict__.copy()
         return entry_data
 
-    def serialize_repr_traceback(reprtraceback):
-        result = reprtraceback.__dict__.copy()
+    def serialize_repr_traceback(reprtraceback: ReprTraceback):
+        result = attr.asdict(reprtraceback)
         result["reprentries"] = [
             serialize_repr_entry(x) for x in reprtraceback.reprentries
         ]
@@ -384,7 +384,7 @@ def _report_to_json(report):
 
     def serialize_repr_crash(reprcrash: Optional[ReprFileLocation]):
         if reprcrash is not None:
-            return reprcrash.__dict__.copy()
+            return attr.asdict(reprcrash)
         else:
             return None
 

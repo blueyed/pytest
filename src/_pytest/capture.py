@@ -152,6 +152,13 @@ class CaptureManager:
     def _capturing_for_request(
         self, request: FixtureRequest
     ) -> Generator["CaptureFixture", None, None]:
+        """
+        Context manager that creates a ``CaptureFixture`` instance for the
+        given ``request``, ensuring there is only a single one being requested
+        at the same time.
+
+        This is used as a helper with ``capsys``, ``capfd`` etc.
+        """
         if self._capture_fixture:
             other_name = next(
                 k
@@ -545,8 +552,12 @@ class FDCaptureBinary:
             self.tmpfile_fd = tmpfile.fileno()
 
     def __repr__(self):
-        return "<FDCapture {} oldfd={} _state={!r}>".format(
-            self.targetfd, getattr(self, "targetfd_save", None), self._state
+        return "<{} {} oldfd={} _state={!r} tmpfile={}>".format(
+            self.__class__.__name__,
+            self.targetfd,
+            getattr(self, "targetfd_save", "<UNSET>"),
+            self._state,
+            hasattr(self, "tmpfile") and repr(self.tmpfile) or "<UNSET>",
         )
 
     def _start(self):
@@ -632,8 +643,12 @@ class SysCapture:
         self.tmpfile = tmpfile
 
     def __repr__(self):
-        return "<SysCapture {} _old={!r}, tmpfile={!r} _state={!r}>".format(
-            self.name, self._old, self.tmpfile, self._state
+        return "<{} {} _old={} _state={!r} tmpfile={!r}>".format(
+            self.__class__.__name__,
+            self.name,
+            hasattr(self, "_old") and repr(self._old) or "<UNSET>",
+            self._state,
+            self.tmpfile,
         )
 
     def start(self):
@@ -648,7 +663,7 @@ class SysCapture:
 
     def done(self):
         setattr(sys, self.name, self._old)
-        self._old = None
+        del self._old
         self.tmpfile.close()
         self._state = "done"
 
