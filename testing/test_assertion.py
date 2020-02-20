@@ -1200,6 +1200,16 @@ def test_reprcompare_notin() -> None:
     ]
 
 
+def test_reprcompare_notin_newline() -> None:
+    assert callop("not in", "foo\n", "aaafoo\nbbb") == [
+        r"'foo\n' not in 'aaafoo\nbbb'",
+        r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
+        r"'foo\n' is contained here:",
+        r"  'aaafoo\nbbb'",
+        r"?     +++++",
+    ]
+
+
 def test_reprcompare_whitespaces():
     config = mock_config()
     detail = plugin.pytest_assertrepr_compare(config, "==", "\r\n", "\n")
