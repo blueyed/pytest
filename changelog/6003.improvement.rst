@@ -1,1 +1,0 @@
-Improve short excinfo with LineMatcher failures in short test summaries, via new ``OutcomeException.short_msg``.

@@ -1285,7 +1285,7 @@ def test_pdb_can_be_rewritten(testdir):
             "E         +1",
             "E         -2",
             "",
-            "pdb.py:2: AssertionError",
+            "pdb.py:2: assert 1 == 2...",
             "*= 1 failed in *",
         ]
     )

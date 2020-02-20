@@ -809,7 +809,7 @@ raise ValueError()
                 ">       raise ValueError(x)",
                 "E       ValueError: 0",
                 "",
-                "{}:3: ValueError".format(mod.__file__),
+                "{}:3: ValueError: 0".format(mod.__file__),
             ]
         )
         assert raised == 3
@@ -920,7 +920,7 @@ raise ValueError()
         assert tw_mock.lines[10] == ""
         line = tw_mock.get_write_msg(11)
         assert line.endswith("mod.py")
-        assert tw_mock.lines[12] == ":3: ValueError"
+        assert tw_mock.lines[12] == ":3: ValueError: 3"
 
     def test_toterminal_long_missing_source(self, importasmod, tmpdir, tw_mock):
         mod = importasmod(
@@ -950,7 +950,7 @@ raise ValueError()
         assert tw_mock.lines[8] == ""
         line = tw_mock.get_write_msg(9)
         assert line.endswith("mod.py")
-        assert tw_mock.lines[10] == ":3: ValueError"
+        assert tw_mock.lines[10] == ":3: ValueError: 3"
 
     def test_toterminal_long_incomplete_source(self, importasmod, tmpdir, tw_mock):
         mod = importasmod(
@@ -980,7 +980,7 @@ raise ValueError()
         assert tw_mock.lines[8] == ""
         line = tw_mock.get_write_msg(9)
         assert line.endswith("mod.py")
-        assert tw_mock.lines[10] == ":3: ValueError"
+        assert tw_mock.lines[10] == ":3: ValueError: 3"
 
     def test_toterminal_long_filenames(self, importasmod, tw_mock):
         mod = importasmod(
@@ -1141,7 +1141,8 @@ raise ValueError()
         assert tw_mock.lines[24] == ""
         line = tw_mock.get_write_msg(25)
         assert line.endswith("mod.py")
-        assert tw_mock.lines[26] == ":8: Err"
+        # TODO: remove module prefix, as with OutcomeExceptions?
+        assert tw_mock.lines[26] == ":8: test_exc_chain_repr0.mod.Err"
         assert tw_mock.lines[27] == ""
         assert (
             tw_mock.lines[28]

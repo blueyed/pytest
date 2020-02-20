@@ -210,7 +210,7 @@ class Node(metaclass=NodeMeta):
 
     # methods for ordering nodes
     @property
-    def nodeid(self):
+    def nodeid(self) -> str:
         """ a ::-separated string denoting its collection tree address. """
         return self._nodeid
 

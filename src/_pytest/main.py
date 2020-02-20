@@ -486,7 +486,7 @@ class Session(nodes.FSCollector):
         self._notfound = []
         initialpaths = []  # type: List[py.path.local]
         self._initial_parts = []  # type: List[Tuple[py.path.local, List[str]]]
-        self.items = items = []
+        self.items = items = []  # type: List[nodes.Item]
         for arg in args:
             fspath, parts = self._parsearg(arg)
             self._initial_parts.append((fspath, parts))
