@@ -15,6 +15,9 @@ from _pytest._io import TerminalWriter
     ],
 )
 def test_code_highlight(has_markup, expected, color_mapping):
+    if has_markup:
+        pytest.importorskip("pygments")
+
     f = StringIO()
     tw = TerminalWriter(f)
     tw.hasmarkup = has_markup

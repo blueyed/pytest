@@ -2480,6 +2480,8 @@ def test_via_exec(testdir: Testdir) -> None:
 
 class TestCodeHighlight:
     def test_code_highlight_simple(self, testdir: Testdir, color_mapping) -> None:
+        pytest.importorskip("pygments")
+
         testdir.makepyfile(
             """
             def test_foo():
@@ -2499,6 +2501,8 @@ class TestCodeHighlight:
         )
 
     def test_code_highlight_continuation(self, testdir: Testdir, color_mapping) -> None:
+        pytest.importorskip("pygments")
+
         testdir.makepyfile(
             """
             def test_foo():
