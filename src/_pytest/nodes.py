@@ -1,3 +1,4 @@
+import inspect
 import os
 import warnings
 from functools import lru_cache
@@ -20,13 +21,15 @@ from _pytest.compat import cached_property
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import PytestPluginManager
-from _pytest.deprecated import NODE_USE_FROM_PARENT
+from _pytest.deprecated import NODE_REMOVED_ARGUMENT
+from _pytest.deprecated import NODE_REQUIRES_PARENT
 from _pytest.fixtures import FixtureDef
 from _pytest.fixtures import FixtureLookupError
 from _pytest.fixtures import FixtureLookupErrorRepr
 from _pytest.mark.structures import Mark
 from _pytest.mark.structures import MarkDecorator
 from _pytest.mark.structures import NodeKeywords
+from _pytest.outcomes import fail
 from _pytest.outcomes import Failed
 
 if TYPE_CHECKING:
@@ -77,11 +80,41 @@ def ischildnode(baseid, nodeid):
 
 
 class NodeMeta(type):
-    def __call__(self, *k, **kw):
-        warnings.warn(NODE_USE_FROM_PARENT.format(name=self.__name__), stacklevel=2)
-        return super().__call__(*k, **kw)
+    def __call__(cls, *args, **kwargs):
+        from _pytest.main import Session  # noqa: F811
+
+        sig = inspect.signature(cls.__init__)
+        bsig = sig.bind(cls, *args, **kwargs)
+
+        if cls is Session:
+            # from_config
+            assert isinstance(bsig.arguments["config"], Config), (args, kwargs)
+            assert len(bsig.arguments) == 2, bsig  # self, config
+        else:
+            # from_parent
+            # TODO: assert hierarchy?
+            if "parent" not in bsig.arguments:
+                # XXX: handle DefinitionMock from tests.  Could also go through
+                # _create instead (or get fixed?)?
+                if not getattr(cls, "_pytest_skip_ctor_check", False):
+                    warnings.warn(
+                        NODE_REQUIRES_PARENT.format(name=cls.__name__), stacklevel=2
+                    )
+            if "config" in bsig.arguments:
+                warnings.warn(
+                    NODE_REMOVED_ARGUMENT.format(name=cls.__name__, arg="config"),
+                    stacklevel=2,
+                )
+            if "session" in bsig.arguments:
+                warnings.warn(
+                    NODE_REMOVED_ARGUMENT.format(name=cls.__name__, arg="session"),
+                    stacklevel=2,
+                )
+
+        return super().__call__(*args, **kwargs)
 
     def _create(self, *k, **kw):
+        """For compatibility with pytest upstream."""
         return super().__call__(*k, **kw)
 
 
@@ -144,10 +177,6 @@ class Node(metaclass=NodeMeta):
             self._nodeid = self.parent.nodeid
             if self.name != "()":
                 self._nodeid += "::" + self.name
-
-    @classmethod
-    def from_parent(cls, parent, *, name):
-        return cls._create(parent=parent, name=name)
 
     @property
     def ihook(self):
@@ -308,7 +337,7 @@ class Node(metaclass=NodeMeta):
         fulltrace = self.config.getoption("fulltrace", False)
         if (
             not fulltrace
-            and isinstance(excinfo.value, Failed)
+            and isinstance(excinfo.value, fail.Exception)
             and not excinfo.value.pytrace
         ):
             return str(excinfo.value)
@@ -463,7 +492,10 @@ class FSCollector(Collector):
 
     @classmethod
     def from_parent(cls, parent, *, fspath):
-        return cls._create(parent=parent, fspath=fspath)
+        """
+        The public constructor
+        """
+        return super().from_parent(parent=parent, fspath=fspath)
 
     def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running
@@ -511,6 +543,9 @@ class Item(Node):
         #: user properties is a list of tuples (name, value) that holds user
         #: defined properties for this test.
         self.user_properties = []  # type: List[Tuple[str, Any]]
+
+    def runtest(self) -> None:
+        raise NotImplementedError("runtest must be implemented by Item subclass")
 
     def add_report_section(self, when: str, key: str, content: str) -> None:
         """

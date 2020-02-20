@@ -316,10 +316,6 @@ def pytest_runtestloop(session):
     """
 
 
-def pytest_itemstart(item, node):
-    """(**Deprecated**) use pytest_runtest_logstart. """
-
-
 @hookspec(firstresult=True)
 def pytest_runtest_protocol(item, nextitem):
     """ implements the runtest_setup/call/teardown protocol for
@@ -428,9 +424,9 @@ def pytest_fixture_setup(fixturedef, request):
 
 
 def pytest_fixture_post_finalizer(fixturedef, request):
-    """ called after fixture teardown, but before the cache is cleared so
-    the fixture result cache ``fixturedef.cached_result`` can
-    still be accessed."""
+    """Called after fixture teardown, but before the cache is cleared, so
+    the fixture result ``fixturedef.cached_result`` is still available (not
+    ``None``)."""
 
 
 # -------------------------------------------------------------------------

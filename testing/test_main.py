@@ -2,7 +2,7 @@ from typing import Optional
 from typing import Tuple
 
 import pytest
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.main import Session
 from _pytest.pytester import Testdir
 

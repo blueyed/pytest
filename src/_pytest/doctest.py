@@ -23,7 +23,7 @@ from _pytest._io import TerminalWriter
 from _pytest.compat import safe_getattr
 from _pytest.compat import TYPE_CHECKING
 from _pytest.fixtures import FixtureRequest
-from _pytest.outcomes import Skipped
+from _pytest.outcomes import OutcomeException
 from _pytest.python_api import approx
 from _pytest.warning_types import PytestWarning
 
@@ -111,9 +111,9 @@ def pytest_collect_file(path, parent):
     config = parent.config
     if path.ext == ".py":
         if config.option.doctestmodules and not _is_setup_py(config, path, parent):
-            return DoctestModule.from_parent(parent, fspath=path)
+            return DoctestModule(path, parent)
     elif _is_doctest(config, path, parent):
-        return DoctestTextfile.from_parent(parent, fspath=path)
+        return DoctestTextfile(path, parent)
 
 
 def _is_setup_py(config, path, parent):
@@ -179,7 +179,7 @@ def _init_runner_class() -> "Type[doctest.DocTestRunner]":
         def report_unexpected_exception(self, out, test, example, exc_info):
             import bdb
 
-            if isinstance(exc_info[1], Skipped):
+            if isinstance(exc_info[1], OutcomeException):
                 raise exc_info[1]
             if isinstance(exc_info[1], bdb.BdbQuit):
                 outcomes.exit("Quitting debugger")
@@ -213,16 +213,18 @@ def _get_runner(
 
 
 class DoctestItem(pytest.Item):
-    def __init__(self, name, parent, runner=None, dtest=None):
+    def __init__(
+        self,
+        name,
+        parent: "Union[DoctestTextfile, DoctestModule]",
+        runner=None,
+        dtest=None,
+    ):
         super().__init__(name, parent)
         self.runner = runner
         self.dtest = dtest
         self.obj = None
         self.fixture_request = None
-
-    @classmethod
-    def from_parent(cls, parent, *, name, runner, dtest):
-        return cls._create(name=name, parent=parent, runner=runner, dtest=dtest)
 
     def setup(self):
         if self.dtest is not None:
@@ -234,7 +236,7 @@ class DoctestItem(pytest.Item):
                 globs[name] = value
             self.dtest.globs.update(globs)
 
-    def runtest(self):
+    def runtest(self) -> None:
         _check_all_skipped(self.dtest)
         self._disable_output_capturing_for_darwin()
         failures = []  # type: List[doctest.DocTestFailure]
@@ -379,9 +381,7 @@ class DoctestTextfile(pytest.Module):
         parser = doctest.DocTestParser()
         test = parser.get_doctest(text, globs, name, filename, 0)
         if test.examples:
-            yield DoctestItem.from_parent(
-                self, name=test.name, runner=runner, dtest=test
-            )
+            yield DoctestItem(test.name, self, runner, test)
 
 
 def _check_all_skipped(test):
@@ -490,9 +490,7 @@ class DoctestModule(pytest.Module):
 
         for test in finder.find(module, module.__name__):
             if test.examples:  # skip empty doctests
-                yield DoctestItem.from_parent(
-                    self, name=test.name, runner=runner, dtest=test
-                )
+                yield DoctestItem(test.name, self, runner, test)
 
 
 def _setup_fixtures(doctest_item):

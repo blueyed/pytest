@@ -48,8 +48,9 @@ def pytest_addoption(parser):
     group = parser.getgroup("debugconfig")
     group.addoption(
         "--version",
+        "-V",
         action="store_true",
-        help="display pytest lib version and import information.",
+        help="display pytest version and information about plugins.",
     )
     group._addoption(
         "-h",
@@ -75,7 +76,7 @@ def pytest_addoption(parser):
         action="store_true",
         default=False,
         help="trace considerations of conftest.py files.",
-    ),
+    )
     group.addoption(
         "--debug",
         action="store_true",

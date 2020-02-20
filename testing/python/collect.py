@@ -4,7 +4,7 @@ import textwrap
 
 import _pytest._code
 import pytest
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.nodes import Collector
 
 
@@ -281,10 +281,10 @@ class TestFunction:
         from _pytest.fixtures import FixtureManager
 
         config = testdir.parseconfigure()
-        session = testdir.Session.from_config(config)
+        session = testdir.Session(config)
         session._fixturemanager = FixtureManager(session)
 
-        return pytest.Function.from_parent(config=config, parent=session, **kwargs)
+        return pytest.Function(parent=session, **kwargs)
 
     def test_function_equality(self, testdir):
         def func1():
@@ -464,7 +464,7 @@ class TestFunction:
                return '3'
 
             @pytest.mark.parametrize('fix2', ['2'])
-            def test_it(fix1):
+            def test_it(fix1, fix2):
                assert fix1 == '21'
                assert not fix3_instantiated
         """
@@ -492,6 +492,19 @@ class TestFunction:
             and "baz" not in keywords[0]
         )
         assert "foo" in keywords[1] and "bar" in keywords[1] and "baz" in keywords[1]
+
+    def test_parametrize_with_empty_string_arguments(self, testdir):
+        items = testdir.getitems(
+            """\
+            import pytest
+
+            @pytest.mark.parametrize('v', ('', ' '))
+            @pytest.mark.parametrize('w', ('', ' '))
+            def test(v, w): ...
+            """
+        )
+        names = {item.name for item in items}
+        assert names == {"test[-]", "test[ -]", "test[- ]", "test[ - ]"}
 
     def test_function_equality_with_callspec(self, testdir):
         items = testdir.getitems(
@@ -892,6 +905,8 @@ class TestTracebackCutting:
             pytest.skip("xxx")
         assert excinfo.traceback[-1].frame.code.name == "skip"
         assert excinfo.traceback[-1].ishidden()
+        assert excinfo.traceback[-2].frame.code.name == "test_skip_simple"
+        assert not excinfo.traceback[-2].ishidden()
 
     def test_traceback_argsetup(self, testdir):
         testdir.makeconftest(
@@ -1025,7 +1040,7 @@ class TestReportInfo:
                     return "ABCDE", 42, "custom"
             def pytest_pycollect_makeitem(collector, name, obj):
                 if name == "test_func":
-                    return MyFunction.from_parent(name=name, parent=collector)
+                    return MyFunction(name, parent=collector)
         """
         )
         item = testdir.getitem("def test_func(): pass")
