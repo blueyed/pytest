@@ -64,7 +64,7 @@ jobs:
           - name: "macos-py36"
             python: "3.6"
             os: macos-latest
-            tox_env: "py36-xdist-coverage"
+            tox_env: "py36-nopygments-xdist-coverage"
             pytest_addopts: "-n4 --verbosity=1"
 
           - name: "windows-py37"
