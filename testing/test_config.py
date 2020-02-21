@@ -1328,9 +1328,7 @@ def test_usageerror_with_fulltrace(testdir: "Testdir") -> None:
     assert result.stdout.lines == []
     assert result.ret == ExitCode.USAGE_ERROR
 
-    args = ["--fulltrace"]
-    testdir.monkeypatch.setattr(sys, "argv", [sys.executable] + args)
-    result = testdir.runpytest(args)
+    result = testdir.runpytest_subprocess("--fulltrace")  # subprocess for sys.argv
     assert result.stderr.lines[0:3] == [
         "ERROR: my_usageerror",
         "",
