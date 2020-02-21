@@ -117,7 +117,11 @@ class Parser:
                 for option in group.options:
                     n = option.names()
                     a = option.attrs()
-                    arggroup.add_argument(*n, **a)
+                    try:
+                        arggroup.add_argument(*n, **a)
+                    except argparse.ArgumentError as exc:
+                        raise UsageError("option group {}: {}".format(group.name, exc))
+
         file_or_dir_arg = optparser.add_argument(FILE_OR_DIR, nargs="*")
         # bash like autocompletion for dirs (appending '/')
         # Type ignored because typeshed doesn't know about argcomplete.
