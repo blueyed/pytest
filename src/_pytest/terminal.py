@@ -436,9 +436,8 @@ class TerminalReporter:
             self.currentfspath = -2
 
     def ensure_newline(self):
-        if self.currentfspath:
+        if self._width_of_current_line:
             self._tw.line()
-            self.currentfspath = None
 
     def write(self, content, **markup):
         self._tw.write(content, **markup)
@@ -473,7 +472,7 @@ class TerminalReporter:
 
     def section(self, title, sep="=", **kw):
         kw.setdefault("bold", True)
-        self._tw.sep(sep, title, **kw)
+        self.write_sep(sep, title, **kw)
 
     def line(self, msg, **kw):
         self._tw.line(msg, **kw)
@@ -917,6 +916,16 @@ class TerminalReporter:
                 values.append(x)
         return values
 
+    def _enforce_newline_for_summary(self):
+        if not getattr(self, "_enforced_newline_for_summary", False):
+            self.ensure_newline()
+            self._tw.line()
+            self._enforced_newline_for_summary = True
+
+    def _write_summary_sep(self, sep, title, **markup):
+        self._enforce_newline_for_summary()
+        self.write_sep(sep, title, **markup)
+
     def summary_warnings(self):
         if self.hasopt("w"):
             all_warnings = self.stats.get(
@@ -941,7 +950,7 @@ class TerminalReporter:
                 reports_grouped_by_message.setdefault(wr.message, []).append(wr)
 
             title = "warnings summary (final)" if final else "warnings summary"
-            self.write_sep("=", title, yellow=True, bold=False)
+            self._write_summary_sep("=", title, yellow=True, bold=False)
             for message, warning_reports in reports_grouped_by_message.items():
                 has_any_location = False
                 for w in warning_reports:
@@ -965,7 +974,7 @@ class TerminalReporter:
                 reports = self.getreports("passed")
                 if not reports:
                     return
-                self.write_sep("=", "PASSES")
+                self._write_summary_sep("=", "PASSES", yellow=True, bold=False)
                 for rep in reports:
                     if rep.sections:
                         msg = self._getfailureheadline(rep)
@@ -1002,7 +1011,7 @@ class TerminalReporter:
             reports = self.getreports("failed")
             if not reports:
                 return
-            self.write_sep("=", "FAILURES")
+            self._write_summary_sep("=", "FAILURES")
             if self.config.option.tbstyle == "line":
                 for rep in reports:
                     line = self._getcrashline(rep)
@@ -1019,7 +1028,7 @@ class TerminalReporter:
             reports = self.getreports("error")
             if not reports:
                 return
-            self.write_sep("=", "ERRORS")
+            self._write_summary_sep("=", "ERRORS")
             for rep in self.stats["error"]:
                 msg = self._getfailureheadline(rep)
                 if rep.when == "collect":
@@ -1075,8 +1084,9 @@ class TerminalReporter:
             msg += " ({})".format(session.shouldfail)
 
         if display_sep:
-            self.write_sep("=", msg, fullwidth=fullwidth, **main_markup)
+            self._write_summary_sep("=", msg, fullwidth=fullwidth, **main_markup)
         else:
+            self._enforce_newline_for_summary()
             self.write_line(msg, **main_markup)
 
     def short_test_summary(self) -> None:
@@ -1150,7 +1160,7 @@ class TerminalReporter:
                 action(lines)
 
         if lines:
-            self.section("short test summary info", "=")
+            self._write_summary_sep("=", "short test summary info")
             for line in lines:
                 self.write_line(line)
 

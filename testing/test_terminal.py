@@ -126,9 +126,7 @@ class TestTerminal:
         rep.write_fspath_result(modcol.nodeid, ".")
         rep.write_line("hello world")
         lines = linecomp.stringio.getvalue().split("\n")
-        assert not lines[0]
-        assert lines[1].endswith(modcol.name + " .")
-        assert lines[2] == "hello world"
+        assert lines == ["", "{} .".format(modcol.name), "hello world", ""]
 
     def test_show_runtest_logstart(self, testdir, linecomp):
         item = testdir.getitem("def test_func(): pass")
@@ -843,10 +841,30 @@ def test_fail_extra_reporting(tty: bool, use_CI: bool, testdir: Testdir):
     )
 
 
-def test_fail_reporting_with_tb_no(testdir):
+def test_fail_reporting_with_tb_no(testdir: Testdir, LineMatcher) -> None:
+    """Test that testloc is handled properly.
+
+    It also checks that there is no extra newline (fixed in `TerminalReporter`
+    by using `write_sep` in `section`).
+    """
     testdir.makepyfile("def test_this(): assert 0")
     result = testdir.runpytest("-rf", "--tb=no")
-    result.stdout.fnmatch_lines("*short test summary*")
+    LineMatcher(result.stdout.lines[-5:-1]).fnmatch_lines(
+        [
+            "test_fail_reporting_with_tb_no.py F * [[]100%[]]",
+            "",
+            "==*== short test summary info ==*==",
+            "FAILED test_fail_reporting_with_tb_no.py:1::test_this - assert 0",
+        ]
+    )
+    result = testdir.runpytest("-rN", "--tb=no")
+    result.stdout.fnmatch_lines(
+        [
+            "test_fail_reporting_with_tb_no.py F * [[]100%[]]",
+            "",
+            "==*== 1 failed in * ==*==",
+        ]
+    )
 
 
 def test_fail_reporting_on_pass(testdir):
@@ -1366,6 +1384,8 @@ def test_terminal_summary(testdir):
         """
         def pytest_terminal_summary(terminalreporter, exitstatus):
             w = terminalreporter
+            assert w.currentfspath is None
+            w.write("pytest_terminal_summary")
             w.section("hello")
             w.line("world")
             w.line("exitstatus: {0}".format(exitstatus))
@@ -1374,7 +1394,8 @@ def test_terminal_summary(testdir):
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         """
-        *==== hello ====*
+        pytest_terminal_summary
+        ==*== hello ==*==
         world
         exitstatus: 5
     """
