@@ -899,7 +899,7 @@ class Config:
     def pytest_load_initial_conftests(self, early_config):
         self.pluginmanager._set_initial_conftests(early_config.known_args_namespace)
 
-    def _initini(self, args: Sequence[str]) -> None:
+    def _initini(self, args: Sequence[str]) -> argparse.Namespace:
         ns, unknown_args = self._parser.parse_known_and_unknown_args(
             args, namespace=copy.copy(self.option)
         )
@@ -915,16 +915,15 @@ class Config:
         self._parser.addini("addopts", "extra command line options", "args")
         self._parser.addini("minversion", "minimally required pytest version")
         self._override_ini = ns.override_ini or ()
+        return ns
 
-    def _consider_importhook(self, args: Sequence[str]) -> None:
+    def _consider_importhook(self, mode: str) -> None:
         """Install the PEP 302 import hook if using assertion rewriting.
 
         Needs to parse the --assert=<mode> option from the commandline
         and find all the installed plugins to mark them for rewriting
         by the importhook.
         """
-        ns, unknown_args = self._parser.parse_known_and_unknown_args(args)
-        mode = getattr(ns, "assertmode", "plain")
         if mode == "rewrite":
             import _pytest.assertion
 
@@ -958,17 +957,17 @@ class Config:
         for name in _iter_rewritable_modules(package_files):
             hook.mark_rewrite(name)
 
-    def _validate_args(self, args: List[str], via: str) -> List[str]:
+    def _validate_args(
+        self, args: List[str], via: str, ns: argparse.Namespace
+    ) -> Tuple[List[str], argparse.Namespace]:
         """Validate known args."""
         self._parser._config_source_hint = via  # type: ignore
         try:
-            self._parser.parse_known_and_unknown_args(
-                args, namespace=copy.copy(self.option)
-            )
+            ns, _ = self._parser.parse_known_and_unknown_args(args, namespace=ns)
         finally:
             del self._parser._config_source_hint  # type: ignore
 
-        return args
+        return args, ns
 
     def _preparse(self, args: List[str], addopts: bool = True) -> None:
         self._implicit_args = []  # type: List[Tuple[str, List[str]]]
@@ -976,17 +975,27 @@ class Config:
             env_addopts = os.environ.get("PYTEST_ADDOPTS", "")
             if len(env_addopts):
                 env_addopts_ = shlex.split(env_addopts)
-                args[:] = self._validate_args(env_addopts_, "via PYTEST_ADDOPTS") + args
+                args[:] = (
+                    self._validate_args(
+                        env_addopts_, "via PYTEST_ADDOPTS", ns=copy.copy(self.option),
+                    )[0]
+                    + args
+                )
                 self._implicit_args.append(("PYTEST_ADDOPTS", env_addopts_))
-        self._initini(args)
+        ns = self._initini(args)
+        assertmode = ns.assertmode
         if addopts:
             ini_addopts = self.getini("addopts")
             if ini_addopts:
-                args[:] = self._validate_args(ini_addopts, "via addopts config") + args
+                addopts_args, addopts_ns = self._validate_args(
+                    ini_addopts, "via addopts config", ns=ns
+                )
+                args[:] = addopts_args + args
+                assertmode = addopts_ns.assertmode
                 self._implicit_args.insert(0, ("addopts config", ini_addopts))
 
         self._checkversion()
-        self._consider_importhook(args)
+        self._consider_importhook(assertmode)
         self.pluginmanager.consider_preparse(args, exclude_only=False)
         if not os.environ.get("PYTEST_DISABLE_PLUGIN_AUTOLOAD"):
             # Don't autoload from setuptools entry point. Only explicitly specified
