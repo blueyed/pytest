@@ -352,6 +352,8 @@ def get_statement_startend2(lineno: int, node: ast.AST) -> Tuple[int, Optional[i
     # AST's line numbers start indexing at 1
     values = []  # type: List[int]
     for x in ast.walk(node):
+        if isinstance(x, (ast.FunctionDef)):
+            values.extend(deco.lineno - 1 for deco in x.decorator_list)
         if isinstance(x, (ast.stmt, ast.ExceptHandler)):
             values.append(x.lineno - 1)
             for name in ("finalbody", "orelse"):
