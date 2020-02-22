@@ -983,15 +983,15 @@ class Config:
                 )
                 self._implicit_args.append(("PYTEST_ADDOPTS", env_addopts_))
         ns = self._initini(args)
-        assertmode = ns.assertmode
+        assertmode = getattr(ns, "assertmode", "plain")
         if addopts:
             ini_addopts = self.getini("addopts")
             if ini_addopts:
-                addopts_args, addopts_ns = self._validate_args(
+                addopts_args, ns = self._validate_args(
                     ini_addopts, "via addopts config", ns=ns
                 )
                 args[:] = addopts_args + args
-                assertmode = addopts_ns.assertmode
+                assertmode = getattr(ns, "assertmode", "plain")
                 self._implicit_args.insert(0, ("addopts config", ini_addopts))
 
         self._checkversion()
