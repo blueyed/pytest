@@ -1,4 +1,6 @@
 import pytest
+from _pytest._io.saferepr import _pformat_consistent
+from _pytest._io.saferepr import _pformat_dispatch
 from _pytest._io.saferepr import saferepr
 
 
@@ -147,3 +149,11 @@ def test_unicode():
     val = "£€"
     reprval = "'£€'"
     assert saferepr(val) == reprval
+
+
+@pytest.mark.parametrize("func", (_pformat_consistent, _pformat_dispatch))
+def test_consistent_quotes(func):
+    assert func("a") == "'a'"
+    # via pprint.PrettyPrinter._dispatch.
+    assert func("a" * 10, width=5) == "'aaaaaaaaaa'"
+    assert func("foo bar", width=5) == "('foo '\n 'bar')"
