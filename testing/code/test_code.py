@@ -229,3 +229,23 @@ class TestReprFuncArgs:
             tw_mock.lines[0]
             == r"unicode_string = São Paulo, utf8_string = b'S\xc3\xa3o Paulo'"
         )
+
+
+def test_nameerror_with_decorator(testdir):
+    # TODO: unittest with Code (additionally)?!
+    source = """
+        @nameerror_deco1
+        def test():
+            pass
+        """
+    p1 = testdir.makepyfile(source)
+    result = testdir.runpytest(str(p1), "-rf")
+    result.stdout.fnmatch_lines(
+        [
+            "*_ ERROR collecting test_nameerror_with_decorator.py _*",
+            "test_nameerror_with_decorator.py:1: in <module>",
+            "    @nameerror_deco1",
+            "E   NameError: name 'nameerror_deco1' is not defined",
+            "*= 1 error in *",
+        ]
+    )
