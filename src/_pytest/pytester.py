@@ -1568,18 +1568,18 @@ class LineMatcher:
                     started = True
                     break
                 else:
-                    if consecutive and started:
-                        self._fail(
-                            "no consecutive match: {!r} with {!r}".format(
-                                line, nextline,
-                            )
-                        )
                     if not nomatchprinted:
                         self._log(
                             "{:>{width}}".format("nomatch:", width=wnick), repr(line)
                         )
                         nomatchprinted = True
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
+                    if consecutive and started:
+                        self._fail(
+                            "no consecutive match: {!r} with {!r}".format(
+                                line, nextline,
+                            )
+                        )
                 extralines.append(nextline)
             else:
                 msg = "unmatched: {!r}".format(line)

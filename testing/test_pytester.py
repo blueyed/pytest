@@ -538,6 +538,8 @@ def test_linematcher_consecutive():
         "exact match: '1'",
         "fnmatch: '*'",
         "   with: '2'",
+        "nomatch: '3'",
+        "    and: 'other'",
     ]
 
     lm.re_match_lines(["1", r"\d?", "other"], consecutive=True)
