@@ -1144,7 +1144,7 @@ def test_makefile_joins_absolute_path(testdir: Testdir) -> None:
         assert str(p1) == (testdir.tmpdir / absfile) + ".py"
 
 
-def test_makefile_warts(testdir: Testdir) -> None:
+def test_makefile(testdir: Testdir) -> None:
     """Test behavior with makefile.
 
     Additional issues:
@@ -1169,6 +1169,14 @@ def test_makefile_warts(testdir: Testdir) -> None:
 
     assert testdir.tmpdir.listdir() == []
 
+    # Cannot create a file named "ext".
+    with pytest.raises(ValueError, match=r"^no files to create$"):
+        testdir.makefile(ext="")
+
+    # Can create empty file.
+    p1 = testdir.makefile("", "")
+    assert p1.basename == "test_makefile"
+
     with pytest.raises(TypeError, match="got multiple values for argument 'ext'"):
         testdir.makefile("", ext="")  # type: ignore[misc]  # noqa: F821
 
@@ -1184,6 +1192,14 @@ def test_makefile_warts(testdir: Testdir) -> None:
     assert p1.basename == "foo.txt"
     p1 = testdir.makefile(ext="", **{"foo.txt.txt.meh": ""})
     assert p1.basename == "foo.txt.txt"
+
+    # ext=None can be used to not clobber extensions.
+    p1 = testdir.makefile(ext=None, **{"foo.txt": ""})
+    assert p1.basename == "foo.txt"
+    p1 = testdir.makefile(ext=None, **{"foo.txt.txt": ""})
+    assert p1.basename == "foo.txt.txt"
+    p1 = testdir.makefile(ext=None, **{"foo.txt.txt.meh": ""})
+    assert p1.basename == "foo.txt.txt.meh"
 
 
 def test_handles_non_python_items(testdir: Testdir):

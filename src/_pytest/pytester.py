@@ -690,7 +690,9 @@ class Testdir(Generic[AnyStr]):
 
         first_p = True
         for basename, value in items:
-            p = self.tmpdir.join(basename).new(ext=ext)
+            p = self.tmpdir.join(basename)
+            if ext is not None:
+                p = p.new(ext=ext)
             p.dirpath().ensure_dir()
             source = "\n".join(to_text(x) for x in Source(value).lines)
             p.write(source.strip().encode(encoding), "wb")
@@ -699,10 +701,13 @@ class Testdir(Generic[AnyStr]):
                 ret = p
         return ret
 
-    def makefile(self, ext, *args, **kwargs):
+    def makefile(
+        self, ext: Optional[str], *args: Union[bytes, str], **kwargs: Union[bytes, str]
+    ) -> py.path.local:
         r"""Create new file(s) in the testdir.
 
         :param str ext: The extension the file(s) should use, including the dot, e.g. `.py`.
+          If `None` the filenames are used as is.
         :param list[str] args: All args will be treated as strings and joined using newlines.
            The result will be written as contents to the file.  The name of the
            file will be based on the test function requesting this fixture.
