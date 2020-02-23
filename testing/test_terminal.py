@@ -1406,10 +1406,10 @@ def test_terminal_summary_warnings_are_displayed(testdir):
     result = testdir.runpytest("-ra")
     result.stdout.fnmatch_lines(
         [
-            "*= warnings summary =*",
+            "*= warnings summary [[]runtest[]] =*",
             "*warning_from_test*",
             "*= short test summary info =*",
-            "*= warnings summary (final) =*",
+            "*= warnings summary (final) [[]config[]] =*",
             "*conftest.py:3:*internal warning",
             "*== 1 failed, 2 warnings in *",
         ]
@@ -1433,7 +1433,7 @@ def test_terminal_summary_warnings_header_once(testdir):
     result = testdir.runpytest("-ra")
     result.stdout.fnmatch_lines(
         [
-            "*= warnings summary =*",
+            "*= warnings summary [[]runtest[]] =*",
             "*warning_from_test*",
             "*= short test summary info =*",
             "*== 1 failed, 1 warning in *",
