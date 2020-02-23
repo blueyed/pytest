@@ -90,14 +90,14 @@ class TempdirFactory:
 
     _tmppath_factory = attr.ib(type=TempPathFactory)
 
-    def mktemp(self, basename: str, numbered: bool = True):
+    def mktemp(self, basename: str, numbered: bool = True) -> py.path.local:
         """Create a subdirectory of the base temporary directory and return it.
         If ``numbered``, ensure the directory is unique by adding a number
         prefix greater than any existing one.
         """
         return py.path.local(self._tmppath_factory.mktemp(basename, numbered).resolve())
 
-    def getbasetemp(self):
+    def getbasetemp(self) -> py.path.local:
         """backward compat wrapper for ``_tmppath_factory.getbasetemp``"""
         return py.path.local(self._tmppath_factory.getbasetemp().resolve())
 
