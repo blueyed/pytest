@@ -1154,52 +1154,52 @@ def test_makefile(testdir: Testdir) -> None:
     def list_files():
         return sorted([os.path.basename(x) for x in testdir.tmpdir.listdir()])
 
-    # Requires "ext".
-    with pytest.raises(TypeError, match="required positional argument"):
-        testdir.makefile(foo="")  # type: ignore[call-arg]  # noqa: F821
-
-    # Requires items to be created.
-    with pytest.raises(TypeError):
-        testdir.makefile()  # type: ignore[call-arg]  # noqa: F821
-    with pytest.raises(ValueError, match=r"^no files to create$"):
-        testdir.makefile(None)
-    with pytest.raises(ValueError, match=r"^no files to create$"):
-        testdir.makefile(ext="")
     assert list_files() == []
 
-    assert testdir.tmpdir.listdir() == []
+    # Does not require "ext".
+    p1 = testdir.makefile(first="")
+    assert p1.basename == "first"
+    assert list_files() == ["first"]
 
-    # Cannot create a file named "ext".
+    # Requires items to be created.
     with pytest.raises(ValueError, match=r"^no files to create$"):
-        testdir.makefile(ext="")
+        testdir.makefile()
+    with pytest.raises(ValueError, match=r"^no files to create$"):
+        testdir.makefile(None)  # type: ignore
+    assert list_files() == ["first"]
 
     # Can create empty file.
-    p1 = testdir.makefile("", "")
+    p1 = testdir.makefile(None, "")
     assert p1.basename == "test_makefile"
+    assert p1.readlines() == []
+    assert list_files() == ["first", "test_makefile"]
 
-    with pytest.raises(TypeError, match="got multiple values for argument 'ext'"):
-        testdir.makefile("", ext="")  # type: ignore[misc]  # noqa: F821
+    # Can create a file named "ext".
+    p1 = testdir.makefile(ext="content")
+    assert p1.basename == "ext"
+    assert p1.readlines() == ["content"]
+    assert list_files() == ["ext", "first", "test_makefile"]
 
     # However, "ext.py" can be created via `makepyfile` at least.
     p1 = testdir.makepyfile(ext="")
     assert p1.basename == "ext.py"
 
-    # Replaces any "ext".
+    # Uses "ext" as keyword argument.
     p1 = testdir.makefile(ext="txt", **{"foo.txt": ""})
-    assert p1.basename == "foo.txt"
-    # Even if empty.  Could allow for None to skip it.
-    p1 = testdir.makefile(ext="", **{"foo.txt.txt": ""})
-    assert p1.basename == "foo.txt"
-    p1 = testdir.makefile(ext="", **{"foo.txt.txt.meh": ""})
-    assert p1.basename == "foo.txt.txt"
+    assert p1.basename == "ext"
+    p1 = testdir.makefile("ext", "content", ext="ext_kwarg")
+    assert p1.basename == "test_makefile.ext"
+    assert p1.readlines() == ["content"]
+    assert open("ext.ext", "r").readlines() == ["ext_kwarg"]
 
-    # ext=None can be used to not clobber extensions.
+    # ext=None can be used to not clobber/use extensions explicitly.
     p1 = testdir.makefile(ext=None, **{"foo.txt": ""})
     assert p1.basename == "foo.txt"
-    p1 = testdir.makefile(ext=None, **{"foo.txt.txt": ""})
-    assert p1.basename == "foo.txt.txt"
-    p1 = testdir.makefile(ext=None, **{"foo.txt.txt.meh": ""})
-    assert p1.basename == "foo.txt.txt.meh"
+    p1 = testdir.makefile(None, **{"foo.txt": ""})
+    assert p1.basename == "foo.txt"
+    p1 = testdir.makefile(None, "line1", "line2")
+    assert p1.basename == "test_makefile"
+    assert p1.readlines() == ["line1\n", "line2"]
 
 
 def test_handles_non_python_items(testdir: Testdir):

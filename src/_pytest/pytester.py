@@ -670,7 +670,7 @@ class Testdir(Generic[AnyStr]):
 
     def _makefile(
         self,
-        ext: str,
+        ext: Optional[str],
         lines: Sequence[Union[bytes, str]],
         files: Mapping[str, Sequence[Union[bytes, str]]],
         encoding="utf-8",
@@ -701,13 +701,18 @@ class Testdir(Generic[AnyStr]):
                 ret = p
         return ret
 
-    def makefile(
-        self, ext: Optional[str], *args: Union[bytes, str], **kwargs: Union[bytes, str]
+    def makefile(  # noqa: F811
+        self, *args: str, **kwargs: Sequence[str]
     ) -> py.path.local:
         r"""Create new file(s) in the testdir.
 
-        :param str ext: The extension the file(s) should use, including the dot, e.g. `.py`.
-          If `None` the filenames are used as is.
+        :param str ext: (optional) The extension the file(s) should use,
+          including the dot, e.g. `.py`.
+          The argument is only used if there are more positional arguments
+          given, i.e. :code:`makefile("ext")` will create a file with the
+          line `"ext"`.
+          `None` can be used to explicitly not append/replace extensions with
+          filenames.
         :param list[str] args: All args will be treated as strings and joined using newlines.
            The result will be written as contents to the file.  The name of the
            file will be based on the test function requesting this fixture.
@@ -721,9 +726,17 @@ class Testdir(Generic[AnyStr]):
             testdir.makefile(".txt", "line1", "line2")
 
             testdir.makefile(".ini", pytest="[pytest]\naddopts=-rs\n")
-
         """
-        return self._makefile(ext, args, kwargs)
+        ext = None  # type: Optional[str]
+        if args:
+            ext, lines = args[0], args[1:]
+        else:
+            lines = ()
+            if "ext" in kwargs and kwargs["ext"] is None:
+                ext = kwargs.pop("ext")
+            else:
+                ext = None
+        return self._makefile(ext, lines, files=kwargs)
 
     def makeconftest(self, source):
         """Write a contest.py file with 'source' as contents."""
