@@ -818,7 +818,8 @@ def test_fail_extra_reporting(tty: bool, use_CI: bool, testdir: Testdir):
             # TODO: no Log here?  (via tryshort?)
             "FAILED test_fail_extra_reporting.py:9::test_linematcher"
             " - LineMatcherFailed: unmatched: 'last_unmatched'"
-            "\\nLog:\\nnomatch: '2'\\n    and: '1'\\nexact match: '2'\\nnomatch: 'last_unmatched'\\n    and: '3'",
+            r"\nLog:\nnomatch: '2'\n    and: '1'\nexact match: '2'\nnomatch: 'last_unmatched'\n    and: '3'"
+            r"\nremains unmatched: 'last_unmatched'",
         ]
     else:
         msgs = [
@@ -836,6 +837,7 @@ def test_fail_extra_reporting(tty: bool, use_CI: bool, testdir: Testdir):
             "E       exact match: '2'",
             "E       nomatch: 'last_unmatched'",
             "E           and: '3'",
+            "E       remains unmatched: 'last_unmatched'",
             "*test summary*",
         ]
         + msgs

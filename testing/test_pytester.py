@@ -494,6 +494,7 @@ def test_linematcher_match_failure() -> None:
         "   with: 'foo'",
         "nomatch: 'baz'",
         "    and: 'bar'",
+        "remains unmatched: 'baz'",
     ]
 
     lm = LineMatcher(["foo", "foo", "bar"])
@@ -508,6 +509,7 @@ def test_linematcher_match_failure() -> None:
         "    with: 'foo'",
         " nomatch: 'baz'",
         "     and: 'bar'",
+        "remains unmatched: 'baz'",
     ]
 
 
@@ -523,6 +525,7 @@ def test_linematcher_fnmatch_lines():
         "exact match: '2'",
         "nomatch: 'last_unmatched'",
         "    and: '3'",
+        "remains unmatched: 'last_unmatched'",
     ]
 
 
@@ -538,6 +541,8 @@ def test_linematcher_consecutive():
         "exact match: '1'",
         "fnmatch: '*'",
         "   with: '2'",
+        "nomatch: '3'",
+        "    and: 'other'",
     ]
 
     lm.re_match_lines(["1", r"\d?", "other"], consecutive=True)
@@ -545,10 +550,12 @@ def test_linematcher_consecutive():
         lm.re_match_lines(["1", r"\d", r"\d"], consecutive=True)
     assert str(excinfo.value).splitlines() == [
         r"no consecutive match: '\\d' with 'other'",
-        "Log:",
-        "exact match: '1'",
-        "re.match: '\\\\d'",
-        "    with: '2'",
+        r"Log:",
+        r"exact match: '1'",
+        r"re.match: '\\d'",
+        r"    with: '2'",
+        r" nomatch: '\\d'",
+        r"     and: 'other'",
     ]
 
 
@@ -588,6 +595,8 @@ def test_linematcher_no_matching(function) -> None:
                 "    and: 'cachedir: .pytest_cache'",
                 "    and: 'collecting ... collected 1 item'",
                 "    and: ''",
+                "fnmatch: '*.py OK*'",
+                "   with: 'show_fixtures_per_test.py OK'",
             ]
         else:
             assert obtained == [
@@ -599,6 +608,8 @@ def test_linematcher_no_matching(function) -> None:
                 "     and: 'cachedir: .pytest_cache'",
                 "     and: 'collecting ... collected 1 item'",
                 "     and: ''",
+                "re.match: '.*py OK'",
+                "    with: 'show_fixtures_per_test.py OK'",
             ]
 
     func = getattr(lm, function)
@@ -610,7 +621,12 @@ def test_linematcher_no_matching_after_match() -> None:
     lm.fnmatch_lines(["1", "3"])
     with pytest.raises(Failed) as e:
         lm.no_fnmatch_line("*")
-    assert str(e.value).splitlines() == ["fnmatch: '*' with '1'"]
+    assert str(e.value).splitlines() == [
+        "fnmatch: '*' with '1'",
+        "Log:",
+        "fnmatch: '*'",
+        "   with: '1'",
+    ]
     with pytest.raises(Failed) as e:
         lm.no_fnmatch_line("3")
     assert str(e.value).splitlines() == [
@@ -619,6 +635,8 @@ def test_linematcher_no_matching_after_match() -> None:
         "nomatch: '3'",
         "    and: '1'",
         "    and: '2'",
+        "fnmatch: '3'",
+        "   with: '3'",
     ]
 
 

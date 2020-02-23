@@ -1568,20 +1568,21 @@ class LineMatcher:
                     started = True
                     break
                 else:
-                    if consecutive and started:
-                        self._fail(
-                            "no consecutive match: {!r} with {!r}".format(
-                                line, nextline,
-                            )
-                        )
                     if not nomatchprinted:
                         self._log(
                             "{:>{width}}".format("nomatch:", width=wnick), repr(line)
                         )
                         nomatchprinted = True
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
+                    if consecutive and started:
+                        self._fail(
+                            "no consecutive match: {!r} with {!r}".format(
+                                line, nextline,
+                            )
+                        )
                 extralines.append(nextline)
             else:
+                self._log("remains unmatched: {!r}".format(line))
                 msg = "unmatched: {!r}".format(line)
                 self._fail(msg)
         self._log_output = []
@@ -1616,7 +1617,10 @@ class LineMatcher:
         wnick = len(match_nickname) + 1
         for line in self.lines:
             if match_func(line, pat):
-                self._fail("{}: {!r} with {!r}".format(match_nickname, pat, line))
+                msg = "{}: {!r}".format(match_nickname, pat)
+                self._log(msg)
+                self._log("{:>{width}}".format("with:", width=wnick), repr(line))
+                self._fail(msg + " with {!r}".format(line))
             else:
                 if not nomatch_printed:
                     self._log("{:>{width}}".format("nomatch:", width=wnick), repr(pat))
