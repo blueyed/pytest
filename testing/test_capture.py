@@ -14,8 +14,10 @@ from typing import TextIO
 
 import pytest
 from _pytest import capture
+from _pytest.capture import _get_multicapture
 from _pytest.capture import CaptureManager
-from _pytest.main import ExitCode
+from _pytest.capture import MultiCapture
+from _pytest.config import ExitCode
 
 # note: py.io capture tests where copied from
 # pylib 1.4.20.dev2 (rev 13d9af95547e)
@@ -32,6 +34,10 @@ def StdCaptureFD(out=True, err=True, in_=True):
 
 def StdCapture(out=True, err=True, in_=True):
     return capture.MultiCapture(out, err, in_, Capture=capture.SysCapture)
+
+
+def TeeStdCapture(out=True, err=True, in_=True):
+    return capture.MultiCapture(out, err, in_, Capture=capture.TeeSysCapture)
 
 
 class TestCaptureManager:
@@ -473,9 +479,9 @@ class TestCaptureFixture:
         result.stdout.fnmatch_lines(
             [
                 "*test_one*",
-                "*capsys*capfd*same*time*",
+                "E * cannot use capfd and capsys at the same time",
                 "*test_two*",
-                "*capfd*capsys*same*time*",
+                "E * cannot use capsys and capfd at the same time",
                 "*2 failed in*",
             ]
         )
@@ -818,6 +824,25 @@ class TestCaptureIO:
         assert f.getvalue() == "foo\r\n"
 
 
+class TestCaptureAndPassthroughIO(TestCaptureIO):
+    def test_text(self):
+        sio = io.StringIO()
+        f = capture.CaptureAndPassthroughIO(sio)
+        f.write("hello")
+        s1 = f.getvalue()
+        assert s1 == "hello"
+        s2 = sio.getvalue()
+        assert s2 == s1
+        f.close()
+        sio.close()
+
+    def test_unicode_and_str_mixture(self):
+        sio = io.StringIO()
+        f = capture.CaptureAndPassthroughIO(sio)
+        f.write("\u00f6")
+        pytest.raises(TypeError, f.write, b"hello")
+
+
 def test_dontreadfrominput():
     from _pytest.capture import DontReadFromInput
 
@@ -986,6 +1011,18 @@ class TestFDCapture:
             cap.done()
             pytest.raises(AttributeError, cap.suspend)
 
+            assert repr(cap) == (
+                "<FDCapture 1 oldfd=<UNSET> _state='done' tmpfile={!r}>".format(
+                    cap.tmpfile
+                )
+            )
+            # Should not crash with missing "_old".
+            assert repr(cap.syscapture) == (
+                "<SysCapture stdout _old=<UNSET> _state='done' tmpfile={!r}>".format(
+                    cap.syscapture.tmpfile
+                )
+            )
+
     def test_capfd_sys_stdout_mode(self, capfd):
         assert "b" not in sys.stdout.mode
 
@@ -1118,6 +1155,23 @@ class TestStdCapture:
             pytest.raises(IOError, sys.stdin.read)
 
 
+class TestTeeStdCapture(TestStdCapture):
+    captureclass = staticmethod(TeeStdCapture)
+
+    def test_capturing_error_recursive(self):
+        """ for TeeStdCapture since we passthrough stderr/stdout, cap1
+        should get all output, while cap2 should only get "cap2\n" """
+
+        with self.getcapture() as cap1:
+            print("cap1")
+            with self.getcapture() as cap2:
+                print("cap2")
+                out2, err2 = cap2.readouterr()
+                out1, err1 = cap1.readouterr()
+        assert out1 == "cap1\ncap2\n"
+        assert out2 == "cap2\n"
+
+
 class TestStdCaptureFD(TestStdCapture):
     pytestmark = needsosdup
     captureclass = staticmethod(StdCaptureFD)
@@ -1176,19 +1230,19 @@ class TestStdCaptureFDinvalidFD:
             def test_stdout():
                 os.close(1)
                 cap = StdCaptureFD(out=True, err=False, in_=False)
-                assert repr(cap.out) == "<FDCapture 1 oldfd=None _state=None>"
+                assert repr(cap.out) == "<FDCapture 1 oldfd=<UNSET> _state=None tmpfile=<UNSET>>"
                 cap.stop_capturing()
 
             def test_stderr():
                 os.close(2)
                 cap = StdCaptureFD(out=False, err=True, in_=False)
-                assert repr(cap.err) == "<FDCapture 2 oldfd=None _state=None>"
+                assert repr(cap.err) == "<FDCapture 2 oldfd=<UNSET> _state=None tmpfile=<UNSET>>"
                 cap.stop_capturing()
 
             def test_stdin():
                 os.close(0)
                 cap = StdCaptureFD(out=False, err=False, in_=True)
-                assert repr(cap.in_) == "<FDCapture 0 oldfd=None _state=None>"
+                assert repr(cap.in_) == "<FDCapture 0 oldfd=<UNSET> _state=None tmpfile=<UNSET>>"
                 cap.stop_capturing()
         """
         )
@@ -1258,7 +1312,7 @@ def test_close_and_capture_again(testdir):
     )
 
 
-@pytest.mark.parametrize("method", ["SysCapture", "FDCapture"])
+@pytest.mark.parametrize("method", ["SysCapture", "FDCapture", "TeeSysCapture"])
 def test_capturing_and_logging_fundamentals(testdir, method):
     if method == "StdCaptureFD" and not hasattr(os, "dup"):
         pytest.skip("need os.dup")
@@ -1515,3 +1569,10 @@ def test_encodedfile_writelines(tmpfile: BinaryIO) -> None:
     tmpfile.close()
     with pytest.raises(ValueError):
         ef.read()
+
+
+def test__get_multicapture() -> None:
+    assert isinstance(_get_multicapture("fd"), MultiCapture)
+    pytest.raises(ValueError, _get_multicapture, "unknown").match(
+        r"^unknown capturing method: 'unknown'"
+    )

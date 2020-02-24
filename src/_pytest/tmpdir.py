@@ -14,7 +14,6 @@ from .pathlib import make_numbered_dir
 from .pathlib import make_numbered_dir_with_cleanup
 from .pathlib import Path
 from _pytest.fixtures import FixtureRequest
-from _pytest.monkeypatch import MonkeyPatch
 
 
 @attr.s
@@ -45,8 +44,30 @@ class TempPathFactory:
             given_basetemp=config.option.basetemp, trace=config.trace.get("tmpdir")
         )
 
+    def _ensure_relative_to_basetemp(self, basename: str):
+        basename = os.path.normpath(basename)
+        if (self.getbasetemp() / basename).resolve().parent != self.getbasetemp():
+            raise ValueError(
+                "{} is not a normalized and relative path".format(basename)
+            )
+        return basename
+
     def mktemp(self, basename: str, numbered: bool = True) -> Path:
-        """makes a temporary directory managed by the factory"""
+        """Creates a new temporary directory managed by the factory.
+
+        :param basename:
+            Directory base name, must be a relative path.
+
+        :param numbered:
+            If True, ensure the directory is unique by adding a number
+            prefix greater than any existing one: ``basename="foo"`` and ``numbered=True``
+            means that this function will create directories named ``"foo-0"``,
+            ``"foo-1"``, ``"foo-2"`` and so on.
+
+        :return:
+            The path to the new directory.
+        """
+        basename = self._ensure_relative_to_basetemp(basename)
         if not numbered:
             p = self.getbasetemp().joinpath(basename)
             p.mkdir()
@@ -91,9 +112,8 @@ class TempdirFactory:
     _tmppath_factory = attr.ib(type=TempPathFactory)
 
     def mktemp(self, basename: str, numbered: bool = True) -> py.path.local:
-        """Create a subdirectory of the base temporary directory and return it.
-        If ``numbered``, ensure the directory is unique by adding a number
-        prefix greater than any existing one.
+        """
+        Same as :meth:`TempPathFactory.mkdir`, but returns a ``py.path.local`` object.
         """
         return py.path.local(self._tmppath_factory.mktemp(basename, numbered).resolve())
 
@@ -114,35 +134,18 @@ def get_user() -> Optional[str]:
         return None
 
 
-def pytest_configure(config) -> None:
-    """Create a TempdirFactory and attach it to the config object.
-
-    This is to comply with existing plugins which expect the handler to be
-    available at pytest_configure time, but ideally should be moved entirely
-    to the tmpdir_factory session fixture.
-    """
-    mp = MonkeyPatch()
-    tmppath_handler = TempPathFactory.from_config(config)
-    t = TempdirFactory(tmppath_handler)
-    config._cleanup.append(mp.undo)
-    mp.setattr(config, "_tmp_path_factory", tmppath_handler, raising=False)
-    mp.setattr(config, "_tmpdirhandler", t, raising=False)
-
-
 @pytest.fixture(scope="session")
-def tmpdir_factory(request: FixtureRequest) -> TempdirFactory:
+def tmpdir_factory(tmp_path_factory) -> TempdirFactory:
     """Return a :class:`_pytest.tmpdir.TempdirFactory` instance for the test session.
     """
-    # Set dynamically by pytest_configure() above.
-    return request.config._tmpdirhandler  # type: ignore
+    return TempdirFactory(tmp_path_factory)
 
 
 @pytest.fixture(scope="session")
 def tmp_path_factory(request: FixtureRequest) -> TempPathFactory:
     """Return a :class:`_pytest.tmpdir.TempPathFactory` instance for the test session.
     """
-    # Set dynamically by pytest_configure() above.
-    return request.config._tmp_path_factory  # type: ignore
+    return TempPathFactory.from_config(request.config)
 
 
 def _mk_tmp(request: FixtureRequest, factory: TempPathFactory) -> Path:

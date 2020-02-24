@@ -1,7 +1,7 @@
 import os
 
 import pytest
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.pytester import Testdir
 
 

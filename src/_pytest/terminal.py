@@ -7,7 +7,6 @@ import collections
 import datetime
 import os
 import platform
-import re
 import sys
 import time
 from functools import partial
@@ -31,7 +30,7 @@ from _pytest import nodes
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
 from _pytest.config import Config
-from _pytest.main import ExitCode
+from _pytest.config import ExitCode
 from _pytest.main import Session
 from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import Path
@@ -39,7 +38,6 @@ from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
 REPORT_COLLECTING_RESOLUTION = 0.5
-RE_COLOR_ESCAPES = re.compile(r"\x1b\[[\d;]+m")
 
 KNOWN_TYPES = (
     "failed",
@@ -51,6 +49,8 @@ KNOWN_TYPES = (
     "warnings",
     "error",
 )
+
+_REPORTCHARS_DEFAULT = "fE"
 
 
 def _getdimensions():
@@ -168,7 +168,7 @@ def pytest_addoption(parser):
         default=0,
         dest="verbose",
         help="increase verbosity.",
-    ),
+    )
     group._addoption(
         "-q",
         "--quiet",
@@ -176,7 +176,7 @@ def pytest_addoption(parser):
         default=0,
         dest="verbose",
         help="decrease verbosity.",
-    ),
+    )
     group._addoption(
         "--verbosity",
         dest="verbose",
@@ -188,12 +188,13 @@ def pytest_addoption(parser):
         "-r",
         action="store",
         dest="reportchars",
-        default="",
+        default=_REPORTCHARS_DEFAULT,
         metavar="chars",
         help="show extra test summary info as specified by chars: (f)ailed, "
         "(E)rror, (s)kipped, (x)failed, (X)passed, "
         "(p)assed, (P)assed with output, (a)ll except passed (p/P), or (A)ll. "
-        "(w)arnings are enabled by default (see --disable-warnings).",
+        "(w)arnings are enabled by default (see --disable-warnings), "
+        "'N' can be used to reset the list. (default: 'fE').",
     )
     group._addoption(
         "--disable-warnings",
@@ -277,38 +278,42 @@ def pytest_configure(config: Config) -> None:
 
 
 def getreportopt(config: Config) -> str:
-    reportopts = ""
     reportchars = config.option.reportchars
-    if not config.option.disable_warnings and "w" not in reportchars:
-        reportchars += "w"
-    elif config.option.disable_warnings and "w" in reportchars:
-        reportchars = reportchars.replace("w", "")
+
+    old_aliases = {"F", "S"}
+    reportopts = ""
     for char in reportchars:
+        if char in old_aliases:
+            char = char.lower()
         if char == "a":
-            reportopts = "sxXwEf"
+            reportopts = "sxXEf"
         elif char == "A":
-            reportopts = "PpsxXwEf"
-            break
+            reportopts = "PpsxXEf"
+        elif char == "N":
+            reportopts = ""
         elif char not in reportopts:
             reportopts += char
+
+    if not config.option.disable_warnings and "w" not in reportopts:
+        reportopts = "w" + reportopts
+    elif config.option.disable_warnings and "w" in reportopts:
+        reportopts = reportopts.replace("w", "")
+
     return reportopts
 
 
 @pytest.hookimpl(trylast=True)  # after _pytest.runner
 def pytest_report_teststatus(report: TestReport) -> Tuple[str, str, str]:
+    letter = "F"
     if report.passed:
         letter = "."
     elif report.skipped:
         letter = "s"
-    elif report.failed:
-        letter = "F"
-        if report.when != "call":
-            letter = "f"
 
-    # Report failed CollectReports as "error" (in line with pytest_collectreport).
     outcome = report.outcome
-    if report.when == "collect" and outcome == "failed":
+    if report.when in ("collect", "setup", "teardown") and outcome == "failed":
         outcome = "error"
+        letter = "E"
 
     return outcome, letter, outcome.upper()
 
@@ -366,9 +371,7 @@ class TerminalReporter:
         self.startdir = config.invocation_dir
         if file is None:
             file = sys.stdout
-        self._tw = _pytest.config.create_terminal_writer(config, file)
-        # self.writer will be deprecated in pytest-3.4
-        self.writer = self._tw
+        self.writer = self._tw = _pytest.config.create_terminal_writer(config, file)
         self.currentfspath = None  # type: Any
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup
@@ -1144,9 +1147,7 @@ class TerminalReporter:
             "x": show_xfailed,
             "X": show_xpassed,
             "f": partial(show_simple, "failed"),
-            "F": partial(show_simple, "failed"),
             "s": show_skipped,
-            "S": show_skipped,
             "p": partial(show_simple, "passed"),
             "E": partial(show_simple, "error"),
         }  # type: Mapping[str, Callable[[List[str]], None]]
@@ -1181,7 +1182,7 @@ class TerminalReporter:
             main_color = "yellow"
         return main_color
 
-    def _set_main_color(self) -> Tuple[str, List[str]]:
+    def _set_main_color(self) -> None:
         unknown_types = []  # type: List[str]
         for found_type in self.stats.keys():
             if found_type:  # setup/teardown reports have an empty key, ignore them
@@ -1189,7 +1190,6 @@ class TerminalReporter:
                     unknown_types.append(found_type)
         self._known_types = list(KNOWN_TYPES) + unknown_types
         self._main_color = self._determine_main_color(bool(unknown_types))
-        return self._main_color, self._known_types
 
     def build_summary_stats_line(self) -> Tuple[List[Tuple[str, Dict[str, bool]]], str]:
         main_color, known_types = self._get_main_color()

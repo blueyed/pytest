@@ -1,6 +1,7 @@
 """ command line options, ini-file and conftest.py processing. """
 import argparse
 import copy
+import enum
 import inspect
 import os
 import shlex
@@ -60,6 +61,29 @@ hookimpl = HookimplMarker("pytest")
 hookspec = HookspecMarker("pytest")
 
 
+class ExitCode(enum.IntEnum):
+    """
+    .. versionadded:: 5.0
+
+    Encodes the valid exit codes by pytest.
+
+    Currently users and plugins may supply other exit codes as well.
+    """
+
+    #: tests passed
+    OK = 0
+    #: tests failed
+    TESTS_FAILED = 1
+    #: pytest was interrupted
+    INTERRUPTED = 2
+    #: an internal error got in the way
+    INTERNAL_ERROR = 3
+    #: pytest was misused
+    USAGE_ERROR = 4
+    #: pytest couldn't find tests
+    NO_TESTS_COLLECTED = 5
+
+
 class ConftestImportFailure(Exception):
     def __init__(self, path, excinfo):
         Exception.__init__(self, path, excinfo)
@@ -67,7 +91,7 @@ class ConftestImportFailure(Exception):
         self.excinfo = excinfo  # type: Tuple[Type[Exception], Exception, TracebackType]
 
 
-def main(args=None, plugins=None) -> "Union[int, _pytest.main.ExitCode]":
+def main(args=None, plugins=None) -> Union[int, ExitCode]:
     """ return exit code, after performing an in-process test run.
 
     :arg args: list of command line arguments.
@@ -75,8 +99,6 @@ def main(args=None, plugins=None) -> "Union[int, _pytest.main.ExitCode]":
     :arg plugins: list of plugin objects to be auto-registered during
                   initialization.
     """
-    from _pytest.main import ExitCode
-
     try:
         try:
             config = _prepareconfig(args, plugins)
@@ -141,7 +163,13 @@ def directory_arg(path, optname):
 
 
 # Plugins that cannot be disabled via "-p no:X" currently.
-essential_plugins = ("mark", "main", "runner", "fixtures", "helpconfig")  # Provides -p.
+essential_plugins = (
+    "mark",
+    "main",
+    "runner",
+    "fixtures",
+    "helpconfig",  # Provides -p.
+)
 
 default_plugins = essential_plugins + (
     "python",
@@ -205,13 +233,15 @@ def get_plugin_manager():
     return get_config().pluginmanager
 
 
-def _prepareconfig(args=None, plugins=None):
+def _prepareconfig(
+    args: Optional[Union[py.path.local, List[str]]] = None, plugins=None
+):
     if args is None:
         args = sys.argv[1:]
     elif isinstance(args, py.path.local):
         args = [str(args)]
-    elif not isinstance(args, (tuple, list)):
-        msg = "`args` parameter expected to be a list or tuple of strings, got: {!r} (type: {})"
+    elif not isinstance(args, list):
+        msg = "`args` parameter expected to be a list of strings, got: {!r} (type: {})"
         raise TypeError(msg.format(args, type(args)))
 
     config = get_config(args, plugins)
@@ -485,7 +515,7 @@ class PytestPluginManager(PluginManager):
                     if path and path.relto(dirpath) or path == dirpath:
                         assert mod not in mods
                         mods.append(mod)
-            self.trace("loaded conftestmodule %r" % (mod))
+            self.trace("loading conftestmodule {!r}".format(mod))
             self.consider_conftest(mod)
             return mod
 
@@ -770,6 +800,11 @@ class Config:
         self.hook.pytest_addoption.call_historic(
             kwargs=dict(parser=self._parser, pluginmanager=self.pluginmanager)
         )
+
+        if TYPE_CHECKING:
+            from _pytest.cacheprovider import Cache
+
+            self.cache = None  # type: Optional[Cache]
 
     @property
     def invocation_dir(self):

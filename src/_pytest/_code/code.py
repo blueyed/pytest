@@ -655,17 +655,18 @@ class ExceptionInfo(Generic[_E]):
         )
         return fmt.repr_excinfo(self)
 
-    def match(self, regexp: "Union[str, Pattern]") -> bool:
+    def match(self, regexp: "Union[str, Pattern]") -> "Literal[True]":
         """
-        Check whether the regular expression 'regexp' is found in the string
-        representation of the exception using ``re.search``. If it matches
-        then True is returned (so that it is possible to write
-        ``assert excinfo.match()``). If it doesn't match an AssertionError is
-        raised.
+        Check whether the regular expression `regexp` matches the string
+        representation of the exception using :func:`python:re.search`.
+        If it matches `True` is returned.
+        If it doesn't match an `AssertionError` is raised.
         """
         __tracebackhide__ = True
-        if not re.search(regexp, str(self.value)):
-            assert 0, "Pattern {!r} not found in {!r}".format(regexp, str(self.value))
+        assert re.search(
+            regexp, str(self.value)
+        ), "Pattern {!r} does not match {!r}".format(regexp, str(self.value))
+        # Return True to allow for "assert excinfo.match()".
         return True
 
 
@@ -812,10 +813,8 @@ class FormattedExcinfo:
             else:
                 message = ""
             path = self._makepath(entry.path)
-            filelocrepr = ReprFileLocation(str(path), entry.lineno + 1, message)
-            localsrepr = None
-            if not short:
-                localsrepr = self.repr_locals(entry.locals)
+            filelocrepr = ReprFileLocation(path, entry.lineno + 1, message)
+            localsrepr = self.repr_locals(entry.locals)
             return ReprEntry(lines, reprargs, localsrepr, filelocrepr, style)
         if excinfo:
             lines.extend(self.get_exconly(excinfo, indent=4))
@@ -846,7 +845,6 @@ class FormattedExcinfo:
         for index, entry in enumerate(traceback):
             einfo = (last == entry) and excinfo or None
             reprentry = self.repr_traceback_entry(entry, einfo)
-
             entries.append(reprentry)
         return ReprTraceback(entries, extraline, style=self.style)
 
@@ -1002,18 +1000,13 @@ class ReprExceptionInfo(ExceptionRepr):
         super().toterminal(tw)
 
 
+@attr.s
 class ReprTraceback(TerminalRepr):
-    entrysep = "_ "
+    reprentries = attr.ib(type=Sequence[Union["ReprEntry", "ReprEntryNative"]])
+    extraline = attr.ib(type=Optional[str])
+    style = attr.ib(type="_TracebackStyle")
 
-    def __init__(
-        self,
-        reprentries: Sequence[Union["ReprEntry", "ReprEntryNative"]],
-        extraline: Optional[str],
-        style: "_TracebackStyle",
-    ) -> None:
-        self.reprentries = reprentries
-        self.extraline = extraline
-        self.style = style
+    entrysep = "_ "
 
     def toterminal(self, tw: TerminalWriter) -> None:
         # the entries might have different styles
@@ -1069,24 +1062,39 @@ class ReprEntry(TerminalRepr):
     @staticmethod
     def _color_error_lines(tw: TerminalWriter, lines: Sequence[str]) -> None:
         bold_before = False
+        seen_indent_lines = []  # type: List[str]
+        seen_source_lines = []  # type: List[str]
         for line in lines:
             if line.startswith("E   "):
+                if seen_source_lines:
+                    tw._write_source(seen_source_lines, seen_indent_lines)
+                    seen_indent_lines = []
+                    seen_source_lines = []
+
                 if bold_before:
                     markup = tw.markup("E   ", bold=True, red=True)
                     markup += tw.markup(line[4:])
                 else:
                     markup = tw.markup(line, bold=True, red=True)
                     bold_before = True
+                tw.line(markup)
             else:
                 bold_before = False
-                markup = line
-            tw.line(markup)
+                seen_indent_lines.append(line[:4])
+                seen_source_lines.append(line[4:])
+
+        if seen_source_lines:
+            tw._write_source(seen_source_lines, seen_indent_lines)
+            seen_indent_lines = []
+            seen_source_lines = []
 
     def toterminal(self, tw: TerminalWriter) -> None:
         if self.style == "short":
             assert self.reprfileloc is not None
             self.reprfileloc.toterminal(tw, style="short")
             self._color_error_lines(tw, self.lines)
+            if self.reprlocals:
+                self.reprlocals.toterminal(tw, indent=" " * 8)
             return
 
         if self.reprfuncargs:
@@ -1108,12 +1116,9 @@ class ReprEntry(TerminalRepr):
 
 @attr.s
 class ReprFileLocation(TerminalRepr):
-    path = attr.ib(type=str)
+    path = attr.ib(type=str, converter=str)
     lineno = attr.ib(type=int)
     message = attr.ib(type=str)
-
-    def __attrs_post_init__(self):
-        assert type(self.path) == str
 
     def _get_short_msg(self) -> str:
         msg = self.message
@@ -1136,9 +1141,9 @@ class ReprLocals(TerminalRepr):
     def __init__(self, lines: Sequence[str]) -> None:
         self.lines = lines
 
-    def toterminal(self, tw: TerminalWriter) -> None:
+    def toterminal(self, tw: TerminalWriter, indent="") -> None:
         for line in self.lines:
-            tw.line(line)
+            tw.line(indent + line)
 
 
 class ReprFuncArgs(TerminalRepr):

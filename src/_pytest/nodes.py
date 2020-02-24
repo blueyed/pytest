@@ -27,6 +27,7 @@ from _pytest.fixtures import FixtureLookupErrorRepr
 from _pytest.mark.structures import Mark
 from _pytest.mark.structures import MarkDecorator
 from _pytest.mark.structures import NodeKeywords
+from _pytest.outcomes import fail
 from _pytest.outcomes import Failed
 
 if TYPE_CHECKING:
@@ -146,8 +147,22 @@ class Node(metaclass=NodeMeta):
                 self._nodeid += "::" + self.name
 
     @classmethod
-    def from_parent(cls, parent, *, name):
-        return cls._create(parent=parent, name=name)
+    def from_parent(cls, parent: "Node", **kw):
+        """
+        Public Constructor for Nodes
+
+        This indirection got introduced in order to enable removing
+        the fragile logic from the node constructors.
+
+        Subclasses can use ``super().from_parent(...)`` when overriding the construction
+
+        :param parent: the parent node of this test Node
+        """
+        if "config" in kw:
+            raise TypeError("config is not a valid argument for from_parent")
+        if "session" in kw:
+            raise TypeError("session is not a valid argument for from_parent")
+        return cls._create(parent=parent, **kw)
 
     @property
     def ihook(self):
@@ -308,7 +323,7 @@ class Node(metaclass=NodeMeta):
         fulltrace = self.config.getoption("fulltrace", False)
         if (
             not fulltrace
-            and isinstance(excinfo.value, Failed)
+            and isinstance(excinfo.value, fail.Exception)
             and not excinfo.value.pytrace
         ):
             return str(excinfo.value)
@@ -459,7 +474,10 @@ class FSCollector(Collector):
 
     @classmethod
     def from_parent(cls, parent, *, fspath):
-        return cls._create(parent=parent, fspath=fspath)
+        """
+        The public constructor
+        """
+        return super().from_parent(parent=parent, fspath=fspath)
 
     def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running
@@ -507,6 +525,9 @@ class Item(Node):
         #: user properties is a list of tuples (name, value) that holds user
         #: defined properties for this test.
         self.user_properties = []  # type: List[Tuple[str, Any]]
+
+    def runtest(self) -> None:
+        raise NotImplementedError("runtest must be implemented by Item subclass")
 
     def add_report_section(self, when: str, key: str, content: str) -> None:
         """

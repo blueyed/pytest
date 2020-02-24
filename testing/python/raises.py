@@ -1,3 +1,4 @@
+import re
 import sys
 
 import pytest
@@ -154,7 +155,7 @@ class TestRaises:
         else:
             assert False, "Expected pytest.raises.Exception"
 
-    @pytest.mark.parametrize("method", ["function", "with"])
+    @pytest.mark.parametrize("method", ["function", "function_match", "with"])
     def test_raises_cyclic_reference(self, method):
         """
         Ensure pytest.raises does not leave a reference cycle (#1965).
@@ -175,6 +176,8 @@ class TestRaises:
 
         if method == "function":
             pytest.raises(ValueError, t)
+        elif method == "function_match":
+            pytest.raises(ValueError, t).match("^$")
         else:
             with pytest.raises(ValueError):
                 t()
@@ -184,7 +187,7 @@ class TestRaises:
 
         assert refcount == len(gc.get_referrers(t))
 
-    def test_raises_match(self):
+    def test_raises_match(self) -> None:
         msg = r"with base \d+"
         with pytest.raises(ValueError, match=msg):
             int("asdf")
@@ -194,19 +197,33 @@ class TestRaises:
             int("asdf")
 
         msg = "with base 16"
-        expr = r"Pattern '{}' not found in \"invalid literal for int\(\) with base 10: 'asdf'\"".format(
+        expr = "Pattern {!r} does not match \"invalid literal for int() with base 10: 'asdf'\"".format(
             msg
         )
-        with pytest.raises(AssertionError, match=expr):
+        with pytest.raises(AssertionError, match=re.escape(expr)):
             with pytest.raises(ValueError, match=msg):
                 int("asdf", base=10)
+
+        # "match" without context manager.
+        pytest.raises(ValueError, int, "asdf").match("invalid literal")
+        with pytest.raises(AssertionError) as excinfo:
+            pytest.raises(ValueError, int, "asdf").match(msg)
+        assert str(excinfo.value) == expr
+
+        pytest.raises(TypeError, int, match="invalid")
+
+        def tfunc(match):
+            raise ValueError("match={}".format(match))
+
+        pytest.raises(ValueError, tfunc, match="asdf").match("match=asdf")
+        pytest.raises(ValueError, tfunc, match="").match("match=")
 
     def test_match_failure_string_quoting(self):
         with pytest.raises(AssertionError) as excinfo:
             with pytest.raises(AssertionError, match="'foo"):
                 raise AssertionError("'bar")
         (msg,) = excinfo.value.args
-        assert msg == 'Pattern "\'foo" not found in "\'bar"'
+        assert msg == 'Pattern "\'foo" does not match "\'bar"'
 
     def test_raises_match_wrong_type(self):
         """Raising an exception with the wrong type and match= given.

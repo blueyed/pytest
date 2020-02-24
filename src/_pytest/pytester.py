@@ -32,8 +32,8 @@ from _pytest.capture import MultiCapture
 from _pytest.capture import SysCapture
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import _PluggyPlugin
+from _pytest.config import ExitCode
 from _pytest.fixtures import FixtureRequest
-from _pytest.main import ExitCode
 from _pytest.main import Session
 from _pytest.monkeypatch import MonkeyPatch
 from _pytest.nodes import Collector
@@ -1451,16 +1451,19 @@ class LineMatcher:
     def fnmatch_lines_random(self, lines2: Sequence[str]) -> None:
         """Check lines exist in the output in any order (using :func:`python:fnmatch.fnmatch`).
         """
+        __tracebackhide__ = True
         self._match_lines_random(lines2, fnmatch)
 
     def re_match_lines_random(self, lines2: Sequence[str]) -> None:
         """Check lines exist in the output in any order (using :func:`python:re.match`).
         """
+        __tracebackhide__ = True
         self._match_lines_random(lines2, lambda name, pat: bool(re.match(pat, name)))
 
     def _match_lines_random(
         self, lines2: Sequence[str], match_func: Callable[[str, str], bool]
     ) -> None:
+        __tracebackhide__ = True
         lines2 = self._getlines(lines2)
         for line in lines2:
             for x in self.lines:
@@ -1468,8 +1471,9 @@ class LineMatcher:
                     self._log("matched: ", repr(line))
                     break
             else:
-                self._log("line %r not found in output" % line)
-                raise ValueError(self._log_text)
+                msg = "line %r not found in output" % line
+                self._log(msg)
+                self._fail(msg)
 
     def get_lines_after(self, fnline: str) -> Sequence[str]:
         """Return all lines following the given line in the text.

@@ -334,8 +334,8 @@ class TestAssert_reprcompare:
 
     def test_text_diff(self):
         diff = callequal("spam", "eggs")[1:]
-        assert "- spam" in diff
-        assert "+ eggs" in diff
+        assert "- eggs" in diff
+        assert "+ spam" in diff
 
     def test_text_skipping(self):
         lines = callequal("a" * 50 + "spam", "a" * 50 + "eggs")
@@ -345,8 +345,8 @@ class TestAssert_reprcompare:
 
     def test_text_skipping_verbose(self):
         lines = callequal("a" * 50 + "spam", "a" * 50 + "eggs", verbose=1)
-        assert "- " + "a" * 50 + "spam" in lines
-        assert "+ " + "a" * 50 + "eggs" in lines
+        assert "- " + "a" * 50 + "eggs" in lines
+        assert "+ " + "a" * 50 + "spam" in lines
 
     def test_multiline_text_diff(self):
         left = "foo\nspam\nbar"
@@ -354,10 +354,9 @@ class TestAssert_reprcompare:
         diff = callequal(left, right)
         assert diff == [
             r"'foo\nspam\nbar' == 'foo\neggs\nbar'",
-            # r"NOTE: Strings contain different line-endings. Escaping them using repr().",
             r"  foo",
-            r"- spam",
-            r"+ eggs",
+            r"- eggs",
+            r"+ spam",
             r"  bar",
         ]
 
@@ -378,8 +377,8 @@ class TestAssert_reprcompare:
             "b'spam' == b'eggs'",
             "At index 0 diff: b's' != b'e'",
             "Full diff:",
-            "- b'spam'",
-            "+ b'eggs'",
+            "- b'eggs'",
+            "+ b'spam'",
         ]
 
     def test_list(self):
@@ -394,9 +393,9 @@ class TestAssert_reprcompare:
                 [0, 2],
                 """
                 Full diff:
-                - [0, 1]
+                - [0, 2]
                 ?     ^
-                + [0, 2]
+                + [0, 1]
                 ?     ^
             """,
                 id="lists",
@@ -406,9 +405,9 @@ class TestAssert_reprcompare:
                 {0: 2},
                 """
                 Full diff:
-                - {0: 1}
+                - {0: 2}
                 ?     ^
-                + {0: 2}
+                + {0: 1}
                 ?     ^
             """,
                 id="dicts",
@@ -418,9 +417,9 @@ class TestAssert_reprcompare:
                 {0, 2},
                 """
                 Full diff:
-                - {0, 1}
+                - {0, 2}
                 ?     ^
-                + {0, 2}
+                + {0, 1}
                 ?     ^
             """,
                 id="sets",
@@ -458,7 +457,7 @@ class TestAssert_reprcompare:
             "   'a',",
             "   'b',",
             "   'c',",
-            "+  '" + long_d + "',",
+            "-  '" + long_d + "',",
             "  ]",
         ]
 
@@ -471,7 +470,7 @@ class TestAssert_reprcompare:
             "   'a',",
             "   'b',",
             "   'c',",
-            "-  '" + long_d + "',",
+            "+  '" + long_d + "',",
             "  ]",
         ]
 
@@ -488,10 +487,10 @@ class TestAssert_reprcompare:
             "At index 0 diff: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' != 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'",
             "Full diff:",
             "  [",
-            "-  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',",
+            "+  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',",
             "   'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',",
             "   'cccccccccccccccccccccccccccccc',",
-            "+  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',",
+            "-  'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',",
             "  ]",
         ]
 
@@ -507,30 +506,30 @@ class TestAssert_reprcompare:
             "Left contains 7 more items, first extra item: 'aaaaaaaaaa'",
             "Full diff:",
             "  [",
-            "+  'should not get wrapped',",
-            "-  'a',",
-            "-  'aaaaaaaaaa',",
-            "-  'aaaaaaaaaa',",
-            "-  'aaaaaaaaaa',",
-            "-  'aaaaaaaaaa',",
-            "-  'aaaaaaaaaa',",
-            "-  'aaaaaaaaaa',",
-            "-  'aaaaaaaaaa',",
+            "-  'should not get wrapped',",
+            "+  'a',",
+            "+  'aaaaaaaaaa',",
+            "+  'aaaaaaaaaa',",
+            "+  'aaaaaaaaaa',",
+            "+  'aaaaaaaaaa',",
+            "+  'aaaaaaaaaa',",
+            "+  'aaaaaaaaaa',",
+            "+  'aaaaaaaaaa',",
             "  ]",
         ]
 
-    def test_dict_wrap(self, monkeypatch):
+    def test_dict_wrap(self, monkeypatch) -> None:
         monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
 
-        d1 = {"common": 1, "env": {"env1": 1}}
-        d2 = {"common": 1, "env": {"env1": 1, "env2": 2}}
+        d1 = {"common": 1, "env": {"env1": 1, "env2": 2}}
+        d2 = {"common": 1, "env": {"env1": 1}}
 
         diff = callequal(d1, d2, verbose=True)
         assert diff == [
-            "{'common': 1,...: {'env1': 1}} == {'common': 1,...1, 'env2': 2}}",
+            "{'common': 1,...1, 'env2': 2}} == {'common': 1,...: {'env1': 1}}",
             "Omitting 1 identical items, use -vv to show",
             "Differing items:",
-            "{'env': {'env1': 1}} != {'env': {'env1': 1, 'env2': 2}}",
+            "{'env': {'env1': 1, 'env2': 2}} != {'env': {'env1': 1}}",
             "Full diff:",
             "- {'common': 1, 'env': {'env1': 1}}",
             "+ {'common': 1, 'env': {'env1': 1, 'env2': 2}}",
@@ -552,7 +551,7 @@ class TestAssert_reprcompare:
             "   'env': {'sub': {'long_a': '" + long_a + "',",
             "                   'sub1': {'long_a': 'substring that gets wrapped substring '",
             "                                      'that gets wrapped '}}},",
-            "+  'new': 1,",
+            "-  'new': 1,",
             "  }",
         ]
 
@@ -579,7 +578,7 @@ class TestAssert_reprcompare:
             "   9,",
             "   10,",
             "   11,",
-            "+  12,",
+            "-  12,",
             "  ]",
         ]
         monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
@@ -588,9 +587,9 @@ class TestAssert_reprcompare:
             "[0, 1, 2, 3, 4, 5, ...] == [0, 1, 2, 3, 4, 5, ...]",
             "Right contains one more item: 12",
             "Full diff:",
-            "- [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]",
-            "+ [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]",
-            "?                                      ++++",
+            "- [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]",
+            "?                                      ----",
+            "+ [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]",
         ]
 
     def test_dict(self):
@@ -627,8 +626,8 @@ class TestAssert_reprcompare:
             "Right contains 2 more items:",
             "{'b': 1, 'c': 2}",
             "Full diff:",
-            "- {'a': 0}",
-            "+ {'b': 1, 'c': 2}",
+            "- {'b': 1, 'c': 2}",
+            "+ {'a': 0}",
         ]
         lines = callequal({"b": 1, "c": 2}, {"a": 0}, verbose=2)
         assert lines == [
@@ -638,8 +637,8 @@ class TestAssert_reprcompare:
             "Right contains 1 more item:",
             "{'a': 0}",
             "Full diff:",
-            "- {'b': 1, 'c': 2}",
-            "+ {'a': 0}",
+            "- {'a': 0}",
+            "+ {'b': 1, 'c': 2}",
         ]
 
     def test_sequence_different_items(self):
@@ -649,8 +648,8 @@ class TestAssert_reprcompare:
             "At index 0 diff: 1 != 3",
             "Right contains one more item: 5",
             "Full diff:",
-            "- (1, 2)",
-            "+ (3, 4, 5)",
+            "- (3, 4, 5)",
+            "+ (1, 2)",
         ]
         lines = callequal((1, 2, 3), (4,), verbose=2)
         assert lines == [
@@ -658,8 +657,8 @@ class TestAssert_reprcompare:
             "At index 0 diff: 1 != 4",
             "Left contains 2 more items, first extra item: 2",
             "Full diff:",
-            "- (1, 2, 3)",
-            "+ (4,)",
+            "- (4,)",
+            "+ (1, 2, 3)",
         ]
 
     def test_set(self):
@@ -720,12 +719,12 @@ class TestAssert_reprcompare:
         assert callequal(nums_x, nums_y) is None
 
         expl = callequal(nums_x, nums_y, verbose=1)
-        assert "-" + repr(nums_x) in expl
-        assert "+" + repr(nums_y) in expl
+        assert "+" + repr(nums_x) in expl
+        assert "-" + repr(nums_y) in expl
 
         expl = callequal(nums_x, nums_y, verbose=2)
-        assert "-" + repr(nums_x) in expl
-        assert "+" + repr(nums_y) in expl
+        assert "+" + repr(nums_x) in expl
+        assert "-" + repr(nums_y) in expl
 
     def test_list_bad_repr(self):
         class A:
@@ -777,8 +776,8 @@ class TestAssert_reprcompare:
         right = "£"
         expl = callequal(left, right)
         assert expl[0] == "'£€' == '£'"
-        assert expl[1] == "- £€"
-        assert expl[2] == "+ £"
+        assert expl[1] == "- £"
+        assert expl[2] == "+ £€"
 
     def test_nonascii_text(self):
         """
@@ -791,7 +790,7 @@ class TestAssert_reprcompare:
                 return "\xff"
 
         expl = callequal(A(), "1")
-        assert expl == ["ÿ == '1'", "+ 1"]
+        assert expl == ["ÿ == '1'", "- 1"]
 
     def test_format_nonascii_explanation(self):
         assert util.format_explanation("λ")
@@ -820,9 +819,9 @@ class TestAssert_reprcompare:
             "['aaaaaaaaaaa...aaaaaaaaaaaa'] == ['aaaaaaaaaaa...aaaaaaaaaaaa']",
             "At index 0 diff: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' != 'aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa'",
             "Full diff:",
-            "- ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']",
+            "- ['aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa']",
             "?                       ^",
-            "+ ['aaaaaaaaaaaaaaaaaaaaxaaaaaaaaaaaaaaaaaaa']",
+            "+ ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']",
             "?                       ^",
         ]
 
@@ -1115,9 +1114,9 @@ class TestTruncateExplanation:
                 r"E       AssertionError: assert '000000000000...6666666666666' == '000000000000...6666666666666'",
                 r"E         Skipping 91 identical leading characters in diff, use -v to show",
                 r"E           000000000",
-                r"E         - 1*",
+                r"E         + 1*",
                 r"E           2*",
-                r"E         - 3*",
+                r"E         + 3*",
                 r"E           4*",
                 r"E         ",
                 r"*truncated (%d lines hidden)*use*-vv*" % expected_truncated_lines,
@@ -1141,11 +1140,11 @@ class TestTruncateExplanation:
                 r"E       AssertionError: assert ('0*0\n'\n * '5*5\n'\n '6*6')"
                 r" == ('0*0\n'\n '2*2\n'\n '4*4\n'\n '6*6')",
                 r"E           0*0",
-                r"E         - 1*1",
+                r"E         + 1*1",
                 r"E           2*2",
-                r"E         - 3*3",
+                r"E         + 3*3",
                 r"E           4*4",
-                r"E         - 5*5",
+                r"E         + 5*5",
                 r"E           6*6",
                 r"",
             ],
@@ -1211,14 +1210,12 @@ def test_reprcompare_notin_newline() -> None:
 
 
 def test_reprcompare_whitespaces():
-    config = mock_config()
-    detail = plugin.pytest_assertrepr_compare(config, "==", "\r\n", "\n")
-    assert detail == [
+    assert callequal("\r\n", "\n") == [
         r"'\r\n' == '\n'",
         r"Strings contain only whitespace, escaping them using repr()",
-        r"- '\r\n'",
-        r"?  --",
-        r"+ '\n'",
+        r"- '\n'",
+        r"+ '\r\n'",
+        r"?  ++",
     ]
 
 
@@ -1226,10 +1223,10 @@ def test_reprcompare_zerowidth_and_non_printable():
     assert callequal("\x00\x1b[31mred", "\x1b[31mgreen") == [
         r"'\x00\x1b[31mred' == '\x1b[31mgreen'",
         r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
-        r"- '\x00\x1b[31mred'",
-        r"?  ----          ^",
-        r"+ '\x1b[31mgreen'",
-        r"?          +  ^^",
+        r"- '\x1b[31mgreen'",
+        r"?          -  ^^",
+        r"+ '\x00\x1b[31mred'",
+        r"?  ++++          ^",
     ]
 
 
@@ -1495,9 +1492,9 @@ def test_diff_newline_at_end(testdir):
         *assert 'asdf' == 'asdf\n'
         E       AssertionError: assert 'asdf' == 'asdf\n'
         E         NOTE: Strings contain different line-endings. Escaping them using repr().
-        *  - asdf
-        *  + asdf\n
-        *  ?     ++
+        *  - asdf\n
+        *  ?     --
+        *  + asdf
     """
     )
 
@@ -1506,18 +1503,18 @@ def test_diff_different_line_endings():
     assert callequal("asdf\n", "asdf", verbose=2) == [
         r"'asdf\n' == 'asdf'",
         r"NOTE: Strings contain different line-endings. Escaping them using repr().",
-        r"- asdf\n",
-        r"?     --",
-        r"+ asdf",
-        r"- ",
+        r"- asdf",
+        r"+ asdf\n",
+        r"?     ++",
+        r"+ ",
     ]
 
     assert callequal("line1\r\nline2", "line1\nline2", verbose=2) == [
         r"'line1\r\nline2' == 'line1\nline2'",
         r"NOTE: Strings contain different line-endings. Escaping them using repr().",
-        r"- line1\r\n",
-        r"?       --",
-        r"+ line1\n",
+        r"- line1\n",
+        r"+ line1\r\n",
+        r"?       ++",
         r"  line2",
     ]
 
@@ -1526,21 +1523,21 @@ def test_diff_different_line_endings():
         r"'line1\r\nline2' == 'line1\nline2\r'",
         r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
         r"  'line1'",
-        r"- 'line2'",
-        r"+ 'line2\r'",
-        r"?       ++",
+        r"- 'line2\r'",
+        r"?       --",
+        r"+ 'line2'",
     ]
 
     # More on left.
     assert callequal("line1\r\nline2\r\nline3\r\n", "line1\nline2", verbose=2) == [
         r"'line1\r\nline2\r\nline3\r\n' == 'line1\nline2'",
         r"NOTE: Strings contain different line-endings. Escaping them using repr().",
-        r"- line1\r\n",
-        r"?       --",
-        r"+ line1\n",
+        r"- line1\n",
+        r"+ line1\r\n",
+        r"?       ++",
         r"  line2",
-        r"- line3",
-        r"- ",
+        r"+ line3",
+        r"+ ",
     ]
 
 
