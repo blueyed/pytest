@@ -663,7 +663,7 @@ class TestTerminalFunctional:
         if request.config.pluginmanager.list_plugin_distinfo():
             result.stdout.fnmatch_lines(["plugins: *"])
 
-    def test_header(self, testdir):
+    def test_header(self, testdir: Testdir) -> None:
         testdir.tmpdir.join("tests").ensure_dir()
         testdir.tmpdir.join("gui").ensure_dir()
 
@@ -691,6 +691,11 @@ class TestTerminalFunctional:
         # with testpaths option, passing directory in command-line: do not show testpaths then
         result = testdir.runpytest("tests")
         result.stdout.fnmatch_lines(["rootdir: ~, inifile: tox.ini"])
+
+        # Reports cwd if != rootdir.
+        testdir.makefile("ini", **{"tests/pytest": ""})
+        result = testdir.runpytest("tests")
+        result.stdout.fnmatch_lines(["rootdir: ~/tests, inifile: pytest.ini, cwd: ~"])
 
     def test_showlocals(self, testdir):
         p1 = testdir.makepyfile(
