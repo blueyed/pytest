@@ -354,7 +354,7 @@ def test_rootdir_option_arg(testdir: Testdir, monkeypatch, path: str) -> None:
     )
 
     expected = [
-        "*rootdir: ~/root",
+        "*rootdir: ~/root, cwd: ~",
         "test_rootdir_option_arg.py *",
         "*1 passed*",
     ]
