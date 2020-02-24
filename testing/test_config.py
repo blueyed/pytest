@@ -4,6 +4,7 @@ import sys
 import textwrap
 
 import py.path
+from py._vendored_packages.iniconfig import SectionWrapper
 
 import _pytest._code
 import pytest
@@ -47,7 +48,9 @@ class TestParseIni:
 
     def test_getcfg_empty_path(self):
         """correctly handle zero length arguments (a la pytest '')"""
-        getcfg([""])
+        ret = getcfg([""])
+        assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))
+        assert isinstance(ret[2], SectionWrapper)
 
     def test_setupcfg_uses_toolpytest_with_pytest(self, testdir):
         p1 = testdir.makepyfile("def test(): pass")
