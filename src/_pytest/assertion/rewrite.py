@@ -277,7 +277,7 @@ if sys.platform == "win32":
             with atomic_write(fspath(pyc), mode="wb", overwrite=True) as fp:
                 _write_pyc_fp(fp, source_stat, co)
         except EnvironmentError as e:
-            state.trace("error writing pyc file at {}: errno={}".format(pyc, e.errno))
+            state.trace("error writing pyc file at {}: {}".format(pyc, e))
             # we ignore any failure to write the cache file
             # there are many reasons, permission-denied, pycache dir being a
             # file etc.
@@ -292,16 +292,14 @@ else:
         try:
             fp = open(proc_pyc, "wb")
         except EnvironmentError as e:
-            state.trace(
-                "error writing pyc file at {}: errno={}".format(proc_pyc, e.errno)
-            )
+            state.trace("error writing pyc file at {}: {}".format(proc_pyc, e))
             return False
 
         try:
             _write_pyc_fp(fp, source_stat, co)
             os.rename(proc_pyc, fspath(pyc))
-        except BaseException as e:
-            state.trace("error writing pyc file at {}: errno={}".format(pyc, e.errno))
+        except EnvironmentError as e:
+            state.trace("error writing pyc file at {}: {}".format(pyc, e))
             # we ignore any failure to write the cache file
             # there are many reasons, permission-denied, pycache dir being a
             # file etc.
