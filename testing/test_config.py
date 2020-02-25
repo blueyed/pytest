@@ -19,6 +19,7 @@ from _pytest.config.findpaths import determine_setup
 from _pytest.config.findpaths import get_common_ancestor
 from _pytest.config.findpaths import getcfg
 from _pytest.pathlib import Path
+from _pytest.pytester import Testdir
 
 if TYPE_CHECKING:
     from _pytest.pytester import Testdir
@@ -52,7 +53,7 @@ class TestParseIni:
         assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))
         assert isinstance(ret[2], SectionWrapper)
 
-    def test_setupcfg_uses_toolpytest_with_pytest(self, testdir):
+    def test_setupcfg_uses_toolpytest_with_pytest(self, testdir: Testdir) -> None:
         p1 = testdir.makepyfile("def test(): pass")
         testdir.makefile(
             ".cfg",
@@ -65,7 +66,9 @@ class TestParseIni:
             % p1.basename,
         )
         result = testdir.runpytest()
-        result.stdout.fnmatch_lines(["*, inifile: setup.cfg, *", "* 1 passed in *"])
+        result.stdout.fnmatch_lines(
+            ["rootdir: ~, inifile: setup.cfg, *", "* 1 passed in *"]
+        )
         assert result.ret == 0
 
     def test_append_parse_args(self, testdir, tmpdir, monkeypatch):
