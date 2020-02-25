@@ -126,7 +126,7 @@ def determine_setup(
     assert inifile is None or isinstance(inifile, str)
     if inifile:
         assert isinstance(inifile, str)
-        ret_inifile = py.path.local(inifile)
+        ret_inifile = py.path.local(inifile)  # type: Optional[py.path.local]
         iniconfig = py.iniconfig.IniConfig(inifile)
         is_cfg_file = inifile.endswith(".cfg")
         sections = ["tool:pytest", "pytest"] if is_cfg_file else ["pytest"]
@@ -145,7 +145,7 @@ def determine_setup(
             rootdir = get_common_ancestor(dirs)  # type: Optional[py.path.local]
     else:
         ancestor = get_common_ancestor(dirs)
-        rootdir, inifile, inicfg = getcfg([ancestor], config=config)
+        rootdir, ret_inifile, inicfg = getcfg([ancestor], config=config)
         if rootdir is None and rootdir_cmd_arg is None:
             for possible_rootdir in ancestor.parts(reverse=True):
                 if possible_rootdir.join("setup.py").exists():
@@ -153,7 +153,7 @@ def determine_setup(
                     break
             else:
                 if dirs != [ancestor]:
-                    rootdir, inifile, inicfg = getcfg(dirs, config=config)
+                    rootdir, ret_inifile, inicfg = getcfg(dirs, config=config)
                 if rootdir is None:
                     if config is not None:
                         cwd = config.invocation_dir
@@ -163,7 +163,6 @@ def determine_setup(
                     is_fs_root = os.path.splitdrive(str(rootdir))[1] == "/"
                     if is_fs_root:
                         rootdir = ancestor
-        ret_inifile = inifile
     if rootdir_cmd_arg:
         rootdir = py.path.local(os.path.expandvars(rootdir_cmd_arg))
         if not rootdir.isdir():
