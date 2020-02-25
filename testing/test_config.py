@@ -66,10 +66,12 @@ class TestParseIni:
         """
             % p1.basename,
         )
+        expected_lines = [
+            "rootdir: ~, inifile: setup.cfg, *",
+            "* 1 passed in *",
+        ]
         result = testdir.runpytest()
-        result.stdout.fnmatch_lines(
-            ["rootdir: ~, inifile: setup.cfg, *", "* 1 passed in *"]
-        )
+        result.stdout.fnmatch_lines(expected_lines)
         assert result.ret == 0
 
     def test_append_parse_args(self, testdir, tmpdir, monkeypatch):
