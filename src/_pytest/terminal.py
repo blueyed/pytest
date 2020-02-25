@@ -727,12 +727,12 @@ class TerminalReporter:
         for line in collapse(lines):
             self.write_line(line)
 
-    def pytest_report_header(self, config):
-        line = "rootdir: %s" % _shorten_path(Path(config.rootdir))
+    def pytest_report_header(self, config: Config) -> List[str]:
+        line = "rootdir: %s" % _shorten_path(Path(str(config.rootdir)))
 
         if config.inifile:
             line += ", inifile: {}".format(
-                _shorten_path(Path(config.rootdir.bestrelpath(config.inifile)))
+                _shorten_path(Path(str(config.rootdir.bestrelpath(config.inifile))))
             )
 
         testpaths = config.getini("testpaths")
