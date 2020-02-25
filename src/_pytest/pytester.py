@@ -27,7 +27,6 @@ import py
 
 import pytest
 from _pytest._code import Source
-from _pytest._io.saferepr import saferepr
 from _pytest.capture import MultiCapture
 from _pytest.capture import SysCapture
 from _pytest.compat import TYPE_CHECKING
@@ -1386,15 +1385,6 @@ class Testdir:
         _display_running("=== running (spawn)", *args)
         child = pexpect.spawn(args[0], list(args[1:]), **kwargs)
         return child
-
-
-def getdecoded(out):
-    try:
-        return out.decode("utf-8")
-    except UnicodeDecodeError:
-        return "INTERNAL not-utf8-decodeable, truncated string:\n{}".format(
-            saferepr(out)
-        )
 
 
 class LineComp:
