@@ -31,6 +31,7 @@ from _pytest.capture import MultiCapture
 from _pytest.capture import SysCapture
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import _PluggyPlugin
+from _pytest.config import Config
 from _pytest.config import ExitCode
 from _pytest.fixtures import FixtureRequest
 from _pytest.main import Session
@@ -1062,7 +1063,7 @@ class Testdir:
             args.append("--basetemp=%s" % self.tmpdir.dirpath("basetemp"))
         return args
 
-    def parseconfig(self, *args):
+    def parseconfig(self, *args: Union[str, py.path.local]) -> Config:
         """Return a new pytest Config instance from given commandline args.
 
         This invokes the pytest bootstrapping code in _pytest.config to create
@@ -1078,7 +1079,7 @@ class Testdir:
 
         import _pytest.config
 
-        config = _pytest.config._prepareconfig(args, self.plugins)
+        config = _pytest.config._prepareconfig(args, self.plugins)  # type: Config
         # we don't know what the test will do with this half-setup config
         # object and thus we make sure it gets unconfigured properly in any
         # case (otherwise capturing could still be active, for example)
