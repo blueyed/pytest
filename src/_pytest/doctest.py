@@ -23,7 +23,7 @@ from _pytest._io import TerminalWriter
 from _pytest.compat import safe_getattr
 from _pytest.compat import TYPE_CHECKING
 from _pytest.fixtures import FixtureRequest
-from _pytest.outcomes import Skipped
+from _pytest.outcomes import OutcomeException
 from _pytest.python_api import approx
 from _pytest.warning_types import PytestWarning
 
@@ -179,7 +179,7 @@ def _init_runner_class() -> "Type[doctest.DocTestRunner]":
         def report_unexpected_exception(self, out, test, example, exc_info):
             import bdb
 
-            if isinstance(exc_info[1], Skipped):
+            if isinstance(exc_info[1], OutcomeException):
                 raise exc_info[1]
             if isinstance(exc_info[1], bdb.BdbQuit):
                 outcomes.exit("Quitting debugger")
@@ -221,8 +221,14 @@ class DoctestItem(pytest.Item):
         self.fixture_request = None
 
     @classmethod
-    def from_parent(cls, parent, *, name, runner, dtest):
-        return cls._create(name=name, parent=parent, runner=runner, dtest=dtest)
+    def from_parent(  # type: ignore
+        cls, parent: "Union[DoctestTextfile, DoctestModule]", *, name, runner, dtest
+    ):
+        # incompatible signature due to to imposed limits on sublcass
+        """
+        the public named constructor
+        """
+        return super().from_parent(name=name, parent=parent, runner=runner, dtest=dtest)
 
     def setup(self):
         if self.dtest is not None:
@@ -234,7 +240,7 @@ class DoctestItem(pytest.Item):
                 globs[name] = value
             self.dtest.globs.update(globs)
 
-    def runtest(self):
+    def runtest(self) -> None:
         _check_all_skipped(self.dtest)
         self._disable_output_capturing_for_darwin()
         failures = []  # type: List[doctest.DocTestFailure]

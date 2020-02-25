@@ -1,5 +1,4 @@
 """ core implementation of testing process: init, session, runtest loop. """
-import enum
 import fnmatch
 import functools
 import importlib
@@ -11,6 +10,7 @@ from typing import Dict
 from typing import FrozenSet
 from typing import List
 from typing import Optional
+from typing import Sequence
 from typing import Tuple
 from typing import Union
 
@@ -22,11 +22,12 @@ from _pytest import nodes
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import directory_arg
+from _pytest.config import ExitCode
 from _pytest.config import hookimpl
 from _pytest.config import UsageError
 from _pytest.fixtures import FixtureManager
-from _pytest.nodes import Node
-from _pytest.outcomes import Exit
+from _pytest.outcomes import exit
+from _pytest.reports import CollectReport
 from _pytest.runner import collect_one_node
 from _pytest.runner import SetupState
 
@@ -34,30 +35,10 @@ RE_FNAME_LINENO = re.compile(r"^([^:].[^:]*):(\d+)?(-?)(\d+)?:?$")
 
 
 if TYPE_CHECKING:
+    from typing import Type
+    from typing_extensions import Literal
+
     from _pytest.python import Package
-
-
-class ExitCode(enum.IntEnum):
-    """
-    .. versionadded:: 5.0
-
-    Encodes the valid exit codes by pytest.
-
-    Currently users and plugins may supply other exit codes as well.
-    """
-
-    #: tests passed
-    OK = 0
-    #: tests failed
-    TESTS_FAILED = 1
-    #: pytest was interrupted
-    INTERRUPTED = 2
-    #: an internal error got in the way
-    INTERNAL_ERROR = 3
-    #: pytest was misused
-    USAGE_ERROR = 4
-    #: pytest couldn't find tests
-    NO_TESTS_COLLECTED = 5
 
 
 def pytest_addoption(parser):
@@ -151,10 +132,8 @@ def pytest_addoption(parser):
         "--deselect",
         action="append",
         metavar="nodeid_prefix",
-        help="deselect item during collection (multi-allowed).",
+        help="deselect item (via node id prefix) during collection (multi-allowed).",
     )
-    # when changing this to --conf-cut-dir, config.py Conftest.setinitial
-    # needs upgrading as well
     group.addoption(
         "--confcutdir",
         dest="confcutdir",
@@ -222,10 +201,10 @@ def wrap_session(
                 # set.  This sets it for when the exception was raised only.
                 session.shouldfail = exc.args[0]
             session.exitstatus = ExitCode.TESTS_FAILED
-        except (KeyboardInterrupt, Exit):
+        except (KeyboardInterrupt, exit.Exception):
             excinfo = _pytest._code.ExceptionInfo.from_current()
             exitstatus = ExitCode.INTERRUPTED  # type: Union[int, ExitCode]
-            if isinstance(excinfo.value, Exit):
+            if isinstance(excinfo.value, exit.Exception):
                 if excinfo.value.returncode is not None:
                     exitstatus = excinfo.value.returncode
                 if initstate < 2:
@@ -239,7 +218,7 @@ def wrap_session(
             excinfo = _pytest._code.ExceptionInfo.from_current()
             try:
                 config.notify_exception(excinfo, config.option)
-            except Exit as exc:
+            except exit.Exception as exc:
                 if exc.returncode is not None:
                     session.exitstatus = exc.returncode
                 sys.stderr.write("{}: {}\n".format(type(exc).__name__, exc))
@@ -256,7 +235,7 @@ def wrap_session(
                 config.hook.pytest_sessionfinish(
                     session=session, exitstatus=session.exitstatus
                 )
-            except Exit as exc:
+            except exit.Exception as exc:
                 if exc.returncode is not None:
                     session.exitstatus = exc.returncode
                 sys.stderr.write("{}: {}\n".format(type(exc).__name__, exc))
@@ -322,7 +301,9 @@ def _in_venv(path):
     return any([fname.basename in activates for fname in bindir.listdir()])
 
 
-def pytest_ignore_collect(path, config):
+def pytest_ignore_collect(
+    path: py.path.local, config: Config
+) -> "Optional[Literal[True]]":
     ignore_paths = config._getconftest_pathlist("collect_ignore", path=path.dirpath())
     ignore_paths = ignore_paths or []
     excludeopt = config.getoption("ignore")
@@ -346,6 +327,7 @@ def pytest_ignore_collect(path, config):
     allow_in_venv = config.getoption("collect_in_virtualenv")
     if not allow_in_venv and _in_venv(path):
         return True
+    return None
 
 
 def pytest_collection_modifyitems(items, config):
@@ -412,9 +394,18 @@ class Session(nodes.FSCollector):
         self._initialpaths = frozenset()  # type: FrozenSet[py.path.local]
 
         # Keep track of any collected nodes in here, so we don't duplicate fixtures
-        self._node_cache = {}  # type: Dict[str, List[Node]]
+        self._collection_node_cache1 = (
+            {}
+        )  # type: Dict[py.path.local, Sequence[nodes.Collector]]
+        self._collection_node_cache2 = (
+            {}
+        )  # type: Dict[Tuple[Type[nodes.Collector], py.path.local], nodes.Collector]
+        self._collection_node_cache3 = (
+            {}
+        )  # type: Dict[Tuple[Type[nodes.Collector], str], CollectReport]
+
         # Dirnames of pkgs with dunder-init files.
-        self._pkg_roots = {}  # type: Dict[py.path.local, Package]
+        self._collection_pkg_roots = {}  # type: Dict[py.path.local, Package]
 
         self._bestrelpathcache = _bestrelpath_cache(
             config.rootdir
@@ -497,13 +488,13 @@ class Session(nodes.FSCollector):
         self.trace("perform_collect", self, args)
         self.trace.root.indent += 1
         self._notfound = []
-        initialpaths = []
-        self._initialparts = []
+        initialpaths = []  # type: List[py.path.local]
+        self._initial_parts = []  # type: List[Tuple[py.path.local, List[str]]]
         self.items = items = []  # type: List[nodes.Item]
         for arg in args:
-            parts = self._parsearg(arg)
-            self._initialparts.append(parts)
-            initialpaths.append(parts[0])
+            fspath, parts = self._parsearg(arg)
+            self._initial_parts.append((fspath, parts))
+            initialpaths.append(fspath)
         self._initialpaths = frozenset(initialpaths)
         rep = collect_one_node(self)
         self.ihook.pytest_collectreport(report=rep)
@@ -523,24 +514,25 @@ class Session(nodes.FSCollector):
             return items
 
     def collect(self):
-        for initialpart in self._initialparts:
-            self.trace("processing argument", initialpart)
+        for fspath, parts in self._initial_parts:
+            self.trace("processing argument", (fspath, parts))
             self.trace.root.indent += 1
             try:
-                yield from self._collect(initialpart)
+                yield from self._collect(fspath, parts)
             except NoMatch:
-                report_arg = "::".join(map(str, initialpart))
+                report_arg = "::".join((str(fspath), *parts))
                 # we are inside a make_report hook so
                 # we cannot directly pass through the exception
                 self._notfound.append((report_arg, sys.exc_info()[1]))
 
             self.trace.root.indent -= 1
+        self._collection_node_cache1.clear()
+        self._collection_node_cache2.clear()
+        self._collection_node_cache3.clear()
+        self._collection_pkg_roots.clear()
 
-    def _collect(self, arg):
+    def _collect(self, argpath, names):
         from _pytest.python import Package
-
-        names = arg[:]
-        argpath = names.pop(0)
 
         # Start with a Session root, and delve to argpath item (dir or file)
         # and stack all Packages found on the way.
@@ -554,18 +546,18 @@ class Session(nodes.FSCollector):
                 if parent.isdir():
                     pkginit = parent.join("__init__.py")
                     if pkginit.isfile():
-                        if pkginit not in self._node_cache:
+                        if pkginit not in self._collection_node_cache1:
                             col = self._collectfile(pkginit, handle_dupes=False)
                             if col:
                                 if isinstance(col[0], Package):
-                                    self._pkg_roots[parent] = col[0]
+                                    self._collection_pkg_roots[parent] = col[0]
                                 # always store a list in the cache, matchnodes expects it
-                                self._node_cache[col[0].fspath] = [col[0]]
+                                self._collection_node_cache1[col[0].fspath] = [col[0]]
 
         # If it's a directory argument, recurse and look for any Subpackages.
         # Let the Package collector deal with subnodes, don't collect here.
         if argpath.check(dir=1):
-            assert not names, "invalid arg {!r}".format(arg)
+            assert not names, "invalid arg {!r}".format((argpath, names))
 
             seen_dirs = set()
             for path in argpath.visit(
@@ -580,28 +572,28 @@ class Session(nodes.FSCollector):
                         for x in self._collectfile(pkginit):
                             yield x
                             if isinstance(x, Package):
-                                self._pkg_roots[dirpath] = x
-                if dirpath in self._pkg_roots:
+                                self._collection_pkg_roots[dirpath] = x
+                if dirpath in self._collection_pkg_roots:
                     # Do not collect packages here.
                     continue
 
                 for x in self._collectfile(path):
                     key = (type(x), x.fspath)
-                    if key in self._node_cache:
-                        yield self._node_cache[key]
+                    if key in self._collection_node_cache2:
+                        yield self._collection_node_cache2[key]
                     else:
-                        self._node_cache[key] = x
+                        self._collection_node_cache2[key] = x
                         yield x
         else:
             assert argpath.check(file=1)
 
-            if argpath in self._node_cache:
-                col = self._node_cache[argpath]
+            if argpath in self._collection_node_cache1:
+                col = self._collection_node_cache1[argpath]
             else:
-                collect_root = self._pkg_roots.get(argpath.dirname, self)
+                collect_root = self._collection_pkg_roots.get(argpath.dirname, self)
                 col = collect_root._collectfile(argpath, handle_dupes=False)
                 if col:
-                    self._node_cache[argpath] = col
+                    self._collection_node_cache1[argpath] = col
             m = self.matchnodes(col, names)
             # If __init__.py was the only file requested, then the matched node will be
             # the corresponding Package, and the first yielded item will be the __init__
@@ -683,23 +675,23 @@ class Session(nodes.FSCollector):
 
     def _parsearg(self, arg):
         """ return (fspath, names) tuple after checking the file exists. """
-        parts = str(arg).split("::")
+        strpath, *parts = str(arg).split("::")
         if self.config.option.pyargs:
-            parts[0] = self._tryconvertpyarg(parts[0])
+            strpath = self._tryconvertpyarg(strpath)
 
-        fname, lineno = self._parse_fname_lineno(parts[0])
+        fname, lineno = self._parse_fname_lineno(strpath)
 
         relpath = fname.replace("/", os.sep)
-        path = self.config.invocation_dir.join(relpath, abs=True)
-        if not path.check():
+        fspath = self.config.invocation_dir.join(relpath, abs=True)
+        if not fspath.check():
             if self.config.option.pyargs:
                 raise UsageError(
                     "file or package not found: " + arg + " (missing __init__.py?)"
                 )
             raise UsageError("file not found: " + arg)
-        parts[0] = path.realpath()
-        parts[0].lineno = lineno
-        return parts
+        fspath = fspath.realpath()
+        fspath.lineno = lineno
+        return (fspath, parts)
 
     def matchnodes(self, matching, names):
         self.trace("matchnodes", matching, names)
@@ -726,11 +718,11 @@ class Session(nodes.FSCollector):
                 continue
             assert isinstance(node, nodes.Collector)
             key = (type(node), node.nodeid)
-            if key in self._node_cache:
-                rep = self._node_cache[key]
+            if key in self._collection_node_cache3:
+                rep = self._collection_node_cache3[key]
             else:
                 rep = collect_one_node(node)
-                self._node_cache[key] = rep
+                self._collection_node_cache3[key] = rep
             if rep.passed:
                 has_matched = False
                 for x in rep.result:

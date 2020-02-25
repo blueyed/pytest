@@ -271,7 +271,9 @@ def _diff_text(left: str, right: str, verbose: int = 0) -> List[str]:
                 if right_end is not None:
                     right_lines[idx] += repr(right_end)[1:-1]
 
-    explanation += [line.strip("\n") for line in ndiff(left_lines, right_lines)]
+    # "right" is the expected base against which we compare "left",
+    # see https://github.com/pytest-dev/pytest/issues/3333
+    explanation += [line.strip("\n") for line in ndiff(right_lines, left_lines)]
     return explanation
 
 
@@ -281,8 +283,8 @@ def _compare_eq_verbose(left: Any, right: Any) -> List[str]:
     right_lines = repr(right).splitlines(keepends)
 
     explanation = []  # type: List[str]
-    explanation += ["-" + line for line in left_lines]
-    explanation += ["+" + line for line in right_lines]
+    explanation += ["+" + line for line in left_lines]
+    explanation += ["-" + line for line in right_lines]
 
     return explanation
 
@@ -325,8 +327,10 @@ def _compare_eq_iterable(
         _surrounding_parens_on_own_lines(right_formatting)
 
     explanation = ["Full diff:"]
+    # "right" is the expected base against which we compare "left",
+    # see https://github.com/pytest-dev/pytest/issues/3333
     explanation.extend(
-        line.rstrip() for line in difflib.ndiff(left_formatting, right_formatting)
+        line.rstrip() for line in difflib.ndiff(right_formatting, left_formatting)
     )
     return explanation
 
@@ -374,8 +378,9 @@ def _compare_eq_sequence(
             break
 
     if comparing_bytes:
-        # when comparing bytes, it doesn't help to show the "sides contain one or more items"
-        # longer explanation, so skip it
+        # when comparing bytes, it doesn't help to show the "sides contain one or more
+        # items" longer explanation, so skip it
+
         return explanation
 
     len_diff = len_left - len_right
