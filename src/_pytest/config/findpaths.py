@@ -29,7 +29,7 @@ def exists(path, ignore=EnvironmentError):
 def getcfg(
     args: "Iterable[py.path.local]", config: "Optional[Config]" = None
 ) -> Tuple[
-    "Optional[py.path.local], Optional[py.path.local], Optional[_SectionWrapper]",
+    "Optional[py.path.local], Optional[str], Optional[_SectionWrapper]",
 ]:
     """
     Search the list of arguments for a valid ini-file for pytest,
@@ -38,17 +38,15 @@ def getcfg(
     note: config is optional and used only to issue warnings explicitly (#2891).
     """
     inibasenames = ["pytest.ini", "tox.ini", "setup.cfg"]
-    args = [x for x in args if not str(x).startswith("-")]
-    if not args:
-        args = [py.path.local()]
     for arg in args:
-        arg = py.path.local(arg)
+        assert isinstance(arg, py.path.local)
         for base in arg.parts(reverse=True):
             for inibasename in inibasenames:
                 p = base.join(inibasename)
                 if exists(p):
+                    inifile = str(p)
                     try:
-                        iniconfig = py.iniconfig.IniConfig(str(p))
+                        iniconfig = py.iniconfig.IniConfig(inifile)
                     except py.iniconfig.ParseError as exc:
                         raise UsageError(str(exc))
 
@@ -56,7 +54,7 @@ def getcfg(
                         inibasename == "setup.cfg"
                         and "tool:pytest" in iniconfig.sections
                     ):
-                        return base, p, iniconfig["tool:pytest"]
+                        return base, inifile, iniconfig["tool:pytest"]
                     elif "pytest" in iniconfig.sections:
                         if inibasename == "setup.cfg" and config is not None:
 
@@ -64,10 +62,10 @@ def getcfg(
                                 CFG_PYTEST_SECTION.format(filename=inibasename),
                                 pytrace=False,
                             )
-                        return base, p, iniconfig["pytest"]
+                        return base, inifile, iniconfig["pytest"]
                     elif inibasename == "pytest.ini":
                         # allowed to be empty
-                        return base, p, None
+                        return base, inifile, None
     return None, None, None
 
 
