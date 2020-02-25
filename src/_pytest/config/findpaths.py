@@ -29,7 +29,7 @@ def exists(path, ignore=EnvironmentError):
 def getcfg(
     args: "Iterable[py.path.local]", config: "Optional[Config]" = None
 ) -> Tuple[
-    "Optional[py.path.local], Optional[str], Optional[_SectionWrapper]",
+    "Optional[py.path.local], Optional[py.path.local], Optional[_SectionWrapper]",
 ]:
     """
     Search the list of arguments for a valid ini-file for pytest,
@@ -44,9 +44,8 @@ def getcfg(
             for inibasename in inibasenames:
                 p = base.join(inibasename)
                 if exists(p):
-                    inifile = str(p)
                     try:
-                        iniconfig = py.iniconfig.IniConfig(inifile)
+                        iniconfig = py.iniconfig.IniConfig(str(p))
                     except py.iniconfig.ParseError as exc:
                         raise UsageError(str(exc))
 
@@ -54,7 +53,7 @@ def getcfg(
                         inibasename == "setup.cfg"
                         and "tool:pytest" in iniconfig.sections
                     ):
-                        return base, inifile, iniconfig["tool:pytest"]
+                        return base, p, iniconfig["tool:pytest"]
                     elif "pytest" in iniconfig.sections:
                         if inibasename == "setup.cfg" and config is not None:
 
@@ -62,10 +61,10 @@ def getcfg(
                                 CFG_PYTEST_SECTION.format(filename=inibasename),
                                 pytrace=False,
                             )
-                        return base, inifile, iniconfig["pytest"]
+                        return base, p, iniconfig["pytest"]
                     elif inibasename == "pytest.ini":
                         # allowed to be empty
-                        return base, inifile, None
+                        return base, p, None
     return None, None, None
 
 
@@ -124,7 +123,10 @@ def determine_setup(
     config: Optional["Config"] = None,
 ) -> "Tuple[py.path.local, Optional[py.path.local], Union[_SectionWrapper, Dict]]":
     dirs = get_dirs_from_args(args)
+    assert inifile is None or isinstance(inifile, str)
     if inifile:
+        assert isinstance(inifile, str)
+        ret_inifile = py.path.local(inifile)
         iniconfig = py.iniconfig.IniConfig(inifile)
         is_cfg_file = inifile.endswith(".cfg")
         sections = ["tool:pytest", "pytest"] if is_cfg_file else ["pytest"]
@@ -140,20 +142,19 @@ def determine_setup(
                 )
             break
         if rootdir_cmd_arg is None:
-            rootdir = get_common_ancestor(dirs)
-        ret_inifile = py.path.local(inifile)  # type: Optional[py.path.local]
+            rootdir = get_common_ancestor(dirs)  # type: Optional[py.path.local]
     else:
         ancestor = get_common_ancestor(dirs)
-        possible_rootdir, ret_inifile, inicfg = getcfg([ancestor], config=config)
-        if possible_rootdir is None and rootdir_cmd_arg is None:
+        rootdir, inifile, inicfg = getcfg([ancestor], config=config)
+        if rootdir is None and rootdir_cmd_arg is None:
             for possible_rootdir in ancestor.parts(reverse=True):
                 if possible_rootdir.join("setup.py").exists():
                     rootdir = possible_rootdir
                     break
             else:
                 if dirs != [ancestor]:
-                    possible_rootdir, ret_inifile, inicfg = getcfg(dirs, config=config)
-                if possible_rootdir is None:
+                    rootdir, inifile, inicfg = getcfg(dirs, config=config)
+                if rootdir is None:
                     if config is not None:
                         cwd = config.invocation_dir
                     else:
@@ -162,8 +163,7 @@ def determine_setup(
                     is_fs_root = os.path.splitdrive(str(rootdir))[1] == "/"
                     if is_fs_root:
                         rootdir = ancestor
-        else:
-            rootdir = possible_rootdir
+        ret_inifile = inifile
     if rootdir_cmd_arg:
         rootdir = py.path.local(os.path.expandvars(rootdir_cmd_arg))
         if not rootdir.isdir():
@@ -172,4 +172,5 @@ def determine_setup(
                     rootdir
                 )
             )
+    assert rootdir
     return rootdir, ret_inifile, inicfg or {}

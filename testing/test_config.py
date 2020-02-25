@@ -29,7 +29,7 @@ class TestParseIni:
     @pytest.mark.parametrize(
         "section, filename", [("pytest", "pytest.ini"), ("tool:pytest", "setup.cfg")]
     )
-    def test_getcfg_and_config(self, testdir, tmpdir, section, filename):
+    def test_getcfg_and_config(self, testdir, tmpdir, section, filename) -> None:
         sub = tmpdir.mkdir("sub")
         sub.chdir()
         tmpdir.join(filename).write(
@@ -43,14 +43,15 @@ class TestParseIni:
             )
         )
         _, _, cfg = getcfg([sub])
+        assert cfg
         assert cfg["name"] == "value"
         config = testdir.parseconfigure(sub)
         assert config.inicfg["name"] == "value"
 
-    def test_getcfg_empty_path(self):
+    def test_getcfg_empty_path(self) -> None:
         """correctly handle zero length arguments (a la pytest '')"""
-        ret = getcfg([""])
-        assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))
+        ret = determine_setup(None, args=[""])
+        assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))  # type: ignore[comparison-overlap]  # noqa: F821
         assert isinstance(ret[2], SectionWrapper)
 
     def test_setupcfg_uses_toolpytest_with_pytest(self, testdir: Testdir) -> None:
@@ -547,7 +548,7 @@ class TestConfigFromdictargs:
         assert config.option.verbose == 4
         assert config.option.capture == "no"
 
-    def test_inifilename(self, tmpdir):
+    def test_inifilename(self, tmpdir) -> None:
         tmpdir.join("foo/bar.ini").ensure().write(
             textwrap.dedent(
                 """\
@@ -572,13 +573,14 @@ class TestConfigFromdictargs:
         )
         with cwd.ensure(dir=True).as_cwd():
             config = Config.fromdictargs(option_dict, ())
+            expected_inifile = py.path.local(inifile)
 
         assert config.args == [str(cwd)]
         assert config.option.inifilename == inifile
         assert config.option.capture == "no"
 
         # this indicates this is the file used for getting configuration values
-        assert config.inifile == inifile
+        assert config.inifile == expected_inifile
         assert config.inicfg.get("name") == "value"
         assert config.inicfg.get("should_not_be_set") is None
 
