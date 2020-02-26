@@ -1436,18 +1436,10 @@ class LineMatcher:
 
         :param lines: a list of lines without their trailing newlines, e.g.
             :code:`text.splitlines()`.
-        :param mode:
-            "consecutive": match lines consecutivly
-            "complate": require all lines to be matched in total
     """
 
-    def __init__(
-        self,
-        lines: List[str],
-        mode: Optional["Literal['consecutive', 'complete']"] = None,
-    ) -> None:
+    def __init__(self, lines: List[str]) -> None:
         self.lines = lines
-        self._mode = mode
         self._log_output = []  # type: List[str]
 
     def _getlines(self, lines2: Union[str, Sequence[str], Source]) -> Sequence[str]:
@@ -1501,7 +1493,11 @@ class LineMatcher:
     def _log_text(self) -> str:
         return "\n".join(self._log_output)
 
-    def fnmatch_lines(self, lines2: Sequence[str]) -> None:
+    def fnmatch_lines(
+        self,
+        lines2: Sequence[str],
+        mode: Optional["Literal['consecutive', 'complete']"] = None,
+    ) -> None:
         """Check lines exist in the output (using :func:`python:fnmatch.fnmatch`).
 
         The argument is a list of lines which have to match and can use glob
@@ -1509,11 +1505,18 @@ class LineMatcher:
         matches and non-matches are also shown as part of the error message.
 
         :param lines2: string patterns to match.
+        :param mode:
+            "consecutive": match lines consecutivly
+            "complete": require all lines to be matched in total
         """
         __tracebackhide__ = True
-        self._match_lines(lines2, fnmatch, "fnmatch")
+        self._match_lines(lines2, fnmatch, "fnmatch", mode=mode)
 
-    def re_match_lines(self, lines2: Sequence[str]) -> None:
+    def re_match_lines(
+        self,
+        lines2: Sequence[str],
+        mode: Optional["Literal['consecutive', 'complete']"] = None,
+    ) -> None:
         """Check lines exist in the output (using :func:`python:re.match`).
 
         The argument is a list of lines which have to match using ``re.match``.
@@ -1522,6 +1525,9 @@ class LineMatcher:
         The matches and non-matches are also shown as part of the error message.
 
         :param lines2: string patterns to match.
+        :param mode:
+            "consecutive": match lines consecutivly
+            "complete": require all lines to be matched in total
         """
         __tracebackhide__ = True
         self._match_lines(
@@ -1533,6 +1539,8 @@ class LineMatcher:
         lines2: Sequence[str],
         match_func: Callable[[str, str], bool],
         match_nickname: str,
+        *,
+        mode: Optional["Literal['consecutive', 'complete']"] = None,
     ) -> None:
         """Underlying implementation of ``fnmatch_lines`` and ``re_match_lines``.
 
@@ -1543,6 +1551,9 @@ class LineMatcher:
             pattern
         :param str match_nickname: the nickname for the match function that
             will be logged to stdout when a match occurs
+        :param mode:
+            "consecutive": match lines consecutivly
+            "complete": require all lines to be matched in total
         """
         if not isinstance(lines2, collections.abc.Sequence):
             raise TypeError("invalid type for lines2: {}".format(type(lines2).__name__))
@@ -1575,11 +1586,11 @@ class LineMatcher:
                         )
                         nomatchprinted = True
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
-                    if self._mode == "complete":
+                    if mode == "complete":
                         self._fail(
                             "no complete match: {!r} with {!r}".format(line, nextline,)
                         )
-                    elif self._mode == "consecutive" and started:
+                    elif mode == "consecutive" and started:
                         self._fail(
                             "no consecutive match: {!r} with {!r}".format(
                                 line, nextline,
