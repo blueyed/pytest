@@ -529,11 +529,11 @@ def test_linematcher_fnmatch_lines():
 
 
 def test_linematcher_consecutive():
-    lm = LineMatcher(["1", "2", "other"])
+    lm = LineMatcher(["1", "2", "other"], mode="consecutive")
 
-    lm.fnmatch_lines(["1", "*", "other"], consecutive=True)
+    lm.fnmatch_lines(["1", "*", "other"])
     with pytest.raises(pytest.fail.Exception) as excinfo:
-        lm.fnmatch_lines(["1", "*", "3"], consecutive=True)
+        lm.fnmatch_lines(["1", "*", "3"])
     assert str(excinfo.value).splitlines() == [
         "no consecutive match: '3' with 'other'",
         "Log:",
@@ -544,9 +544,9 @@ def test_linematcher_consecutive():
         "    and: 'other'",
     ]
 
-    lm.re_match_lines(["1", r"\d?", "other"], consecutive=True)
+    lm.re_match_lines(["1", r"\d?", "other"])
     with pytest.raises(pytest.fail.Exception) as excinfo:
-        lm.re_match_lines(["1", r"\d", r"\d"], consecutive=True)
+        lm.re_match_lines(["1", r"\d", r"\d"])
     assert str(excinfo.value).splitlines() == [
         r"no consecutive match: '\\d' with 'other'",
         r"Log:",

@@ -47,6 +47,7 @@ from _pytest.tmpdir import TempdirFactory
 
 if TYPE_CHECKING:
     from typing import Type
+    from typing_extensions import Literal  # noqa: F401
 
     import pexpect
 
@@ -1433,12 +1434,20 @@ class LineMatcher:
     This is a convenience class to test large texts like the output of
     commands.
 
-    The constructor takes a list of lines without their trailing newlines, i.e.
-    ``text.splitlines()``.
+        :param lines: a list of lines without their trailing newlines, e.g.
+            :code:`text.splitlines()`.
+        :param mode:
+            "consecutive": match lines consecutivly
+            "complate": require all lines to be matched in total
     """
 
-    def __init__(self, lines: List[str]) -> None:
+    def __init__(
+        self,
+        lines: List[str],
+        mode: Optional["Literal['consecutive', 'complete']"] = None,
+    ) -> None:
         self.lines = lines
+        self._mode = mode
         self._log_output = []  # type: List[str]
 
     def _getlines(self, lines2: Union[str, Sequence[str], Source]) -> Sequence[str]:
@@ -1492,9 +1501,7 @@ class LineMatcher:
     def _log_text(self) -> str:
         return "\n".join(self._log_output)
 
-    def fnmatch_lines(
-        self, lines2: Sequence[str], *, consecutive: bool = False
-    ) -> None:
+    def fnmatch_lines(self, lines2: Sequence[str]) -> None:
         """Check lines exist in the output (using :func:`python:fnmatch.fnmatch`).
 
         The argument is a list of lines which have to match and can use glob
@@ -1502,14 +1509,11 @@ class LineMatcher:
         matches and non-matches are also shown as part of the error message.
 
         :param lines2: string patterns to match.
-        :param consecutive: match lines consecutive?
         """
         __tracebackhide__ = True
-        self._match_lines(lines2, fnmatch, "fnmatch", consecutive=consecutive)
+        self._match_lines(lines2, fnmatch, "fnmatch")
 
-    def re_match_lines(
-        self, lines2: Sequence[str], *, consecutive: bool = False
-    ) -> None:
+    def re_match_lines(self, lines2: Sequence[str]) -> None:
         """Check lines exist in the output (using :func:`python:re.match`).
 
         The argument is a list of lines which have to match using ``re.match``.
@@ -1518,14 +1522,10 @@ class LineMatcher:
         The matches and non-matches are also shown as part of the error message.
 
         :param lines2: string patterns to match.
-        :param consecutive: match lines consecutively?
         """
         __tracebackhide__ = True
         self._match_lines(
-            lines2,
-            lambda name, pat: bool(re.match(pat, name)),
-            "re.match",
-            consecutive=consecutive,
+            lines2, lambda name, pat: bool(re.match(pat, name)), "re.match",
         )
 
     def _match_lines(
@@ -1533,8 +1533,6 @@ class LineMatcher:
         lines2: Sequence[str],
         match_func: Callable[[str, str], bool],
         match_nickname: str,
-        *,
-        consecutive: bool = False
     ) -> None:
         """Underlying implementation of ``fnmatch_lines`` and ``re_match_lines``.
 
@@ -1545,7 +1543,6 @@ class LineMatcher:
             pattern
         :param str match_nickname: the nickname for the match function that
             will be logged to stdout when a match occurs
-        :param consecutive: match lines consecutively?
         """
         if not isinstance(lines2, collections.abc.Sequence):
             raise TypeError("invalid type for lines2: {}".format(type(lines2).__name__))
@@ -1578,7 +1575,7 @@ class LineMatcher:
                         )
                         nomatchprinted = True
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
-                    if consecutive and started:
+                    if self._mode == "consecutive" and started:
                         self._fail(
                             "no consecutive match: {!r} with {!r}".format(
                                 line, nextline,
