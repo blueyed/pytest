@@ -43,6 +43,7 @@ from _pytest.warning_types import PytestExperimentalApiWarning
 from _pytest.warning_types import PytestUnhandledCoroutineWarning
 from _pytest.warning_types import PytestUnknownMarkWarning
 from _pytest.warning_types import PytestWarning
+from pytest import collect
 
 
 __all__ = [
@@ -51,6 +52,7 @@ __all__ = [
     "approx",
     "Class",
     "cmdline",
+    "collect",
     "Collector",
     "deprecated_call",
     "exit",
