@@ -558,6 +558,47 @@ def test_linematcher_consecutive():
     ]
 
 
+def test_linematcher_complete():
+    lm = LineMatcher(["1", "2", "other"], mode="complete")
+
+    lm.fnmatch_lines(["1", "*", "other"])
+
+    # Behaves like mode=consecutive.
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["1", "*", "3"])
+    assert str(excinfo.value).splitlines() == [
+        "no complete match: '3' with 'other'",
+        "Log:",
+        "exact match: '1'",
+        "fnmatch: '*'",
+        "   with: '2'",
+        "nomatch: '3'",
+        "    and: 'other'",
+    ]
+
+    lm.re_match_lines(["1", r"\d?", "other"])
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.re_match_lines(["1", r"\d", r"\d"])
+    assert str(excinfo.value).splitlines() == [
+        r"no complete match: '\\d' with 'other'",
+        r"Log:",
+        r"exact match: '1'",
+        r"re.match: '\\d'",
+        r"    with: '2'",
+        r" nomatch: '\\d'",
+        r"     and: 'other'",
+    ]
+
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["2", "other"])
+    assert str(excinfo.value).splitlines() == [
+        "no complete match: '2' with '1'",
+        "Log:",
+        "nomatch: '2'",
+        "    and: '1'",
+    ]
+
+
 @pytest.mark.parametrize("function", ["no_fnmatch_line", "no_re_match_line"])
 def test_linematcher_no_matching(function) -> None:
     if function == "no_fnmatch_line":

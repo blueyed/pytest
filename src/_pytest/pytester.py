@@ -1575,7 +1575,11 @@ class LineMatcher:
                         )
                         nomatchprinted = True
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
-                    if self._mode == "consecutive" and started:
+                    if self._mode == "complete":
+                        self._fail(
+                            "no complete match: {!r} with {!r}".format(line, nextline,)
+                        )
+                    elif self._mode == "consecutive" and started:
                         self._fail(
                             "no consecutive match: {!r} with {!r}".format(
                                 line, nextline,
