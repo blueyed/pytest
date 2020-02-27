@@ -457,7 +457,7 @@ class Session(nodes.FSCollector):
             return True
         return None
 
-    def pytest_report_collectionfinish(self):
+    def pytest_report_collectionfinish(self) -> Optional[List[str]]:
         if self._collect_ignored:
             total = 0
             desc = []
@@ -466,14 +466,13 @@ class Session(nodes.FSCollector):
                 if len(self._collect_ignored) > 1:
                     desc.append("{} ({})".format(via, count))
                 else:
-                    # if via != "collect_ignore" and via != "collect_ignore_glob":
-                    #     assert 0, via
                     desc.append("via {}".format(via))
             return [
                 "ignored {} {} ({})".format(
                     total, "path" if total == 1 else "paths", ", ".join(desc)
                 )
             ]
+        return None
 
     @hookimpl(tryfirst=True)
     def pytest_runtest_logreport(self, report):

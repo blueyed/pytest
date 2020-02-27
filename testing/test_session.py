@@ -273,7 +273,7 @@ def test_exclude(testdir):
     result = testdir.runpytest("--ignore=hello", "--ignore=hello2")
     assert result.ret == 0
     result.stdout.fnmatch_lines(
-        ["collected 1 item", "ignored 2 paths (via ignore)", "*1 passed*"]
+        ["collected 1 item", "ignored 2 paths (via --ignore)", "*1 passed*"]
     )
 
 
