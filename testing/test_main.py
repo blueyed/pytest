@@ -32,6 +32,26 @@ def test_parse_fname_lnum_range(
     assert Session._parse_fname_lnum_range(given) == expected
 
 
+def test_ArgPath():
+    from _pytest.main import ArgPath
+    import py.path
+
+    lpath = py.path.local()
+
+    argpath = ArgPath(lpath)
+    assert argpath._lnum_range is None
+    assert repr(argpath) == "<ArgPath {!r} _lnum_range=None>".format(repr(lpath))
+
+    argpath = ArgPath(lpath, lnum_range=(1, 1))
+    assert argpath._lnum_range == (1, 1)
+    assert repr(argpath) == "<ArgPath {!r} _lnum_range=(1, 1)>".format(repr(lpath))
+
+    # __div__ create a LocalPath.
+    new_path = argpath / "joined"
+    assert isinstance(new_path, py.path.local)
+    assert not isinstance(new_path, ArgPath)
+
+
 @pytest.mark.parametrize(
     "ret_exc",
     (

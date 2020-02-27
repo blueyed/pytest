@@ -372,23 +372,38 @@ class _bestrelpath_cache(dict):
         return r
 
 
-class ArgPath:
+class ArgPath(py.path.local):
     """A path specified as argument (or implicit via testpaths)."""
 
+    def __new__(klass, *args, **kwargs):
+        self = object.__new__(klass)
+        self._own_class = klass
+        return self
+
     def __init__(
-        self,
-        path=py.path.local,
-        lnum_range: Optional[Tuple[Optional[int], Optional[int]]] = None,
+        self, *args, lnum_range: Optional[Tuple[Optional[int], Optional[int]]] = None,
     ) -> None:
-        self._path = path
+        super().__init__(*args)
         self._lnum_range = lnum_range
 
-    def __getattr__(self, name):
-        return getattr(object.__getattribute__(self, "_path"), name)
+    @property
+    def __class__(self):
+        """Return py.path.local's class when used via `object.__new__` in its code.
+
+        This is meant to not have ArgPath instances then still."""
+        frame = sys._getframe()
+        co_names = frame.f_back.f_code.co_names
+        if "object" in co_names and "__new__" in co_names:
+            return py._path.local.LocalPath
+        return self._own_class
+
+    @__class__.setter
+    def __class__(self, value):  # noqa: F811
+        self._own_class = value
 
     def __repr__(self) -> str:
         return "<{} {!r} _lnum_range={!r}>".format(
-            self.__class__.__name__, self._path, self._lnum_range,
+            self.__class__.__name__, super().__repr__(), self._lnum_range,
         )
 
 
