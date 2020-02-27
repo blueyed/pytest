@@ -372,6 +372,26 @@ class _bestrelpath_cache(dict):
         return r
 
 
+class ArgPath:
+    """A path specified as argument (or implicit via testpaths)."""
+
+    def __init__(
+        self,
+        path=py.path.local,
+        lnum_range: Optional[Tuple[Optional[int], Optional[int]]] = None,
+    ) -> None:
+        self._path = path
+        self._lnum_range = lnum_range
+
+    def __getattr__(self, name):
+        return getattr(object.__getattribute__(self, "_path"), name)
+
+    def __repr__(self) -> str:
+        return "<{} {!r} _lnum_range={!r}>".format(
+            self.__class__.__name__, self._path, self._lnum_range,
+        )
+
+
 class Session(nodes.FSCollector):
     Interrupted = Interrupted
     Failed = Failed
@@ -631,7 +651,7 @@ class Session(nodes.FSCollector):
             return spec.origin
 
     @staticmethod
-    def _parse_fname_lineno(
+    def _parse_fname_lnum_range(
         arg: str,
     ) -> Tuple[str, Tuple[Optional[int], Optional[int]]]:
         fname = arg
@@ -651,13 +671,13 @@ class Session(nodes.FSCollector):
                     end = start
         return fname, (start, end)
 
-    def _parsearg(self, arg):
+    def _parsearg(self, arg: str) -> Tuple[ArgPath, List[str]]:
         """ return (fspath, names) tuple after checking the file exists. """
         strpath, *parts = str(arg).split("::")
         if self.config.option.pyargs:
             strpath = self._tryconvertpyarg(strpath)
 
-        fname, lineno = self._parse_fname_lineno(strpath)
+        fname, lnum_range = self._parse_fname_lnum_range(strpath)
 
         relpath = fname.replace("/", os.sep)
         fspath = self.config.invocation_dir.join(relpath, abs=True)
@@ -667,9 +687,8 @@ class Session(nodes.FSCollector):
                     "file or package not found: " + arg + " (missing __init__.py?)"
                 )
             raise UsageError("file not found: " + arg)
-        fspath = fspath.realpath()
-        fspath.lineno = lineno
-        return (fspath, parts)
+        argpath = ArgPath(fspath.realpath(), lnum_range=lnum_range)
+        return (argpath, parts)
 
     def matchnodes(self, matching, names):
         self.trace("matchnodes", matching, names)
@@ -729,11 +748,10 @@ class Session(nodes.FSCollector):
             rep = collect_one_node(node)
             if rep.passed:
                 for subnode in rep.result:
-                    try:
-                        collect_lnum = node.fspath.lineno
-                    except AttributeError:
+                    if isinstance(subnode.fspath, ArgPath):
+                        collect_lnum = node.fspath._lnum_range
+                    else:
                         collect_lnum = None
-
                     if collect_lnum and (collect_lnum[0] or collect_lnum[1]):
                         import inspect
 

@@ -26,10 +26,10 @@ from _pytest.pytester import Testdir
         "range-invalid": ("fname:2-1:", ("fname", (2, 1))),
     },
 )
-def test_parse_fname_lineno(
+def test_parse_fname_lnum_range(
     given: str, expected: Tuple[str, Tuple[Optional[int], Optional[int]]]
 ):
-    assert Session._parse_fname_lineno(given) == expected
+    assert Session._parse_fname_lnum_range(given) == expected
 
 
 @pytest.mark.parametrize(
