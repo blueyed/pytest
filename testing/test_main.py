@@ -40,16 +40,11 @@ def test_ArgPath():
 
     argpath = ArgPath(lpath)
     assert argpath._lnum_range is None
-    assert repr(argpath) == "<ArgPath {!r} _lnum_range=None>".format(repr(lpath))
+    assert repr(argpath) == "<ArgPath {!r} _lnum_range=None>".format(lpath)
 
     argpath = ArgPath(lpath, lnum_range=(1, 1))
     assert argpath._lnum_range == (1, 1)
-    assert repr(argpath) == "<ArgPath {!r} _lnum_range=(1, 1)>".format(repr(lpath))
-
-    # __div__ create a LocalPath.
-    new_path = argpath / "joined"
-    assert isinstance(new_path, py.path.local)
-    assert not isinstance(new_path, ArgPath)
+    assert repr(argpath) == "<ArgPath {!r} _lnum_range=(1, 1)>".format(lpath)
 
 
 @pytest.mark.parametrize(

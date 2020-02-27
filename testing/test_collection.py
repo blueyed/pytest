@@ -452,11 +452,13 @@ class TestSession:
         config = testdir.parseconfig(p.basename)
         rcol = Session.from_config(config)
         assert rcol.fspath == subdir
-        fspath, parts = rcol._parsearg(p.basename)
+        argpath, parts = rcol._parsearg(p.basename)
+        fspath = argpath._path
 
         assert fspath == target
         assert len(parts) == 0
-        fspath, parts = rcol._parsearg(p.basename + "::test_func")
+        argpath, parts = rcol._parsearg(p.basename + "::test_func")
+        fspath = argpath._path
         assert fspath == target
         assert parts[0] == "test_func"
         assert len(parts) == 1
