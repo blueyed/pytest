@@ -662,15 +662,16 @@ class Session(nodes.FSCollector):
             m = RE_FNAME_LINENO.match(arg)
             if m:
                 fname = m.group(1)
-                is_range = m.group(3)
                 start_ = m.group(2)
                 if start_:
                     start = int(start_)
                 end_ = m.group(4)
                 if end_:
                     end = int(end_)
-                elif not is_range:
-                    end = start
+                else:
+                    is_range = m.group(3)
+                    if not is_range:
+                        end = start
         return fname, (start, end)
 
     def _parsearg(self, arg: str) -> Tuple[ArgPath, List[str]]:
