@@ -508,7 +508,7 @@ class Session(nodes.FSCollector):
         self.trace.root.indent += 1
         self._notfound = []
         initialpaths = []  # type: List[py.path.local]
-        self._initial_parts = []  # type: List[Tuple[py.path.local, List[str]]]
+        self._initial_parts = []  # type: List[Tuple[ArgPath, List[str]]]
         self.items = items = []  # type: List[nodes.Item]
         for arg in args:
             argpath, parts = self._parsearg(arg)
