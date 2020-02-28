@@ -200,6 +200,9 @@ def test_strict_prohibits_unregistered_markers(testdir, option_name):
             "test_strict_prohibits_unregistered_markers.py:2: in <module>",
             "    @pytest.mark.unregisteredmark",
             "E   Failed: 'unregisteredmark' not found in `markers` configuration option",
+            "*= short test summary info =*",
+            "ERROR test_strict_prohibits_unregistered_markers.py:2 - Failed:"
+            " 'unregisteredmark' not found in `markers` configuration option",
             "*! Interrupted: 1 error during collection !*",
             "*= 1 error in *",
         ]

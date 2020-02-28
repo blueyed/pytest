@@ -2257,6 +2257,45 @@ def test__get_pos() -> None:
     assert check(config, rep) == "windows/path.py:2::testname"
 
 
+def test_crash_during_collection(testdir, monkeypatch) -> None:
+    from pluggy import hooks
+
+    def crash(obj):
+        raise Exception("crash")
+
+    monkeypatch.setattr("_pytest.python.safe_isclass", crash)
+
+    p1 = testdir.makepyfile("def test_pass(): pass")
+    result = testdir.runpytest(str(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "collected 0 items / 1 error",
+            "",
+            "*= ERRORS =*",
+            "*_ ERROR collecting test_crash_during_collection.py _*",
+            # XXX: shouldn't be cut off here.
+            "{}:*: in __call__".format(hooks.__file__),
+            "    return self._hookexec(self, self.get_hookimpls(), kwargs)",
+        ],
+        consecutive=True,
+    )
+
+    lnum = crash.__code__.co_firstlineno + 1
+    result.stdout.fnmatch_lines(
+        [
+            "{}:{}: in crash".format(__file__, lnum),
+            '    raise Exception("crash")',
+            "E   Exception: crash",
+            "*= short test summary info =*",
+            "ERROR collecting test_crash_during_collection.py ({}:{}) - Exception: crash".format(
+                __file__, lnum
+            ),
+            "*! Interrupted: 1 error during collection !*",
+            "*= 1 error in *",
+        ]
+    )
+
+
 @pytest.mark.parametrize("ci", (None, "true"))
 def test_summary_with_nonprintable(ci, testdir: Testdir) -> None:
     testdir.monkeypatch.setattr("_pytest.terminal.get_terminal_width", lambda: 99)
@@ -2339,7 +2378,7 @@ def test_collecterror(testdir):
             "*_ ERROR collecting test_collecterror.py _*",
             "E   SyntaxError: *",
             "*= short test summary info =*",
-            "ERROR test_collecterror.py",
+            "ERROR collecting test_collecterror.py",
             "*! Interrupted: 1 error during collection !*",
             "*= 1 error in *",
         ]

@@ -18,6 +18,7 @@ from typing import Mapping
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import Union
 
 import attr
 import pluggy
@@ -27,6 +28,7 @@ from wcwidth import wcswidth
 
 import pytest
 from _pytest import nodes
+from _pytest._code.code import ReprFileLocation
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
 from _pytest.config import Config
@@ -1211,43 +1213,55 @@ class TerminalReporter:
         return parts, main_color
 
 
-def _get_pos(config: Config, rep: TestReport) -> str:
-    nodeid = config.cwd_relative_nodeid(rep.nodeid)
-    path, _, testname = nodeid.partition("::")
-    if not testname:
-        return nodeid
-
-    # Append location (line number).
+def _get_rep_reprcrash(
+    rep: Union[CollectReport, TestReport], fulltrace: bool
+) -> Optional[ReprFileLocation]:
     if not rep.longrepr:
-        return nodeid
-    if config.option.fulltrace:
-        try:
-            testloc = rep.longrepr.reprcrash
-        except AttributeError:
-            return nodeid
-    else:
+        return None
+
+    if isinstance(rep, TestReport) and not fulltrace:
         # This uses the first traceback entry for the location in the test itself
         # (rather than reprcrash, which might be less relevant for going to
         # directly, e.g. pexpect failures in pytest itself).
         try:
-            testloc = rep.longrepr.reprtraceback.reprentries[0].reprfileloc
+            return rep.longrepr.reprtraceback.reprentries[0].reprfileloc
         except AttributeError:
-            testloc = None
-        if testloc is None:
-            # Handle --tb=native, --tb=no.
-            try:
-                testloc = rep.longrepr.reprcrash
-            except AttributeError:
-                return nodeid
+            pass
 
-    assert isinstance(testloc.path, str), testloc.path
-    testloc_path = Path(testloc.path)
-    if testloc_path.is_absolute():
-        testloc_path = _shorten_path(testloc_path, Path(str(config.invocation_dir)))
+    # Handle --tb=native, --tb=no.
+    try:
+        return rep.longrepr.reprcrash
+    except AttributeError:
+        return None
 
-    if str(testloc_path).replace("\\", nodes.SEP) == path:
-        return "%s:%d::%s" % (path, testloc.lineno, testname)
-    return "%s (%s:%d)" % (nodeid, testloc_path, testloc.lineno)
+
+def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
+    nodeid = config.cwd_relative_nodeid(rep.nodeid)
+    path, _, testname = nodeid.partition("::")
+
+    if isinstance(rep, CollectReport):
+        desc = "collecting"
+        if nodeid:
+            desc += " " + nodeid
+        path = rep.fspath
+    else:
+        desc = nodeid
+
+    # Append location (line number).
+    crashloc = _get_rep_reprcrash(rep, config.option.fulltrace)
+    if not crashloc:
+        return desc
+
+    assert isinstance(crashloc.path, str), crashloc.path
+    crash_path = Path(crashloc.path)
+    if crash_path.is_absolute():
+        crash_path = _shorten_path(crash_path, Path(str(config.invocation_dir)))
+
+    if str(crash_path).replace("\\", nodes.SEP) == path:
+        if not testname:
+            return "%s:%d" % (path, crashloc.lineno)
+        return "%s:%d::%s" % (path, crashloc.lineno, testname)
+    return "%s (%s:%d)" % (desc, crash_path, crashloc.lineno)
 
 
 def _get_line_with_reprcrash_message(config, rep, termwidth):
