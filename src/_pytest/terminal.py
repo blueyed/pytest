@@ -28,6 +28,7 @@ from wcwidth import wcswidth
 
 import pytest
 from _pytest import nodes
+from _pytest._code.code import ReprFileLocation
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
 from _pytest.config import Config
@@ -1212,6 +1213,33 @@ class TerminalReporter:
         return parts, main_color
 
 
+def _get_rep_reprcrash(
+    rep: Union[CollectReport, TestReport], fulltrace: bool
+) -> Optional[ReprFileLocation]:
+    if not rep.longrepr:
+        return None
+
+    if fulltrace:
+        try:
+            return rep.longrepr.reprcrash
+        except AttributeError:
+            return None
+
+    if isinstance(rep, TestReport):
+        # This uses the first traceback entry for the location in the test itself
+        # (rather than reprcrash, which might be less relevant for going to
+        # directly, e.g. pexpect failures in pytest itself).
+        try:
+            return rep.longrepr.reprtraceback.reprentries[0].reprfileloc
+        except AttributeError:
+            pass
+    # Handle --tb=native, --tb=no.
+    try:
+        return rep.longrepr.reprcrash
+    except AttributeError:
+        return None
+
+
 def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
     nodeid = config.cwd_relative_nodeid(rep.nodeid)
     path, _, testname = nodeid.partition("::")
@@ -1225,40 +1253,20 @@ def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
         desc = nodeid
 
     # Append location (line number).
-    if not rep.longrepr:
+    crashloc = _get_rep_reprcrash(rep, config.option.fulltrace)
+    if not crashloc:
         return desc
-    if config.option.fulltrace:
-        try:
-            testloc = rep.longrepr.reprcrash
-        except AttributeError:
-            return desc
-    else:
-        testloc = None
-        if isinstance(rep, TestReport):
-            # This uses the first traceback entry for the location in the test itself
-            # (rather than reprcrash, which might be less relevant for going to
-            # directly, e.g. pexpect failures in pytest itself).
-            try:
-                testloc = rep.longrepr.reprtraceback.reprentries[0].reprfileloc
-            except AttributeError:
-                testloc = None
-    if testloc is None:
-        # Handle --tb=native, --tb=no.
-        try:
-            testloc = rep.longrepr.reprcrash
-        except AttributeError:
-            return desc
 
-    assert isinstance(testloc.path, str), testloc.path
-    testloc_path = Path(testloc.path)
-    if testloc_path.is_absolute():
-        testloc_path = _shorten_path(testloc_path, Path(str(config.invocation_dir)))
+    assert isinstance(crashloc.path, str), crashloc.path
+    crashloc_path = Path(crashloc.path)
+    if crashloc_path.is_absolute():
+        crashloc_path = _shorten_path(crashloc_path, Path(str(config.invocation_dir)))
 
-    if str(testloc_path).replace("\\", nodes.SEP) == path:
+    if str(crashloc_path).replace("\\", nodes.SEP) == path:
         if not testname:
-            return "%s:%d" % (path, testloc.lineno)
-        return "%s:%d::%s" % (path, testloc.lineno, testname)
-    return "%s (%s:%d)" % (desc, testloc_path, testloc.lineno)
+            return "%s:%d" % (path, crashloc.lineno)
+        return "%s:%d::%s" % (path, crashloc.lineno, testname)
+    return "%s (%s:%d)" % (desc, crashloc_path, crashloc.lineno)
 
 
 def _get_line_with_reprcrash_message(config, rep, termwidth):
