@@ -919,17 +919,17 @@ class TestNewFirst:
             myplugin="""
             def pytest_collection_modifyitems(items):
                 items[:] = sorted(items, key=lambda item: item.nodeid)
-                print("\\nnew_items:", items)
+                print("new_items:", items)
             """
         )
         testdir.syspathinsert()
-        result = testdir.runpytest("-v", "--nf", "-p", "myplugin")
+        result = testdir.runpytest("--nf", "-p", "myplugin", "--collect-only", "-q")
         result.stdout.fnmatch_lines(
             [
                 "new_items: *test_1.py*test_1.py*test_2.py*",
-                "*test_1/test_1.py::test_2 PASSED*",
-                "*test_2/test_2.py::test_1 PASSED*",
-                "*test_1/test_1.py::test_1 PASSED*",
+                "test_1/test_1.py::test_2",
+                "test_2/test_2.py::test_1",
+                "test_1/test_1.py::test_1",
             ]
         )
 
