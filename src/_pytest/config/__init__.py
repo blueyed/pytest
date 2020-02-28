@@ -1132,7 +1132,11 @@ class Config:
             try:
                 key, user_ini_value = ini_config.split("=", 1)
             except ValueError:
-                raise UsageError("-o/--override-ini expects option=value style.")
+                raise UsageError(
+                    "-o/--override-ini expects option=value style (got: {!r}).".format(
+                        ini_config
+                    )
+                )
             else:
                 if key == name:
                     value = user_ini_value
@@ -1196,28 +1200,6 @@ def _warn_about_missing_assertion(mode):
                 "by the underlying Python interpreter "
                 "(are you using python -O?)\n"
             )
-
-
-def setns(obj, dic):
-    import pytest
-
-    for name, value in dic.items():
-        if isinstance(value, dict):
-            mod = getattr(obj, name, None)
-            if mod is None:
-                modname = "pytest.%s" % name
-                mod = types.ModuleType(modname)
-                sys.modules[modname] = mod
-                mod.__all__ = []
-                setattr(obj, name, mod)
-            obj.__all__.append(name)
-            setns(mod, value)
-        else:
-            setattr(obj, name, value)
-            obj.__all__.append(name)
-            # if obj != pytest:
-            #    pytest.__all__.append(name)
-            setattr(pytest, name, value)
 
 
 def create_terminal_writer(config: Config, *args, **kwargs) -> TerminalWriter:
