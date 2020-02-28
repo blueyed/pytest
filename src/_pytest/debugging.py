@@ -130,6 +130,18 @@ class PdbBase(Generic[_P]):
             _pytest_capman = capman
             _continued = False
 
+            def interaction(self, frame, traceback):
+                config = pytestPDB_obj.config
+                pytestPDB_obj.config.pluginmanager.hook.pytest_enter_pdb(
+                    config=config, pdb=self
+                )
+                try:
+                    return super().interaction(frame, traceback)
+                finally:
+                    pytestPDB_obj.config.pluginmanager.hook.pytest_leave_pdb(
+                        config=config, pdb=self
+                    )
+
             def do_debug(self, arg):
                 pytestPDB_obj._recursive_debug += 1
                 ret = super().do_debug(arg)
@@ -157,9 +169,6 @@ class PdbBase(Generic[_P]):
                         capman.resume()
                     else:
                         tw.sep(">", "PDB continue")
-                pytestPDB_obj.config.pluginmanager.hook.pytest_leave_pdb(
-                    config=pytestPDB_obj.config, pdb=self
-                )
                 self._continued = True
                 return ret
 
@@ -237,7 +246,6 @@ class PdbBase(Generic[_P]):
 
         _pdb = self._import_pdb_cls()(**kwargs)
 
-        self.config.pluginmanager.hook.pytest_enter_pdb(config=self.config, pdb=_pdb)
         return _pdb
 
     def post_mortem(self, t):

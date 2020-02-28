@@ -4,6 +4,7 @@ import sys
 import _pytest._code
 import pytest
 from _pytest.debugging import _validate_usepdb_cls
+from _pytest.pytester import Testdir
 
 try:
     # Type ignored for Python <= 3.6.
@@ -862,6 +863,44 @@ class TestPDB:
         assert "leave_pdb_hook" in rest
         assert "1 failed" in rest
         self.flush(child)
+
+    def test_enter_leave_with_continue(self, testdir: Testdir) -> None:
+        testdir.makeconftest(
+            """
+            calls = []
+
+            def pytest_enter_pdb(config, pdb):
+                calls.append("pytest_enter_pdb")
+
+            def pytest_leave_pdb(config, pdb):
+                calls.append("pytest_leave_pdb")
+        """
+        )
+        p1 = testdir.makepyfile(
+            """
+            import pytest
+            from conftest import calls
+
+            def f():
+                pass
+
+            def test_set_trace():
+                pytest.set_trace()
+                f()
+                f()
+                assert calls == [
+                    'pytest_enter_pdb',
+                    'pytest_leave_pdb',
+                    'pytest_enter_pdb',
+                    'pytest_leave_pdb',
+                    'pytest_enter_pdb',
+                    'pytest_leave_pdb',
+                ]
+        """
+        )
+        testdir.syspathinsert()
+        result = testdir.runpytest(str(p1), stdin="break f\nc\nc\nc\n")
+        assert result.ret == 0
 
     def test_pdb_custom_cls(self, testdir, custom_pdb_calls):
         p1 = testdir.makepyfile("""xxx """)
