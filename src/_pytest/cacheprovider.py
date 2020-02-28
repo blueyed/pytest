@@ -242,8 +242,8 @@ class LFPlugin:
         self.lastfailed = config.cache.get(
             "cache/lastfailed", {}
         )  # type: Dict[str, bool]
-        self._previously_failed_count = None
-        self._report_status = None
+        self._previously_failed_count = None  # type: Optional[int]
+        self._report_status = None  # type: Optional[str]
         self._skipped_files = 0  # count skipped files during collection due to --lf
 
         if config.getoption("lf"):
@@ -282,7 +282,12 @@ class LFPlugin:
         else:
             self.lastfailed[report.nodeid] = True
 
-    def pytest_collection_modifyitems(self, session, config, items):
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+    def pytest_collection_modifyitems(
+        self, config: Config, items: List[nodes.Item]
+    ) -> Generator[None, None, None]:
+        yield
+
         if not self.active:
             return
 
@@ -347,9 +352,12 @@ class NFPlugin:
         self.active = config.option.newfirst
         self.cached_nodeids = config.cache.get("cache/nodeids", [])
 
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_collection_modifyitems(
-        self, session: Session, config: Config, items: List[nodes.Item]
-    ) -> None:
+        self, items: List[nodes.Item]
+    ) -> Generator[None, None, None]:
+        yield
+
         new_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
         if self.active:
             other_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
@@ -371,11 +379,12 @@ class NFPlugin:
     def _get_increasing_order(self, items):
         return sorted(items, key=lambda item: item.fspath.mtime(), reverse=True)
 
-    def pytest_sessionfinish(self, session):
+    def pytest_sessionfinish(self) -> None:
         config = self.config
         if config.getoption("cacheshow") or hasattr(config, "slaveinput"):
             return
-
+        if config.getoption("collectonly"):
+            return
         config.cache.set("cache/nodeids", self.cached_nodeids)
 
 
