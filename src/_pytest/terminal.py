@@ -1258,15 +1258,15 @@ def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
         return desc
 
     assert isinstance(crashloc.path, str), crashloc.path
-    crashloc_path = Path(crashloc.path)
-    if crashloc_path.is_absolute():
-        crashloc_path = _shorten_path(crashloc_path, Path(str(config.invocation_dir)))
+    crash_path = Path(crashloc.path)
+    if crash_path.is_absolute():
+        crash_path = _shorten_path(crash_path, Path(str(config.invocation_dir)))
 
-    if str(crashloc_path).replace("\\", nodes.SEP) == path:
+    if str(crash_path).replace("\\", nodes.SEP) == path:
         if not testname:
             return "%s:%d" % (path, crashloc.lineno)
         return "%s:%d::%s" % (path, crashloc.lineno, testname)
-    return "%s (%s:%d)" % (desc, crashloc_path, crashloc.lineno)
+    return "%s (%s:%d)" % (desc, crash_path, crashloc.lineno)
 
 
 def _get_line_with_reprcrash_message(config, rep, termwidth):
