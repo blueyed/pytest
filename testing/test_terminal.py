@@ -2289,7 +2289,7 @@ def test_crash_during_collection(testdir, monkeypatch) -> None:
                 __file__, lnum
             ),
             "*! Interrupted: 1 error during collection !*",
-            "*= 1 error in 0.12s =*",
+            "*= 1 error in *",
         ]
     )
 
