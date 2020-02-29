@@ -496,6 +496,14 @@ def test_mockimport_callable(monkeypatch):
         (("os.foo", globals()), {"level": 42}),
     ]
 
+    # With fromlist.
+    calls[:] = []
+    with pytest.raises(ImportError):
+        from os import foo  # noqa: F401
+    assert calls == [
+        (("os", globals(), None, ("foo",), 0), {}),
+    ]
+
 
 def test_mockimport_importlib(monkeypatch):
     """importlib.import_module is not patched"""
