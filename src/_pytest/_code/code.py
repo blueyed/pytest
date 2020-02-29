@@ -389,8 +389,12 @@ class Traceback(List[TracebackEntry]):
 
             by default this removes all the TracebackEntries which are hidden
             (see ishidden() above)
+
+            The entry with the crash (see :func:`getcrashentry`) is always kept.
         """
-        return Traceback(filter(fn, self), self._excinfo)
+        crash_entry = self.getcrashentry()
+        new = [entry for entry in self if fn(entry) and entry != crash_entry]
+        return Traceback(new, self._excinfo)
 
     def getcrashentry(self) -> TracebackEntry:
         """ return last non-hidden traceback entry that lead

@@ -217,6 +217,33 @@ class TestTraceback:
             ]
         )
 
+    def test_filter_keeps_crash_entry(self, testdir):
+        p1 = testdir.makepyfile(
+            """
+            def test(request):
+                capman = request.config.pluginmanager.getplugin("capturemanager")
+                capman.read_global_capture = None
+            """
+        )
+        result = testdir.runpytest(str(p1))
+        result.stdout.fnmatch_lines(
+            [
+                "collected 1 item",
+                "",
+                "test_filter_keeps_crash_entry.py FE *",
+                "_* ERROR at teardown of test *_",
+                ">       out, err = self.read_global_capture()",
+                "E       TypeError: 'NoneType' object is not callable",
+                "=* FAILURES *=",
+                ">       out, err = self.read_global_capture()",
+                "E       TypeError: 'NoneType' object is not callable",
+                "FAILED test_filter_keeps_crash_entry.py::test (*_pytest*runner.py:*)"
+                " - TypeError: *",
+                "ERROR test_filter_keeps_crash_entry.py::test (*_pytest*runner.py:*)"
+                " - TypeError: *",
+            ]
+        )
+
 
 class TestReprFuncArgs:
     def test_not_raise_exception_with_mixed_encoding(self, tw_mock) -> None:
