@@ -225,7 +225,7 @@ class TestTraceback:
                 capman.read_global_capture = None
             """
         )
-        result = testdir.runpytest(str(p1))
+        result = testdir.runpytest_subprocess(str(p1))
         result.stdout.fnmatch_lines(
             [
                 "collected 1 item",
