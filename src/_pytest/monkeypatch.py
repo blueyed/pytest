@@ -3,12 +3,20 @@ import os
 import sys
 import warnings
 from contextlib import contextmanager
+from types import FunctionType
 from typing import Generator
+from typing import List
 from typing import Optional
+from typing import Sequence
+from typing import Union
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.fixtures import fixture
 from _pytest.pathlib import Path
+
+if TYPE_CHECKING:
+    from typing import Type  # noqa: F401
 
 
 @fixture
@@ -264,20 +272,40 @@ class MonkeyPatch:
         """
         self.delitem(os.environ, name, raising=raising)
 
-    def mockimport(self, mocked_imports, err=ImportError):
+    def mockimport(
+        self,
+        mocked_imports: Union[str, Sequence[str]],
+        err: Union[FunctionType, "Type[BaseException]"] = ImportError,
+    ):
+        """Mock import with given error to be raised, or callable.
+
+        The callable gets called instead of :func:`python:__import__`.
+
+        This is considered to be **experimental**.
+        """
         import inspect
 
         if not hasattr(self, "_mocked_imports"):
             self._mocked_imports = {}
             self._orig_import = __import__
 
-            def import_mock(name, *args, **kwargs):
-                if name in self._mocked_imports:
-                    err = self._mocked_imports[name]
-                    if inspect.isfunction(err):
-                        return err(name, *args, **kwargs)
-                    raise err
-                return self._orig_import(name, *args, **kwargs)
+            def import_mock(*args, **kwargs):
+                name = kwargs.get("name", args[0])  # type: str
+                fromlist = kwargs.get(
+                    "fromlist", args[3] if len(args) > 3 else []
+                )  # type: List[str]
+                if fromlist:
+                    req_names = ["{}.{}".format(name, x) for x in fromlist]
+                else:
+                    req_names = [name]
+
+                for _name in req_names:
+                    if _name in self._mocked_imports:
+                        err = self._mocked_imports[_name]
+                        if inspect.isfunction(err):
+                            return err(*args, **kwargs)
+                        raise err
+                return self._orig_import(*args, **kwargs)
 
             self.setattr("builtins.__import__", import_mock)
 
