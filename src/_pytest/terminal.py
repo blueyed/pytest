@@ -1219,15 +1219,6 @@ def _get_rep_reprcrash(
     if not rep.longrepr:
         return None
 
-    if isinstance(rep, TestReport) and not fulltrace:
-        # This uses the first traceback entry for the location in the test itself
-        # (rather than reprcrash, which might be less relevant for going to
-        # directly, e.g. pexpect failures in pytest itself).
-        try:
-            return rep.longrepr.reprtraceback.reprentries[0].reprfileloc
-        except AttributeError:
-            pass
-
     # Handle --tb=native, --tb=no.
     try:
         return rep.longrepr.reprcrash
