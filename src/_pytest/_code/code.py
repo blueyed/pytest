@@ -393,7 +393,7 @@ class Traceback(List[TracebackEntry]):
             The entry with the crash (see :func:`getcrashentry`) is always kept.
         """
         crash_entry = self.getcrashentry()
-        new = [entry for entry in self if fn(entry) and entry != crash_entry]
+        new = [entry for entry in self if fn(entry) or entry == crash_entry]
         return Traceback(new, self._excinfo)
 
     def getcrashentry(self) -> TracebackEntry:
