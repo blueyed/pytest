@@ -511,3 +511,10 @@ def test_mockimport_already_imported(monkeypatch):
     monkeypatch.mockimport("os", TypeError)
     with pytest.raises(TypeError):
         import os  # noqa: F401
+
+
+def test_mockimport_fromlist(monkeypatch):
+    monkeypatch.mockimport(("os.foo",), TypeError)
+
+    with pytest.raises(TypeError):
+        from os import foo  # noqa: F401
