@@ -277,7 +277,12 @@ class MonkeyPatch:
         mocked_imports: Union[str, Sequence[str]],
         err: Union[FunctionType, "Type[BaseException]"] = ImportError,
     ):
-        """Mock import with given error or callable."""
+        """Mock import with given error to be raised, or callable.
+
+        The callable gets called instead of :func:`python:__import__`.
+
+        This is considered to be **experimental**.
+        """
         import inspect
 
         if not hasattr(self, "_mocked_imports"):
@@ -299,7 +304,6 @@ class MonkeyPatch:
                         err = self._mocked_imports[_name]
                         if inspect.isfunction(err):
                             return err(*args, **kwargs)
-                        print(err)
                         raise err
                 return self._orig_import(*args, **kwargs)
 
