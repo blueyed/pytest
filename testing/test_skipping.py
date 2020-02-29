@@ -257,21 +257,15 @@ class TestXFail:
                 assert 1
         """
         )
-        from _pytest.runner import CallInfo
-
-        from_call_code = CallInfo.from_call.__func__.__code__
-        loc = "{}:{}".format(
-            from_call_code.co_filename, from_call_code.co_firstlineno + 7
-        )
 
         result = testdir.runpytest(p, "-rx")
         result.stdout.fnmatch_lines(
             [
                 "*= short test summary info =*",
                 "",
-                "XFAIL test_one.py::test_this ({})".format(loc),
+                "XFAIL test_one.py::test_this (*_pytest*skipping.py:*)",
                 "  reason: [NOTRUN] noway",
-                "XFAIL test_one.py::test_this_true ({})".format(loc),
+                "XFAIL test_one.py::test_this_true (*_pytest*skipping.py:*)",
                 "  reason: [NOTRUN] condition: True",
                 "*= 1 passed, 2 xfailed in *",
             ]

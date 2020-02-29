@@ -237,9 +237,9 @@ class TestTraceback:
                 "=* FAILURES *=",
                 ">       out, err = self.read_global_capture()",
                 "E       TypeError: 'NoneType' object is not callable",
-                "FAILED test_filter_keeps_crash_entry.py::test (*_pytest*runner.py:*)"
+                "FAILED test_filter_keeps_crash_entry.py::test (*_pytest*capture.py:*)"
                 " - TypeError: *",
-                "ERROR test_filter_keeps_crash_entry.py::test (*_pytest*runner.py:*)"
+                "ERROR test_filter_keeps_crash_entry.py::test (*_pytest*capture.py:*)"
                 " - TypeError: *",
             ]
         )
