@@ -313,7 +313,8 @@ class TestParser:
             "  -h, --[no-]help",
         ]
 
-    def test_no_prefix_with_store_true_action(self) -> None:
+    def test_inverse_option_with_store_true_action(self) -> None:
+        """`--foo` generates `--no-foo`, but handles existing `--no-foo`."""
         from _pytest.config.argparsing import Parser
         from _pytest.config.argparsing import MyOptionParser
 
