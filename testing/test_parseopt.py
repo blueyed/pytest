@@ -256,7 +256,7 @@ class TestParser:
         parser.parse([])
         help = parser.optparser.format_help()
         assert help.splitlines() == [
-            "usage: __main__.py [--func-args] [file_or_dir [file_or_dir ...]]",
+            "usage: * [--func-args] [file_or_dir [file_or_dir ...]]",
             "",
             "positional arguments:",
             "  file_or_dir",
@@ -279,7 +279,7 @@ class TestParser:
         parser.parse(["-h"])
         help = parser.optparser.format_help()
         assert help.splitlines() == [
-            "usage: __main__.py [--doit] [-h] [file_or_dir [file_or_dir ...]]",
+            "usage: * [--doit] [-h] [file_or_dir [file_or_dir ...]]",
             "",
             "positional arguments:",
             "  file_or_dir",
@@ -303,7 +303,7 @@ class TestParser:
         parser.parse(["-h"])
         help = parser.optparser.format_help()
         assert help.splitlines() == [
-            "usage: __main__.py [--preferences value1 value2 value3] [-h] [file_or_dir [file_or_dir ...]]",
+            "usage: * [--preferences value1 value2 value3] [-h] [file_or_dir [file_or_dir ...]]",
             "",
             "positional arguments:",
             "  file_or_dir",
