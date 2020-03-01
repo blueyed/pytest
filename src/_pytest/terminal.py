@@ -13,6 +13,7 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Mapping
 from typing import Optional
@@ -267,9 +268,12 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure(config: Config) -> None:
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_cmdline_main(config: Config) -> Generator[None, None, None]:
+    """Setup terminalreporter as early as possible."""
     reporter = TerminalReporter(config, sys.stdout)
     config.pluginmanager.register(reporter, "terminalreporter")
+
     if config.option.debug or config.option.traceconfig:
 
         def mywriter(tags, args):
@@ -277,6 +281,8 @@ def pytest_configure(config: Config) -> None:
             reporter.write_line("[traceconfig] " + msg)
 
         config.trace.root.setprocessor("pytest:config", mywriter)
+
+    yield
 
 
 def getreportopt(config: Config) -> str:
