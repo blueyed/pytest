@@ -1,5 +1,6 @@
 import pytest
 from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
 
 
 def test_version(testdir, pytestconfig):
@@ -14,7 +15,7 @@ def test_version(testdir, pytestconfig):
         result.stderr.fnmatch_lines(["*setuptools registered plugins:", "*at*"])
 
 
-def test_help(testdir):
+def test_help(testdir: Testdir) -> None:
     result = testdir.runpytest("--help", "-p", "no:[defaults]")
     assert result.ret == 0
     result.stdout.fnmatch_lines(
@@ -40,7 +41,7 @@ def test_help(testdir):
         *minversion*
         *to see*markers*pytest --markers*
         *to see*fixtures*pytest --fixtures*
-        """
+    """
     )
     result.stdout.no_fnmatch_line("logging:")
 
