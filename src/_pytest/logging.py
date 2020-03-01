@@ -190,7 +190,10 @@ def pytest_addoption(parser):
         const=False,
         default=True,
         type="bool",
-        help="disable printing caught logs on failed tests.",
+        help=(
+            "disable adding caught logs as report sections"
+            ' (deprecated, use "--show-capture" instead).'
+        ),
     )
     add_option_ini(
         "--log-level",
