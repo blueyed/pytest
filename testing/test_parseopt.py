@@ -255,13 +255,7 @@ class TestParser:
         parser.addoption("--func-args", "--doit", help="foo", action="store_true")
         parser.parse([])
         help = parser.optparser.format_help()
-        assert help.splitlines() == [
-            "usage: * [--func-args] [file_or_dir [file_or_dir ...]]",
-            "",
-            "positional arguments:",
-            "  file_or_dir",
-            "",
-            "custom options:",
+        assert help.splitlines()[-2:] == [
             "  --[no-]func-args, --[no-]doit",
             "                        foo",
         ]
@@ -278,13 +272,7 @@ class TestParser:
         )
         parser.parse(["-h"])
         help = parser.optparser.format_help()
-        assert help.splitlines() == [
-            "usage: * [--doit] [-h] [file_or_dir [file_or_dir ...]]",
-            "",
-            "positional arguments:",
-            "  file_or_dir",
-            "",
-            "general:",
+        assert help.splitlines()[-3:] == [
             "  --[no-]doit, --[no-]func-args",
             "                        foo",
             "  -h, --[no-]help       show help message and configuration info",
@@ -302,12 +290,7 @@ class TestParser:
         group._addoption("-h", "--help", action="store_true", dest="help")
         parser.parse(["-h"])
         help = parser.optparser.format_help()
-        assert help.splitlines() == [
-            "usage: * [--preferences value1 value2 value3] [-h] [file_or_dir [file_or_dir ...]]",
-            "",
-            "positional arguments:",
-            "  file_or_dir",
-            "",
+        assert help.splitlines()[-3:] == [
             "general:",
             "  --preferences=value1 value2 value3",
             "  -h, --[no-]help",
