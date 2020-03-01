@@ -720,7 +720,7 @@ class Testdir:
         p = self.makeini(source)
         return py.iniconfig.IniConfig(p)["pytest"]
 
-    def makepyfile(self, *args, **kwargs):
+    def makepyfile(self, *args, **kwargs) -> py.path.local:
         """Shortcut for .makefile() with a .py extension."""
         return self._makefile(".py", args, kwargs)
 
