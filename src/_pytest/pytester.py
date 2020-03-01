@@ -17,6 +17,7 @@ from typing import Dict
 from typing import Generator
 from typing import Iterable
 from typing import List
+from typing import Mapping
 from typing import Optional
 from typing import Sequence
 from typing import Tuple
@@ -654,25 +655,34 @@ class Testdir:
         """
         self.tmpdir.chdir()
 
-    def _makefile(self, ext, lines, files, encoding="utf-8"):
+    def _makefile(
+        self,
+        ext: str,
+        lines: Sequence[Union[bytes, str]],
+        files: Mapping[str, Sequence[Union[bytes, str]]],
+        encoding="utf-8",
+    ) -> py.path.local:
         items = list(files.items())
 
         def to_text(s):
             return s.decode(encoding) if isinstance(s, bytes) else str(s)
 
         if lines:
-            source = "\n".join(to_text(x) for x in lines)
-            basename = self.request.function.__name__
-            items.insert(0, (basename, source))
+            funcname = self.request.function.__name__  # type: str
+            lines = "\n".join(to_text(x) for x in lines)
+            items.insert(0, (funcname, lines))
 
-        ret = None
+        if not items:
+            raise ValueError("no files to create")
+
+        first_p = True
         for basename, value in items:
             p = self.tmpdir.join(basename).new(ext=ext)
             p.dirpath().ensure_dir()
-            source = Source(value)
-            source = "\n".join(to_text(line) for line in source.lines)
+            source = "\n".join(to_text(x) for x in Source(value).lines)
             p.write(source.strip().encode(encoding), "wb")
-            if ret is None:
+            if first_p:
+                first_p = False
                 ret = p
         return ret
 
@@ -710,7 +720,7 @@ class Testdir:
         p = self.makeini(source)
         return py.iniconfig.IniConfig(p)["pytest"]
 
-    def makepyfile(self, *args, **kwargs):
+    def makepyfile(self, *args, **kwargs) -> py.path.local:
         """Shortcut for .makefile() with a .py extension."""
         return self._makefile(".py", args, kwargs)
 

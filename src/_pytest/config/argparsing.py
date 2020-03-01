@@ -110,6 +110,7 @@ class Parser:
 
         optparser = MyOptionParser(self, self.extra_info, prog=self.prog)
         groups = self._groups + [self._anonymous]
+        self._preprocess_options_for_no_prefix(groups)
         for group in groups:
             if group.options:
                 desc = group.description or group.name
@@ -123,6 +124,33 @@ class Parser:
         # Type ignored because typeshed doesn't know about argcomplete.
         file_or_dir_arg.completer = filescompleter  # type: ignore
         return optparser
+
+    def _preprocess_options_for_no_prefix(self, groups: List["OptionGroup"]) -> None:
+        """Add "--no-"-prefixed option names for "store_true" actions."""
+        all_names = []
+        store_true_options = []
+        for option in [option for group in groups for option in group.options]:
+            names = option.names()
+            if option.attrs().get("action") == "store_true":
+                store_true_options.append((option, names))
+            all_names.extend(names)
+
+        for option, option_names in store_true_options:
+            new_option_strings = []
+            for option_string in option_names:
+                if option_string.startswith("--no-"):
+                    new = "--{}".format(option_string[5:])
+                elif option_string.startswith("--"):
+                    new = "--no-{}".format(option_string[2:])
+                else:
+                    continue
+                if new not in all_names:
+                    new_option_strings.append(new)
+
+            if new_option_strings:
+                option._long_opts.extend(new_option_strings)
+                assert option._attrs["action"] == "store_true", option
+                option._attrs["action"] = "store_true_with_no_prefix"
 
     def parse_setoption(
         self,
@@ -377,6 +405,16 @@ class OptionGroup:
         self.options.append(option)
 
 
+class StoreTrueWithNoPrefixAction(argparse._StoreTrueAction):
+    """Handle `--no-foo` for `--foo` options."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if option_string.startswith("--no-"):
+            setattr(namespace, self.dest, False)
+        else:
+            setattr(namespace, self.dest, True)
+
+
 class MyOptionParser(argparse.ArgumentParser):
     def __init__(
         self,
@@ -396,6 +434,9 @@ class MyOptionParser(argparse.ArgumentParser):
         # extra_info is a dict of (param -> value) to display if there's
         # an usage error to provide more contextual information to the user
         self.extra_info = extra_info if extra_info else {}
+        self.register(
+            "action", "store_true_with_no_prefix", StoreTrueWithNoPrefixAction
+        )
 
     def error(self, message: str) -> "NoReturn":
         """Transform argparse error message into UsageError."""
@@ -515,6 +556,19 @@ class DropShorterLongHelpFormatter(argparse.HelpFormatter):
                 return_list.append(option)
             if option[2:] == short_long.get(option.replace("-", "")):
                 return_list.append(option.replace(" ", "=", 1))
+
+        if isinstance(action, StoreTrueWithNoPrefixAction):
+            # Collapse "--foo, --no-foo" into "--[no-]foo".
+            idx = 0
+            while idx < len(return_list):
+                option = return_list[idx]
+                if option.startswith("--"):
+                    other_idx = return_list.index("--no-{}".format(option[2:]))
+                    return_list.pop(other_idx)
+                    option = "--[no-]" + option[2:]
+                    return_list = return_list[:idx] + [option] + return_list[idx + 1 :]
+                idx += 1
+
         formatted_action_invocation = ", ".join(return_list)
         action._formatted_action_invocation = formatted_action_invocation  # type: ignore
         return formatted_action_invocation

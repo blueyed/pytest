@@ -1,5 +1,6 @@
 import pytest
 from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
 
 
 def test_version(testdir, pytestconfig):
@@ -14,15 +15,28 @@ def test_version(testdir, pytestconfig):
         result.stderr.fnmatch_lines(["*setuptools registered plugins:", "*at*"])
 
 
-def test_help(testdir):
+def test_help(testdir: Testdir) -> None:
     result = testdir.runpytest("--help", "-p", "no:[defaults]")
     assert result.ret == 0
     result.stdout.fnmatch_lines(
         """
+        usage: * [[]options[]] [[]file_or_dir[]] [[]file_or_dir[]] [[]...[]]
+
+        positional arguments:
+          file_or_dir
+
           -m MARKEXPR           only run tests matching given mark expression.
                                 For example: -m 'mark1 and not mark2'.
         reporting:
           --durations=N *
+
+        collection:
+          --[[]no-[]]collect-only, --[[]no-[]]co
+
+        test session debugging and configuration:
+          -V, --version         display pytest version and information about plugins.
+          -h, --help            show help message and configuration info
+
         *setup.cfg*
         *minversion*
         *to see*markers*pytest --markers*

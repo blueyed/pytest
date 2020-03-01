@@ -255,9 +255,11 @@ class TestParser:
         parser.addoption("--func-args", "--doit", help="foo", action="store_true")
         parser.parse([])
         help = parser.optparser.format_help()
-        assert "--func-args, --doit  foo" in help
+        assert help.splitlines()[-2:] == [
+            "  --[no-]func-args, --[no-]doit",
+            "                        foo",
+        ]
 
-    # testing would be more helpful with all help generated
     def test_drop_short_help1(self, parser: parseopt.Parser) -> None:
         group = parser.getgroup("general")
         group.addoption("--doit", "--func-args", action="store_true", help="foo")
@@ -270,7 +272,11 @@ class TestParser:
         )
         parser.parse(["-h"])
         help = parser.optparser.format_help()
-        assert "-doit, --func-args  foo" in help
+        assert help.splitlines()[-3:] == [
+            "  --[no-]doit, --[no-]func-args",
+            "                        foo",
+            "  -h, --[no-]help       show help message and configuration info",
+        ]
 
     def test_multiple_metavar_help(self, parser: parseopt.Parser) -> None:
         """
@@ -284,7 +290,41 @@ class TestParser:
         group._addoption("-h", "--help", action="store_true", dest="help")
         parser.parse(["-h"])
         help = parser.optparser.format_help()
-        assert "--preferences=value1 value2 value3" in help
+        assert help.splitlines()[-3:] == [
+            "general:",
+            "  --preferences=value1 value2 value3",
+            "  -h, --[no-]help",
+        ]
+
+    def test_inverse_option_with_store_true_action(self) -> None:
+        """`--foo` generates `--no-foo`, but handles existing `--no-foo`."""
+        from _pytest.config.argparsing import Parser
+        from _pytest.config.argparsing import MyOptionParser
+
+        parser = Parser(usage="usage")
+        optparser = MyOptionParser(parser=parser)
+
+        parser.addoption("--no-foo", action="store_true", dest="no_foo")
+        parser.addoption("--foo", action="store_true", dest="foo")
+
+        optparser = parser._getparser()
+        assert list(optparser._option_string_actions.keys()) == ["--no-foo", "--foo"]
+        p1 = parser.parse([])
+        assert (p1.foo, p1.no_foo) == (False, False)
+
+        p1 = parser.parse(["--foo"])
+        assert (p1.foo, p1.no_foo) == (True, False)
+
+        p1 = parser.parse(["--no-foo"])
+        assert (p1.foo, p1.no_foo) == (False, True)
+
+        parser.addoption("--bar", action="store_true", dest="bar", default=None)
+        p1 = parser.parse([])
+        assert p1.bar is None
+        p1 = parser.parse(["--bar"])
+        assert p1.bar is True
+        p1 = parser.parse(["--no-bar"])
+        assert p1.bar is False
 
 
 def test_argcomplete(testdir, monkeypatch) -> None:

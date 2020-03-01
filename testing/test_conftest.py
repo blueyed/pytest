@@ -1,12 +1,13 @@
 import os
 import textwrap
 
-import py
+import py.path
 
 import pytest
 from _pytest.config import ExitCode
 from _pytest.config import PytestPluginManager
 from _pytest.pathlib import Path
+from _pytest.pytester import Testdir
 
 
 def ConftestWithSetinitial(path):
@@ -174,19 +175,25 @@ def test_setinitial_conftest_subdirs(testdir, name):
         assert len(conftest._conftestpath2mod) == 0
 
 
-def test_conftest_confcutdir(testdir):
-    testdir.makeconftest("assert 0")
-    x = testdir.mkdir("x")
-    x.join("conftest.py").write(
-        textwrap.dedent(
-            """\
-            def pytest_addoption(parser):
-                parser.addoption("--xyz", action="store_true")
-            """
-        )
+@pytest.fixture
+def conftest_in_tests(testdir: Testdir) -> py.path.local:
+    return testdir.makepyfile(
+        **{
+            "tests/conftest": """
+        def pytest_addoption(parser):
+            parser.addoption("--xyz", action="store_const", const=True)
+        """
+        }
     )
+
+
+def test_conftest_confcutdir(
+    testdir: Testdir, conftest_in_tests: py.path.local
+) -> None:
+    testdir.makeconftest("assert 0")
+    x = conftest_in_tests.dirpath()
     result = testdir.runpytest("-h", "--confcutdir=%s" % x, x)
-    result.stdout.fnmatch_lines(["*--xyz*"])
+    result.stdout.fnmatch_lines(["custom options:", "  --xyz"])
     result.stdout.no_fnmatch_line("*warning: could not load initial*")
 
 
@@ -319,31 +326,17 @@ def test_no_conftest(testdir):
     assert result.ret == ExitCode.USAGE_ERROR
 
 
-def test_conftest_existing_resultlog(testdir):
-    x = testdir.mkdir("tests")
-    x.join("conftest.py").write(
-        textwrap.dedent(
-            """\
-            def pytest_addoption(parser):
-                parser.addoption("--xyz", action="store_true")
-            """
-        )
-    )
+def test_conftest_existing_resultlog(
+    testdir: Testdir, conftest_in_tests: py.path.local
+) -> None:
     testdir.makefile(ext=".log", result="")  # Writes result.log
     result = testdir.runpytest("-h", "--resultlog", "result.log")
     result.stdout.fnmatch_lines(["*--xyz*"])
 
 
-def test_conftest_existing_junitxml(testdir):
-    x = testdir.mkdir("tests")
-    x.join("conftest.py").write(
-        textwrap.dedent(
-            """\
-            def pytest_addoption(parser):
-                parser.addoption("--xyz", action="store_true")
-            """
-        )
-    )
+def test_conftest_existing_junitxml(
+    testdir: Testdir, conftest_in_tests: py.path.local
+) -> None:
     testdir.makefile(ext=".xml", junit="")  # Writes junit.xml
     result = testdir.runpytest("-h", "--junitxml", "junit.xml")
     result.stdout.fnmatch_lines(["*--xyz*"])
@@ -409,24 +402,13 @@ def test_fixture_dependency(testdir):
     result.stdout.fnmatch_lines(["*1 passed*"])
 
 
-def test_conftest_found_with_double_dash(testdir):
-    sub = testdir.mkdir("sub")
-    sub.join("conftest.py").write(
-        textwrap.dedent(
-            """\
-            def pytest_addoption(parser):
-                parser.addoption("--hello-world", action="store_true")
-            """
-        )
-    )
-    p = sub.join("test_hello.py")
+def test_conftest_found_with_double_dash_in_arg(
+    testdir: Testdir, conftest_in_tests: py.path.local
+) -> None:
+    p = conftest_in_tests.dirpath().join("test_hello.py")
     p.write("def test_hello(): pass")
     result = testdir.runpytest(str(p) + "::test_hello", "-h")
-    result.stdout.fnmatch_lines(
-        """
-        *--hello-world*
-    """
-    )
+    result.stdout.fnmatch_lines(["*--xyz*"])
 
 
 class TestConftestVisibility:
@@ -643,17 +625,13 @@ def test_hook_proxy(testdir):
     )
 
 
-def test_required_option_help(testdir):
-    testdir.makeconftest("assert 0")
-    x = testdir.mkdir("x")
-    x.join("conftest.py").write(
-        textwrap.dedent(
-            """\
-            def pytest_addoption(parser):
-                parser.addoption("--xyz", action="store_true", required=True)
-            """
-        )
+def test_required_option_help(testdir: Testdir) -> None:
+    testdir.makeconftest(
+        """
+        def pytest_addoption(parser):
+            parser.addoption("--xyz", action="store_true", required=True)
+        """
     )
-    result = testdir.runpytest("-h", x)
+    result = testdir.runpytest("-h")
     result.stdout.no_fnmatch_line("*argument --xyz is required*")
-    assert "general:" in result.stdout.str()
+    result.stdout.fnmatch_lines(["general:", "custom options:", "  --[no-]xyz"])

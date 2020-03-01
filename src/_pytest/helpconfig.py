@@ -49,7 +49,8 @@ def pytest_addoption(parser):
     group.addoption(
         "--version",
         "-V",
-        action="store_true",
+        action="store_const",
+        const=True,
         help="display pytest version and information about plugins.",
     )
     group._addoption(

@@ -1085,13 +1085,23 @@ def test_makefile_warts(testdir: Testdir) -> None:
     Additional issues:
      - always strips and dedents.
     """
+
+    def list_files():
+        return sorted([os.path.basename(x) for x in testdir.tmpdir.listdir()])
+
     # Requires "ext".
     with pytest.raises(TypeError, match="required positional argument"):
         testdir.makefile(foo="")  # type: ignore[call-arg]  # noqa: F821
 
-    # Cannot create a file named "ext".
-    p1 = testdir.makefile(ext="")
-    assert p1 is None
+    # Requires items to be created.
+    with pytest.raises(TypeError):
+        testdir.makefile()  # type: ignore[call-arg]  # noqa: F821
+    with pytest.raises(ValueError, match=r"^no files to create$"):
+        testdir.makefile(None)
+    with pytest.raises(ValueError, match=r"^no files to create$"):
+        testdir.makefile(ext="")
+    assert list_files() == []
+
     assert testdir.tmpdir.listdir() == []
 
     with pytest.raises(TypeError, match="got multiple values for argument 'ext'"):
