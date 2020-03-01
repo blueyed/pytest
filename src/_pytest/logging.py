@@ -599,9 +599,9 @@ class LoggingPlugin:
         )
         self.log_file_handler.setFormatter(self.log_file_formatter)
 
-    def _log_cli_enabled(self):
+    def _log_cli_enabled(self) -> bool:
         """Return True if log_cli should be considered enabled, either explicitly
-        or because --log-cli-level was given in the command-line.
+        or because --log-cli-level was given on the command-line.
         """
         return self._config.getoption(
             "--log-cli-level"
