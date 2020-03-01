@@ -20,7 +20,7 @@ def test_help(testdir: Testdir) -> None:
     assert result.ret == 0
     result.stdout.fnmatch_lines(
         """
-        usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]
+        usage: * [options] [file_or_dir] [file_or_dir] [...]
 
         positional arguments:
           file_or_dir
