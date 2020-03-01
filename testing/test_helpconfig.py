@@ -19,15 +19,28 @@ def test_help(testdir):
     assert result.ret == 0
     result.stdout.fnmatch_lines(
         """
+        usage: __main__.py [options] [file_or_dir] [file_or_dir] [...]
+
+        positional arguments:
+          file_or_dir
+
           -m MARKEXPR           only run tests matching given mark expression.
                                 For example: -m 'mark1 and not mark2'.
         reporting:
           --durations=N *
+
+        collection:
+          --[[]no-[]]collect-only, --[[]no-[]]co
+
+        test session debugging and configuration:
+          -V, --version         display pytest version and information about plugins.
+          -h, --help            show help message and configuration info
+
         *setup.cfg*
         *minversion*
         *to see*markers*pytest --markers*
         *to see*fixtures*pytest --fixtures*
-    """
+        """
     )
     result.stdout.no_fnmatch_line("logging:")
 
