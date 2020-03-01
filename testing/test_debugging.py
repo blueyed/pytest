@@ -362,7 +362,7 @@ class TestPDB:
         child.expect("1 error")
         self.flush(child)
 
-    def test_pdb_interaction_on_internal_error(self, testdir):
+    def test_pdb_interaction_on_internal_error(self, testdir: Testdir) -> None:
         testdir.makeconftest(
             """
             def pytest_runtest_protocol():
@@ -374,16 +374,8 @@ class TestPDB:
         child.expect("Pdb")
 
         # INTERNALERROR is only displayed once via terminal reporter.
-        assert (
-            len(
-                [
-                    x
-                    for x in child.before.decode().splitlines()
-                    if x.startswith("INTERNALERROR> Traceback")
-                ]
-            )
-            == 1
-        )
+        output = child.before.decode().splitlines()
+        assert output.count("INTERNALERROR> Traceback (most recent call last):") == 1
 
         child.sendeof()
         self.flush(child)
