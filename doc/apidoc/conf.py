@@ -150,10 +150,10 @@ html_theme_options = {}
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
-html_title = "pytest documentation"
+html_title = "pytest API documentation"
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-html_short_title = "pytest-%s" % release
+html_short_title = "pytest-api-%s" % release
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -248,7 +248,7 @@ latex_documents = [
     (
         "contents",
         "pytest.tex",
-        "pytest Documentation",
+        "pytest API Documentation",
         "holger krekel, trainer and consultant, http://merlinux.eu",
         "manual",
     )
@@ -330,7 +330,7 @@ texinfo_documents = [
     (
         master_doc,
         "pytest",
-        "pytest Documentation",
+        "pytest API Documentation",
         (
             "Holger Krekel@*Benjamin Peterson@*Ronny Pfannschmidt@*"
             "Floris Bruynooghe@*others"
