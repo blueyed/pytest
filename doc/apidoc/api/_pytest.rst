@@ -27,13 +27,11 @@ Submodules
    _pytest.fixtures
    _pytest.freeze_support
    _pytest.helpconfig
-   _pytest.highlight
    _pytest.hookspec
    _pytest.junitxml
    _pytest.logging
    _pytest.main
    _pytest.monkeypatch
-   _pytest.mp
    _pytest.nodes
    _pytest.nose
    _pytest.outcomes
