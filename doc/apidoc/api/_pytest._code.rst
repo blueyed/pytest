@@ -17,4 +17,3 @@ Module contents
    :undoc-members:
    :show-inheritance:
    :private-members:
-
