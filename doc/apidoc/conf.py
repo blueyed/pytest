@@ -246,7 +246,7 @@ htmlhelp_basename = "pytestdoc"
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
     (
-        "contents",
+        master_doc,
         "pytest.tex",
         "pytest API Documentation",
         "holger krekel, trainer and consultant, http://merlinux.eu",
