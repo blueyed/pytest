@@ -10,7 +10,9 @@ sphinx:
   # Ignoring warnings for now.  Not many, but tedious to fix right now.
   # fail_on_warning: true
 
-formats: all
+formats:
+  - epub
+  - pdf
 
 python:
    version: 3.8
