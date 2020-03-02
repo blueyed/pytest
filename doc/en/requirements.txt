@@ -1,3 +1,4 @@
+# TODO: move to "docs" extras_require (setup.py/setup.cfg).
 pygments-pytest>=1.1.0
 sphinx>=1.8.2,<2.1
 sphinxcontrib-trio
