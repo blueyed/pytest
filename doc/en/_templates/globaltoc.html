@@ -25,6 +25,8 @@
 <hr>
 <ul>
   <li><a href="{{ pathto('genindex') }}">Index</a></li>
-  <li><a href="/projects/apidoc/en/{{ current_version | default("latest") }}/">Full API</a></li>
+{%- if READTHEDOCS %}
+  <li><a href="/projects/apidoc/en/{{ current_version }}">Full API</a></li>
+{%- endif %}
 </ul>
 <hr>
