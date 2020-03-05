@@ -370,6 +370,17 @@ def configure_logging(app: "sphinx.application.Sphinx") -> None:
     warn_handler[0].filters.insert(0, WarnLogFilter())
 
 
+def setup_intersphinx_pytest():
+    html_context = globals().get("html_context", {})
+    if html_context.get("READTHEDOCS", False):
+        pytest_url = html_context["canonical_url"].replace("/projects/apidoc/", "")
+    else:
+        from pathlib import Path
+
+        pytest_url = str(Path(__file__).parent.parent / "en" / "_build" / "html")
+    intersphinx_mapping["pytest"] = (pytest_url, None)
+
+
 def setup(app: "sphinx.application.Sphinx") -> None:
     # from sphinx.ext.autodoc import cut_lines
     # app.connect('autodoc-process-docstring', cut_lines(4, what=['module']))
@@ -388,3 +399,5 @@ def setup(app: "sphinx.application.Sphinx") -> None:
     )
 
     configure_logging(app)
+
+    setup_intersphinx_pytest()
