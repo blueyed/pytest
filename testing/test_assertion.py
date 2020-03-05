@@ -1519,11 +1519,13 @@ def test_diff_different_line_endings():
         r"  line2",
     ]
 
-    # Only '\r' is considered non-printable
+    # Only '\r' is considered non-printable, repr() is used on original lines.
     assert callequal("line1\r\nline2", "line1\nline2\r", verbose=2) == [
         r"'line1\r\nline2' == 'line1\nline2\r'",
         r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
-        r"  'line1'",
+        r"- 'line1\n'",
+        r"+ 'line1\r\n'",
+        r"?        ++",
         r"- 'line2\r'",
         r"?       --",
         r"+ 'line2'",
