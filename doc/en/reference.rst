@@ -194,7 +194,7 @@ Mark a test function as using the given fixture names.
 .. _`pytest.mark.xfail ref`:
 
 pytest.mark.xfail
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 **Tutorial**: :ref:`xfail`.
 
@@ -1595,8 +1595,8 @@ passed multiple times. The expected format is ``name=value``. For example::
 
 .. confval:: xfail_strict
 
-    If set to ``True``, tests marked with ``@pytest.mark.xfail`` that actually succeed will by default fail the
-    test suite.
+    If set to ``True``, tests marked with :ref:`@pytest.mark.xfail <pytest.mark.xfail ref>`
+    that actually succeed will by default fail the test suite.
     For more information, see :ref:`xfail strict tutorial`.
 
 

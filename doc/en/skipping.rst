@@ -16,7 +16,8 @@ resource which is not available at the moment (for example a database).
 
 A **xfail** means that you expect a test to fail for some reason.
 A common example is a test for a feature not yet implemented, or a bug not yet fixed.
-When a test passes despite being expected to fail (marked with ``pytest.mark.xfail``),
+When a test passes despite being expected to fail
+(marked with :ref:`pytest.mark.xfail ref`),
 it's an **xpass** and will be reported in the test summary.
 
 ``pytest`` counts and lists *skip* and *xfail* tests separately. Detailed
