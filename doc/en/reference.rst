@@ -883,6 +883,7 @@ TestReport
 
 .. autoclass:: _pytest.runner.TestReport()
     :members:
+    :show-inheritance:
     :inherited-members:
 
 _Result
