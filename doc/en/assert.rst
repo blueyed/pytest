@@ -133,7 +133,7 @@ The reporter will provide you with helpful output in case of failures such as *n
 exception* or *wrong exception*.
 
 Note that it is also possible to specify a "raises" argument to
-``pytest.mark.xfail``, which checks that the test is failing in a more
+:ref:`pytest.mark.xfail ref`, which checks that the test is failing in a more
 specific way than just having any exception raised:
 
 .. code-block:: python
