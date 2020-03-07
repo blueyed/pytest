@@ -638,8 +638,7 @@ class FDCapture(FDCaptureBinary):
 
 
 class SysCaptureBinary:
-    class CLOSE_STDIN:
-        pass
+    CLOSE_STDIN = CLOSE_STDIN
 
     EMPTY_BUFFER = b""
     _state = None

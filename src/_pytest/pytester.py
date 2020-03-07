@@ -989,11 +989,9 @@ class Testdir(Generic[AnyStr]):
             if "-s" in args:
                 stdin = sys.stdin
             else:
-                stdin = self.CLOSE_STDIN
+                stdin = CLOSE_STDIN
 
-        if stdin is self.CLOSE_STDIN:
-            stdin = SysCapture.CLOSE_STDIN
-        elif isinstance(stdin, str):
+        if isinstance(stdin, str):
 
             class EchoingInput(StringIO):
                 def readline(self, *args, **kwargs):
@@ -1010,7 +1008,7 @@ class Testdir(Generic[AnyStr]):
             from _pytest.compat import CaptureIO
 
             if fd == 0:
-                if not stdin or stdin is SysCapture.CLOSE_STDIN:
+                if not stdin or stdin is CLOSE_STDIN:
                     tmpfile = None
                 else:
                     from _pytest.capture import safe_text_dupfile
