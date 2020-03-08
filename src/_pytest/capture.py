@@ -443,8 +443,8 @@ class EncodedFile:
 # XXX: Generic[AnyStr], and AnyStr as type directly does not work?
 #      Would be good to ensure out and err are of the same type.
 class CaptureResult(NamedTuple):
-    out: Union[str, bytes]
-    err: Union[str, bytes]
+    out: None  # type: Union[str, bytes]
+    err: None  # type: Union[str, bytes]
 
 
 class MultiCapture:
