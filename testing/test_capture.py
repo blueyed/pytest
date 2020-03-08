@@ -1337,8 +1337,8 @@ def test_capturing_and_logging_fundamentals(testdir, method):
         import sys, os
         import py, logging
         from _pytest import capture
-        cap = capture.MultiCapture(out=False, in_=False,
-                                     Capture=capture.%s)
+
+        cap = capture.MultiCapture(out=False, in_=False, Capture=capture.%s)
         cap.start_capturing()
 
         logging.warning("hello1")
