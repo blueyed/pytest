@@ -14,6 +14,16 @@ help:
 
 .PHONY: help Makefile
 
+# Build changelog draft on changelog updates.
+_changelog_towncrier_draft.rst: ../../changelog
+	cd ../.. && towncrier --draft > "doc/en/$@"
+# Ignore with catch-all target.
+../../changelog: ;
+
+html-changelog: _changelog_towncrier_draft.rst html
+html-changelog: SPHINXOPTS+=-t changelog_towncrier_draft
+html-changelog: ;
+
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
