@@ -158,40 +158,21 @@ As stated, the objective is to share maintenance and avoid "plugin-abandon".
 .. _`pull requests`:
 .. _pull-requests:
 
-Preparing Pull Requests
+Creating a pull request
 -----------------------
 
-Short version
-~~~~~~~~~~~~~
+.. note::
 
-#. Fork the repository.
-#. Enable and install `pre-commit <https://pre-commit.com>`_ to ensure style-guides and code checks are followed.
-#. Follow **PEP-8** for naming and `black <https://github.com/psf/black>`_ for formatting.
-#. Tests are run using ``tox``::
+    See the `GitHub Tutorial on pull requests <https://help.github.com/articles/using-pull-requests/>`_.
+    for an introduction on what pull requests are.
 
-    tox -e linting,py37
+.. note::
 
-   The test environments above are usually enough to cover most cases locally.
+    `flake8`_ (enforcing :pep:`8`) and `black`_ are used to ensure a
+    consistent code style.
 
-#. Write a ``changelog`` entry: ``changelog/2574.bugfix.rst``, use issue id number
-   and one of ``bugfix``, ``removal``, ``feature``, ``vendor``, ``doc`` or
-   ``trivial`` for the issue type.
-#. Unless your change is a trivial or a documentation fix (e.g., a typo or reword of a small section) please
-   add yourself to the ``AUTHORS`` file, in alphabetical order.
-
-
-Long version
-~~~~~~~~~~~~
-
-What is a "pull request"?  It informs the project's core developers about the
-changes you want to review and merge.  Pull requests are stored on
-`GitHub servers <https://github.com/pytest-dev/pytest/pulls>`_.
-Once you send a pull request, we can discuss its potential modifications and
-even add more commits to it later on. There's an excellent tutorial on how Pull
-Requests work in the
-`GitHub Help Center <https://help.github.com/articles/using-pull-requests/>`_.
-
-Here is a simple overview, with pytest-specific bits:
+.. _flake8: https://pypi.org/project/flake8/
+.. _black: https://github.com/psf/black
 
 #. Fork the
    `pytest GitHub repository <https://github.com/pytest-dev/pytest>`__.  It's
@@ -213,51 +194,54 @@ Here is a simple overview, with pytest-specific bits:
    If you need some help with Git, follow this quick start
    guide: https://git.wiki.kernel.org/index.php/QuickStart
 
-#. Install `pre-commit <https://pre-commit.com>`_ and its hook on the pytest repo:
-
-   **Note: pre-commit must be installed as admin, as it will not function otherwise**::
-
-     $ pip install --user pre-commit
-     $ pre-commit install
-
-   Afterwards ``pre-commit`` will run whenever you commit.
+#. **Optionally** install and enable `pre-commit <https://pre-commit.com>`_
 
    https://pre-commit.com/ is a framework for managing and maintaining multi-language pre-commit hooks
    to ensure code-style and code formatting is consistent.
 
+   Installing it will run checks whenever you commit, which slows things down
+   however, and might cause conflicts, e.g. between ``black`` changing files
+   in a way ``flake8`` does not like them.
+
+   Therefore it is usually better to run it via ``tox -e linting`` manually,
+   when you are finished with your changes.
+
+     $ pip install --user pre-commit
+     $ pre-commit install
+
 #. Install tox
 
-   Tox is used to run all the tests and will automatically setup virtualenvs
-   to run the tests in.
-   (will implicitly use http://www.virtualenv.org/en/latest/)::
+   Tox is used to run the tests in an isolated environment with automatically
+   created virtualenvs::
 
     $ pip install tox
 
+   You can also use a virtualenv directly (see below).
+
 #. Run all the tests
 
-   You need to have Python 3.7 available in your system.  Now
-   running tests is as simple as issuing this command::
+   The following example uses Python 3.7, which needs to be available on
+   your system.
 
-    $ tox -e linting,py37
+   To run all tests and additional linting checks::
 
-   This command will run tests via the "tox" tool against Python 3.7
-   and also perform "lint" coding-style checks.
+    $ tox -e py37,linting
 
-#. You can now edit your local working copy and run the tests again as necessary. Please follow PEP-8 for naming.
+#. You can now edit your local working copy and run the tests again as necessary.
 
-   You can pass different options to ``tox``. For example, to run tests on Python 3.7 and pass options to pytest
+   You can pass different options to ``tox``, and especially the ``pytest``
+   run by ``tox``.
+   For example, to run tests on Python 3.8 and pass options to pytest
    (e.g. enter pdb on failure) to pytest you can do::
 
-    $ tox -e py37 -- --pdb
+    $ tox -e py38 -- --pdb
 
    Or to only run tests in a particular test module on Python 3.7::
 
     $ tox -e py37 -- testing/test_config.py
 
-
-   When committing, ``pre-commit`` will re-format the files if necessary.
-
-#. If instead of using ``tox`` you prefer to run the tests directly, then we suggest to create a virtual environment and use
+#. If instead of using ``tox`` you prefer to run the tests directly, then
+   you can create a virtual environment and use
    an editable install with the ``testing`` extra::
 
        $ python3 -m venv .venv
@@ -269,18 +253,23 @@ Here is a simple overview, with pytest-specific bits:
 
        $ pytest testing/test_config.py
 
+#. Create a new changelog entry in the ``changelog`` directory.
+   The file should be named ``<issueid>.<type>.rst``,
+   where *issueid* is the number of the issue (or pull request) related
+   to the change and *type* is one of
+   ``bugfix``, ``removal``, ``feature``, ``vendor``, ``doc`` or ``trivial``,
+   e.g. ``changelog/2574.bugfix.rst``.
+
+   You can skip creating a changelog entry if the change doesn't affect the
+   documented behaviour of Pytest.
 
 #. Commit and push once your tests pass and you are happy with your change(s)::
 
     $ git commit -a -m "<commit message>"
     $ git push -u
 
-#. Create a new changelog entry in ``changelog``. The file should be named ``<issueid>.<type>.rst``,
-   where *issueid* is the number of the issue related to the change and *type* is one of
-   ``bugfix``, ``removal``, ``feature``, ``vendor``, ``doc`` or ``trivial``. You may not create a
-   changelog entry if the change doesn't affect the documented behaviour of Pytest.
-
-#. Add yourself to ``AUTHORS`` file if not there yet, in alphabetical order.
+#. Consider adding yourself to the ``AUTHORS`` file in alphabetical order,
+   unless your change is trivial.
 
 #. Finally, submit a pull request through the GitHub website using this data::
 
