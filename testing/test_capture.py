@@ -16,6 +16,7 @@ import pytest
 from _pytest import capture
 from _pytest.capture import _get_multicapture
 from _pytest.capture import CaptureManager
+from _pytest.capture import CaptureResult
 from _pytest.capture import MultiCapture
 from _pytest.config import ExitCode
 
@@ -38,6 +39,27 @@ def StdCapture(out=True, err=True, in_=True):
 
 def TeeStdCapture(out=True, err=True, in_=True):
     return capture.MultiCapture(out, err, in_, Capture=capture.TeeSysCapture)
+
+
+def test_CaptureResult() -> None:
+    with pytest.raises(TypeError):
+        CaptureResult()  # type: ignore
+
+    cr = CaptureResult(out="out", err="err")
+    repr_ = repr(cr)
+    assert repr_ == "CaptureResult(out='out', err='err')"
+    assert str(cr) == repr_
+
+    cr = CaptureResult(out=b"out\nout2", err=b"err\nerr2")
+    repr_ = repr(cr)
+    assert repr_ == r"CaptureResult(out=b'out\nout2', err=b'err\nerr2')"
+    assert str(cr) == repr_
+
+    # XXX: should cause mypy type error?!
+    cr = CaptureResult(out="out", err=b"err")
+    repr_ = repr(cr)
+    assert repr_ == r"CaptureResult(out='out', err=b'err')"
+    assert str(cr) == repr_
 
 
 class TestCaptureManager:

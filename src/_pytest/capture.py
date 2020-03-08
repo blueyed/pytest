@@ -2,7 +2,6 @@
 per-test stdout/stderr capturing mechanism.
 
 """
-import collections
 import contextlib
 import io
 import os
@@ -12,7 +11,9 @@ from tempfile import TemporaryFile
 from typing import BinaryIO
 from typing import Generator
 from typing import Iterable
+from typing import NamedTuple
 from typing import Optional
+from typing import Union
 
 import pytest
 from _pytest.compat import CaptureAndPassthroughIO
@@ -439,7 +440,11 @@ class EncodedFile:
         return getattr(object.__getattribute__(self, "buffer"), name)
 
 
-CaptureResult = collections.namedtuple("CaptureResult", ["out", "err"])
+# XXX: Generic[AnyStr], and AnyStr as type directly does not work?
+#      Would be good to ensure out and err are of the same type.
+class CaptureResult(NamedTuple):
+    out: Union[str, bytes]
+    err: Union[str, bytes]
 
 
 class MultiCapture:
