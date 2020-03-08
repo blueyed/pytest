@@ -682,8 +682,8 @@ class SysCaptureBinary:
         setattr(sys, self.name, self.tmpfile)
         self._state = "resumed"
 
-    def writeorg(self, data):
-        self._old.write(data)
+    def writeorg(self, data: bytes) -> None:
+        self._old.write(data.decode(self._old.encoding))
         self._old.flush()
 
 
@@ -695,6 +695,10 @@ class SysCapture(SysCaptureBinary):
         self.tmpfile.seek(0)
         self.tmpfile.truncate()
         return res
+
+    def writeorg(self, data: str) -> None:  # type: ignore
+        self._old.write(data)
+        self._old.flush()
 
 
 class TeeSysCapture(SysCapture):
