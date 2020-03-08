@@ -19,6 +19,7 @@ from _pytest.capture import CaptureManager
 from _pytest.capture import CaptureResult
 from _pytest.capture import MultiCapture
 from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
 
 # note: py.io capture tests where copied from
 # pylib 1.4.20.dev2 (rev 13d9af95547e)
@@ -60,6 +61,23 @@ def test_CaptureResult() -> None:
     repr_ = repr(cr)
     assert repr_ == r"CaptureResult(out='out', err=b'err')"
     assert str(cr) == repr_
+
+
+def test_capsysbinary(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        def test(capsysbinary):
+            print("hello")
+            assert False, "trigger_failure"
+        """
+    )
+    result = testdir.runpytest(str(p1))
+    result.stdout.fnmatch_lines([
+        'E       assert False',
+        '*- Captured stdout call -*',
+        'hello',
+    ])
+    assert result.ret == 1
 
 
 class TestCaptureManager:
