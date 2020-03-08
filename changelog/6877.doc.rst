@@ -1,0 +1,5 @@
+Improve :ref:`pull-requests` in ``CONTRIBUTING.rst``
+
+Started with not
+`enforcing pre-commit <https://github.com/pytest-dev/pytest/issues/6877>`_,
+but then also merged "short" and "long" version.
