@@ -102,8 +102,6 @@ for reference:
         directory which is unique to each test function;
         replaced by :fixture:`tmp_path`.
 
-        .. _`py.path.local`: https://py.readthedocs.io/en/latest/path.html
-
    :fixture:`tmpdir_factory`
         Make session-scoped temporary directories and return
         :class:`py.path.local` objects;

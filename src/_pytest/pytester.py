@@ -577,7 +577,7 @@ class Testdir:
 
     Attributes:
 
-    :ivar tmpdir: The :py:class:`py.path.local` instance of the temporary directory.
+    :ivar py.path.local tmpdir: The temporary directory.
 
     :ivar plugins: A list of plugins to use with :py:meth:`parseconfig` and
        :py:meth:`runpytest`.  Initially this is an empty list but plugins can
@@ -811,7 +811,7 @@ class Testdir:
            :py:meth:`parseconfig` and :py:meth:`parseconfigure` to create the
            configuration
 
-        :param arg: a :py:class:`py.path.local` instance of the file
+        :param arg: a :ref:`py.path.local <py:local>` instance of the file
 
         """
         session = Session.from_config(config)
@@ -828,7 +828,7 @@ class Testdir:
         This is like :py:meth:`getnode` but uses :py:meth:`parseconfigure` to
         create the (configured) pytest Config instance.
 
-        :param path: a :py:class:`py.path.local` instance of the file
+        :param py.path.local path: the file
 
         """
         config = self.parseconfigure(path)
