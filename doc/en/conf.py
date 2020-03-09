@@ -16,6 +16,7 @@
 # The full version, including alpha/beta/rc tags.
 # The short X.Y version.
 import os
+import re
 import sys
 
 from _pytest import __version__ as version
@@ -28,6 +29,21 @@ if TYPE_CHECKING:
 # DEBUG readthedocs
 import pprint  # noqa: E402
 pprint.pprint(dict(os.environ))
+
+
+READTHEDOCS_VERSION = os.environ.get("READTHEDOCS_VERSION", "")
+tags = globals()["tags"]
+
+
+# Build changelog draft for non-stable versions on RTD, or explicitly via tag.
+if (
+    not re.match(r"\d|stable", READTHEDOCS_VERSION) or
+    tags.has("changelog_towncrier_draft")
+):
+    import subprocess
+
+    with open("_changelog_towncrier_draft.rst", "w") as f:
+        subprocess.check_call(["towncrier", "--draft"], stdout=f, cwd="../..")
 
 
 release = ".".join(version.split(".")[:2])
