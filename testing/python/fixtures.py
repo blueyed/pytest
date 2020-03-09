@@ -4498,7 +4498,6 @@ def test__get_direct_parametrize_args(testdir: Testdir) -> None:
 
 
 class TestFinalizerOnlyAddedOnce:
-
     @pytest.fixture(scope="class", autouse=True)
     def a(self):
         pass
