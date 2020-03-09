@@ -24,7 +24,14 @@ with advance notice in the **Deprecations** section of releases.
     .. The 'changelog_towncrier_draft' tag is included by our 'tox -e docs',
        but not on readthedocs.
 
+    ----
+
+    Changelog draft
+    ===============
+
     .. include:: _changelog_towncrier_draft.rst
+
+    ----
 
 .. towncrier release notes start
 
