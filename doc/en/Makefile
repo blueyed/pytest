@@ -14,11 +14,9 @@ help:
 
 .PHONY: help Makefile
 
-# Build changelog draft on changelog updates.
-_changelog_towncrier_draft.rst: ../../changelog
-	cd ../.. && towncrier --draft > "doc/en/$@"
-# Ignore with catch-all target.
-../../changelog: ;
+_changelog_towncrier_draft.rst:
+	cd ../.. && pwd && towncrier --draft > "doc/en/$@"
+.PHONY: _changelog_towncrier_draft.rst
 
 html-changelog: _changelog_towncrier_draft.rst html
 html-changelog: SPHINXOPTS+=-t changelog_towncrier_draft
