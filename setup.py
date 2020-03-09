@@ -37,7 +37,7 @@ def main():
             ],
             "docs": [
                 "pygments-pytest>=1.1.0",
-                "sphinx @ git+https://github.com/sphinx-doc/sphinx.git@5aee836#egg=Sphinx",
+                "sphinx @ git+https://github.com/sphinx-doc/sphinx.git@8dbb799#egg=Sphinx",
                 "sphinxcontrib-trio",
                 "sphinx-removed-in>=0.2.0",
                 # For changelog (draft).
