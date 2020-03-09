@@ -144,10 +144,8 @@ For information about fixtures, see :ref:`fixtures`. To see a complete list of a
         Return a temporary directory path object
         which is unique to each test function invocation,
         created as a sub directory of the base temporary
-        directory.  The returned object is a `py.path.local`_
-        path object.
-
-        .. _`py.path.local`: https://py.readthedocs.io/en/latest/path.html
+        directory.  The returned object is a :class:`py.path.local`
+        object.
 
     tmp_path
         Return a temporary directory path object

@@ -895,6 +895,26 @@ Result used within :ref:`hook wrappers <hookwrapper>`.
 .. automethod:: pluggy.callers._Result.get_result
 .. automethod:: pluggy.callers._Result.force_result
 
+py.path.local
+~~~~~~~~~~~~~
+
+`py.path.local` instances are a legacy provided via the ``py`` library as
+instances of ``py._path.local.LocalPath``.
+
+.. note::
+
+    While they are used in many places (especially with hooks) still,
+    they are meant to be deprecated in favor of using pathlib Path instances
+    in the long run.
+
+.. currentmodule:: py.path
+.. class:: local
+
+.. autoclass:: py._path.local.LocalPath
+   :members:
+   :member-order: groupwise
+
+
 Special Variables
 -----------------
 

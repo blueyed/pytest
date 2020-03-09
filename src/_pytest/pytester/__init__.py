@@ -901,7 +901,7 @@ class Testdir(Generic[AnyStr]):
            :py:meth:`parseconfig` and :py:meth:`parseconfigure` to create the
            configuration
 
-        :param arg: a :py:class:`py.path.local` instance of the file
+        :param arg: a :ref:`py.path.local <py:local>` instance of the file
 
         """
         session = Session.from_config(config)
@@ -918,7 +918,7 @@ class Testdir(Generic[AnyStr]):
         This is like :py:meth:`getnode` but uses :py:meth:`parseconfigure` to
         create the (configured) pytest Config instance.
 
-        :param path: a :py:class:`py.path.local` instance of the file
+        :param py.path.local path: the file
 
         """
         config = self.parseconfigure(path)

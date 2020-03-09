@@ -215,7 +215,7 @@ def pytest_ignore_collect(
 
         return (True, "collect_ignore")
 
-    :param path: a :py:class:`py.path.local` - the path to analyze
+    :param py.path.local path: the path to analyze
     :param _pytest.config.Config config: pytest config object
     """
 
@@ -226,7 +226,7 @@ def pytest_collect_directory(path, parent):
 
     Stops at first non-None result, see :ref:`firstresult`
 
-    :param path: a :py:class:`py.path.local` - the path to analyze
+    :param py.path.local path: the path to analyze
     """
 
 
@@ -234,7 +234,7 @@ def pytest_collect_file(path, parent):
     """ return collection Node or None for the given path. Any new node
     needs to have the specified ``parent`` as a parent.
 
-    :param path: a :py:class:`py.path.local` - the path to collect
+    :param py.path.local path: the path to collect
     """
 
 
@@ -278,7 +278,7 @@ def pytest_pycollect_makemodule(path, parent):
 
     Stops at first non-None result, see :ref:`firstresult`
 
-    :param path: a :py:class:`py.path.local` - the path of module to collect
+    :param py.path.local path: the path of the module to collect
     """
 
 
@@ -540,7 +540,7 @@ def pytest_report_header(config, startdir):
     """ return a string or list of strings to be displayed as header info for terminal reporting.
 
     :param _pytest.config.Config config: pytest config object
-    :param startdir: py.path object with the starting dir
+    :param py.path.local startdir: object with the starting dir
 
     .. note::
 
@@ -559,7 +559,7 @@ def pytest_report_collectionfinish(config, startdir, items):
     This strings will be displayed after the standard "collected X items" message.
 
     :param _pytest.config.Config config: pytest config object
-    :param startdir: py.path object with the starting dir
+    :param startdir: :ref:`py.path.local <py:local>` object with the starting dir
     :param items: list of pytest items that are going to be executed; this list should not be modified.
     """
 

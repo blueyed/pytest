@@ -89,7 +89,7 @@ You can use the ``tmpdir`` fixture which will
 provide a temporary directory unique to the test invocation,
 created in the `base temporary directory`_.
 
-``tmpdir`` is a `py.path.local`_ object which offers ``os.path`` methods
+``tmpdir`` is a :class:`py.path.local` object which offers ``os.path`` methods
 and more.  Here is an example test usage:
 
 .. code-block:: python
@@ -191,5 +191,3 @@ You can override the default temporary directory setting like this:
 When distributing tests on the local machine, ``pytest`` takes care to
 configure a basetemp directory for the sub processes such that all temporary
 data lands below a single per-test run basetemp directory.
-
-.. _`py.path.local`: https://py.readthedocs.io/en/latest/path.html

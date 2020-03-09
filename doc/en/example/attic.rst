@@ -76,8 +76,7 @@ ignorant of how/where the function argument is provided -
 in our example from a `conftest plugin`_.
 
 sidenote: the temporary directory used here are instances of
-the `py.path.local`_ class which provides many of the os.path
+the :class:`py.path.local` class which provides many of the os.path
 methods in a convenient way.
 
-.. _`py.path.local`: ../path.html#local
 .. _`conftest plugin`: customize.html#conftestplugin
