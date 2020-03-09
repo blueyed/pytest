@@ -14,12 +14,8 @@ help:
 
 .PHONY: help Makefile
 
-_changelog_towncrier_draft.rst:
-	cd ../.. && pwd && towncrier --draft > "doc/en/$@"
-.PHONY: _changelog_towncrier_draft.rst
-
-html-changelog: _changelog_towncrier_draft.rst html
 html-changelog: SPHINXOPTS+=-t changelog_towncrier_draft
+html-changelog: html
 html-changelog: ;
 
 # Catch-all target: route all unknown targets to Sphinx using the new

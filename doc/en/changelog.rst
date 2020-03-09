@@ -26,17 +26,16 @@ with advance notice in the **Deprecations** section of releases.
 
 .. only:: changelog_towncrier_draft
 
-    .. The 'changelog_towncrier_draft' tag is included by our 'tox -e docs',
-       but not on readthedocs.
-
-    ----
-
     Changelog draft
     ===============
 
     .. include:: _changelog_towncrier_draft.rst
 
     ----
+
+    .. (comment needed for HR above)
+
+.. towncrier release notes start
 
 pytest 5.3.5 (2020-01-29)
 =========================
