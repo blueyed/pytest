@@ -35,6 +35,12 @@ def main():
             "checkqa-mypy": [
                 "mypy==v0.761",  # keep this in sync with .pre-commit-config.yaml.
             ],
+            "docs": [
+                "pygments-pytest>=1.1.0",
+                "sphinx>=1.8.2,<2.1",
+                "sphinxcontrib-trio",
+                "sphinx-removed-in>=0.2.0",
+            ],
         },
         install_requires=INSTALL_REQUIRES,
     )
