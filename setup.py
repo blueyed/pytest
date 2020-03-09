@@ -43,7 +43,7 @@ def main():
                 # For changelog (draft).
                 # Not strictly required, but does not warrant a separate extra.
                 # (also used with "html-changelog" target in doc/en/Makefile).
-                "towncrier",
+                "towncrier @ git+https://github.com/blueyed/towncrier.git@fix-get_package#egg=towncrier",
             ],
         },
         install_requires=INSTALL_REQUIRES,
