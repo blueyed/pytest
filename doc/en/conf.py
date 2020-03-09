@@ -25,6 +25,11 @@ if TYPE_CHECKING:
     import sphinx.application
 
 
+# DEBUG readthedocs
+import pprint  # noqa: E402
+pprint.pprint(dict(os.environ))
+
+
 release = ".".join(version.split(".")[:2])
 
 # If extensions (or modules to document with autodoc) are in another directory,
