@@ -26,21 +26,6 @@ if TYPE_CHECKING:
     import sphinx.application
 
 
-READTHEDOCS_VERSION = os.environ.get("READTHEDOCS_VERSION", "")
-tags = globals()["tags"]
-
-
-# Build changelog draft for non-stable versions on RTD, or explicitly via tag.
-if (
-    not re.match(r"\d|stable", READTHEDOCS_VERSION) or
-    tags.has("changelog_towncrier_draft")
-):
-    import subprocess
-
-    with open("_changelog_towncrier_draft.rst", "w") as f:
-        subprocess.check_call(["towncrier", "--draft"], stdout=f, cwd="../..")
-
-
 release = ".".join(version.split(".")[:2])
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -388,6 +373,22 @@ def configure_logging(app: "sphinx.application.Sphinx") -> None:
     warn_handler[0].filters.insert(0, WarnLogFilter())
 
 
+def handle_changelog_draft(app: "sphinx.application.Sphinx") -> None:
+    """Build changelog draft for non-stable versions on RTD, or explicitly via tag."""
+
+    READTHEDOCS_VERSION = os.environ.get("READTHEDOCS_VERSION", "")
+    include_changelog_draft = (
+        READTHEDOCS_VERSION and not re.match(r"\d|stable", READTHEDOCS_VERSION)
+    ) or app.tags.has("changelog_towncrier_draft")
+    if include_changelog_draft:
+        import subprocess
+
+        with open("_changelog_towncrier_draft.rst", "w") as f:
+            subprocess.check_call(["towncrier", "--draft"], stdout=f, cwd="../..")
+
+        app.tags.add("changelog_towncrier_draft")
+
+
 def setup(app: "sphinx.application.Sphinx") -> None:
     # from sphinx.ext.autodoc import cut_lines
     # app.connect('autodoc-process-docstring', cut_lines(4, what=['module']))
@@ -406,3 +407,5 @@ def setup(app: "sphinx.application.Sphinx") -> None:
     )
 
     configure_logging(app)
+
+    handle_changelog_draft(app)
