@@ -37,7 +37,7 @@ def main():
             ],
             "docs": [
                 "pygments-pytest>=1.1.0",
-                "sphinx>=1.8.2,<2.1",
+                "sphinx>=1.8.2,<2.5",
                 "sphinxcontrib-trio",
                 "sphinx-removed-in>=0.2.0",
                 # For changelog (draft).
