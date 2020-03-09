@@ -26,11 +26,6 @@ if TYPE_CHECKING:
     import sphinx.application
 
 
-# DEBUG readthedocs
-import pprint  # noqa: E402
-pprint.pprint(dict(os.environ))
-
-
 READTHEDOCS_VERSION = os.environ.get("READTHEDOCS_VERSION", "")
 tags = globals()["tags"]
 
