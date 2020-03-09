@@ -1,0 +1,1 @@
+pytest's own tests now work with plugins like pytest-repeat being installed (they are not used for inner tests anymore).
