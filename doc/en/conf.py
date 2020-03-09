@@ -377,10 +377,11 @@ def handle_changelog_draft(app: "sphinx.application.Sphinx") -> None:
     """Build changelog draft for non-stable versions on RTD, or explicitly via tag."""
 
     READTHEDOCS_VERSION = os.environ.get("READTHEDOCS_VERSION", "")
-    include_changelog_draft = (
-        READTHEDOCS_VERSION and not re.match(r"\d|stable", READTHEDOCS_VERSION)
-    ) or app.tags.has("changelog_towncrier_draft")
-    if include_changelog_draft:
+    if READTHEDOCS_VERSION:
+        include_draft = not re.match(r"\d|stable", READTHEDOCS_VERSION)
+    else:
+        include_draft = not app.tags.has("no_changelog_towncrier_draft")
+    if include_draft:
         import subprocess
 
         with open("_changelog_towncrier_draft.rst", "w") as f:

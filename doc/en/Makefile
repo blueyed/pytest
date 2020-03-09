@@ -14,9 +14,9 @@ help:
 
 .PHONY: help Makefile
 
-html-changelog: SPHINXOPTS+=-t changelog_towncrier_draft
-html-changelog: html
-html-changelog: ;
+html-nochangelog: SPHINXOPTS+=-t no_changelog_towncrier_draft
+html-nochangelog: html
+html-nochangelog: ;
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
