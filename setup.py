@@ -40,6 +40,10 @@ def main():
                 "sphinx>=1.8.2,<2.1",
                 "sphinxcontrib-trio",
                 "sphinx-removed-in>=0.2.0",
+                # For changelog (draft).
+                # Not strictly required, but does not warrant a separate extra.
+                # (also used with "html-changelog" target in doc/en/Makefile).
+                "towncrier",
             ],
         },
         install_requires=INSTALL_REQUIRES,
