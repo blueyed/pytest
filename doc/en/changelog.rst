@@ -26,14 +26,14 @@ with advance notice in the **Deprecations** section of releases.
 
 .. only:: changelog_towncrier_draft
 
-    Changelog draft
-    ===============
+    Changelog draft for the next release
+    ====================================
 
     .. include:: _changelog_towncrier_draft.rst
 
     ----
 
-    .. (comment needed for HR above)
+    (end of changelog draft)
 
 .. towncrier release notes start
 
