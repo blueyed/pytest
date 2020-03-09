@@ -38,8 +38,6 @@ with advance notice in the **Deprecations** section of releases.
 
     ----
 
-.. towncrier release notes start
-
 pytest 5.3.5 (2020-01-29)
 =========================
 
