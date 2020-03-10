@@ -1536,6 +1536,7 @@ def test_capture_with_live_logging(testdir, capture_fixture):
     assert result.ret == 0
 
 
+@pytest.mark.pypy_specific
 def test_typeerror_encodedfile_write(testdir):
     """It should behave the same with and without output capturing (#4861).
 
