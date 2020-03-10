@@ -1227,8 +1227,9 @@ class Testdir(Generic[AnyStr]):
         This calls subprocess.Popen making sure the current working directory
         is in the PYTHONPATH.
 
-        You probably want to use :py:meth:`run` instead.
+        `encoding` is only supported with Python 3.6+.
 
+        You probably want to use :py:meth:`run` instead.
         """
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(
@@ -1243,9 +1244,9 @@ class Testdir(Generic[AnyStr]):
         else:
             kw["stdin"] = stdin
 
-        popen = subprocess.Popen(
-            cmdargs, stdout=stdout, stderr=stderr, encoding=encoding, **kw
-        )
+        if encoding is not None:
+            kw["encoding"] = encoding
+        popen = subprocess.Popen(cmdargs, stdout=stdout, stderr=stderr, **kw)
         if stdin is CLOSE_STDIN:
             assert popen.stdin
             popen.stdin.close()
