@@ -386,7 +386,11 @@ class TestCustomConftests:
         result.stdout.fnmatch_lines(
             [
                 "collected 0 items",
-                "ignored 3 paths (collect_ignore (2), --ignore (1))",
+                (
+                    sys.version_info < (3, 6)
+                    and "ignored 3 paths (*)"
+                    or "ignored 3 paths (collect_ignore (2), --ignore (1))"
+                ),
                 "*= no tests ran in *",
             ]
         )
