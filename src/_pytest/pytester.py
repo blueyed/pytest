@@ -1496,7 +1496,9 @@ class LineMatcher:
     def fnmatch_lines(
         self,
         lines2: Sequence[str],
-        mode: Optional["Literal['consecutive', 'complete']"] = None,
+        *,
+        consecutive: bool = False,
+        complete: bool = False
     ) -> None:
         """Check lines exist in the output (using :func:`python:fnmatch.fnmatch`).
 
@@ -1505,17 +1507,20 @@ class LineMatcher:
         matches and non-matches are also shown as part of the error message.
 
         :param lines2: string patterns to match.
-        :param mode:
-            "consecutive": match lines consecutivly
-            "complete": require all lines to be matched in total
+        :param bool consecutive: match lines consecutively?
+        :param bool complete: require all lines to be matched in total
         """
         __tracebackhide__ = True
-        self._match_lines(lines2, fnmatch, "fnmatch", mode=mode)
+        self._match_lines(
+            lines2, fnmatch, "fnmatch", consecutive=consecutive, complete=complete
+        )
 
     def re_match_lines(
         self,
         lines2: Sequence[str],
-        mode: Optional["Literal['consecutive', 'complete']"] = None,
+        *,
+        consecutive: bool = False,
+        complete: bool = False
     ) -> None:
         """Check lines exist in the output (using :func:`python:re.match`).
 
@@ -1525,13 +1530,16 @@ class LineMatcher:
         The matches and non-matches are also shown as part of the error message.
 
         :param lines2: string patterns to match.
-        :param mode:
-            "consecutive": match lines consecutivly
-            "complete": require all lines to be matched in total
+        :param bool consecutive: match lines consecutively?
+        :param bool complete: require all lines to be matched in total
         """
         __tracebackhide__ = True
         self._match_lines(
-            lines2, lambda name, pat: bool(re.match(pat, name)), "re.match",
+            lines2,
+            lambda name, pat: bool(re.match(pat, name)),
+            "re.match",
+            consecutive=consecutive,
+            complete=complete,
         )
 
     def _match_lines(
@@ -1540,7 +1548,8 @@ class LineMatcher:
         match_func: Callable[[str, str], bool],
         match_nickname: str,
         *,
-        mode: Optional["Literal['consecutive', 'complete']"] = None,
+        consecutive: bool = False,
+        complete: bool = False
     ) -> None:
         """Underlying implementation of ``fnmatch_lines`` and ``re_match_lines``.
 
@@ -1551,14 +1560,11 @@ class LineMatcher:
             pattern
         :param str match_nickname: the nickname for the match function that
             will be logged to stdout when a match occurs
-        :param mode:
-            "consecutive": match lines consecutivly
-            "complete": require all lines to be matched in total
+        :param bool consecutive: match lines consecutively?
+        :param bool complete: require all lines to be matched in total
         """
         if not isinstance(lines2, collections.abc.Sequence):
             raise TypeError("invalid type for lines2: {}".format(type(lines2).__name__))
-        if mode not in (None, "consecutive", "complete"):
-            raise ValueError("invalid mode {!r}".format(mode))
         lines2 = self._getlines(lines2)
         lines1 = self.lines[:]
         nextline = None
@@ -1588,11 +1594,11 @@ class LineMatcher:
                         )
                         nomatchprinted = True
                     self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
-                    if mode == "complete":
+                    if complete:
                         self._fail(
                             "no complete match: {!r} with {!r}".format(line, nextline,)
                         )
-                    elif mode == "consecutive" and started:
+                    elif consecutive and started:
                         self._fail(
                             "no consecutive match: {!r} with {!r}".format(
                                 line, nextline,

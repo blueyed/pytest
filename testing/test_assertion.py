@@ -1149,7 +1149,7 @@ class TestTruncateExplanation:
                 r"E           6*6",
                 r"",
             ],
-            mode="consecutive",
+            consecutive=True,
         )
 
         monkeypatch.setenv("CI", "")
