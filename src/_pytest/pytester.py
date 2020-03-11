@@ -1557,6 +1557,8 @@ class LineMatcher:
         """
         if not isinstance(lines2, collections.abc.Sequence):
             raise TypeError("invalid type for lines2: {}".format(type(lines2).__name__))
+        if mode not in (None, "consecutive", "complete"):
+            raise ValueError("invalid mode {!r}".format(mode))
         lines2 = self._getlines(lines2)
         lines1 = self.lines[:]
         nextline = None
