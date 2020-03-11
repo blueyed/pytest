@@ -193,7 +193,7 @@ class TestDoctests:
                 "ZeroDivisionError: division by zero",
                 "*/test_doctest_unexpected_exception.txt:2: UnexpectedException",
             ],
-            consecutive="consecutive",
+            mode="consecutive",
         )
 
     def test_doctest_outcomes(self, testdir):

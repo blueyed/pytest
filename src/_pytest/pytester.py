@@ -1434,8 +1434,8 @@ class LineMatcher:
     This is a convenience class to test large texts like the output of
     commands.
 
-        :param lines: a list of lines without their trailing newlines, e.g.
-            :code:`text.splitlines()`.
+    :param List[str] lines: a list of lines without their trailing newlines, e.g.
+        from :code:`text.splitlines()`.
     """
 
     def __init__(self, lines: List[str]) -> None:
