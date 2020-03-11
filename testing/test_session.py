@@ -341,8 +341,7 @@ def test_rootdir_option_arg(testdir: Testdir, monkeypatch, path: str) -> None:
     monkeypatch.setenv("PY_ROOTDIR_PATH", str(testdir.tmpdir))
     path = path.format(relative=str(testdir.tmpdir), environment="$PY_ROOTDIR_PATH")
 
-    rootdir = testdir.mkdir("root")
-    rootdir.mkdir("tests")
+    testdir.mkdir("root")
     testdir.makepyfile(
         """
         import os
@@ -354,7 +353,7 @@ def test_rootdir_option_arg(testdir: Testdir, monkeypatch, path: str) -> None:
     )
 
     expected = [
-        "*rootdir: ~/root",
+        "*rootdir: ~/root, cwd: ~",
         "test_rootdir_option_arg.py *",
         "*1 passed*",
     ]
