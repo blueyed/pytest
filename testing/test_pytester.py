@@ -528,6 +528,11 @@ def test_linematcher_fnmatch_lines():
     ]
 
 
+def test_linematcher_modes():
+    with pytest.raises(ValueError, match="invalid mode 'invalidmode'"):
+        LineMatcher([], mode="invalidmode")
+
+
 def test_linematcher_consecutive():
     lm = LineMatcher(["1", "2", "other"])
 
