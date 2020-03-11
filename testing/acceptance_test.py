@@ -133,6 +133,7 @@ class TestGeneralUsage:
         @attr.s
         class DummyDist:
             entry_points = attr.ib()
+            metadata = {"name": "mpyproject"}
             files = ()
 
         def my_dists():
@@ -140,11 +141,28 @@ class TestGeneralUsage:
 
         monkeypatch.setattr(importlib_metadata, "distributions", my_dists)
         params = ("-p", "mycov") if load_cov_early else ()
-        testdir.runpytest_inprocess(*params)
+        result = testdir.runpytest("--version", *params)
         if load_cov_early:
             assert loaded == ["mycov", "myplugin1", "myplugin2"]
+            result.stderr.fnmatch_lines(
+                [
+                    "setuptools registered plugins:",
+                    "  mpyproject-None at */mycov_module.py",
+                    "  mpyproject-None at */mytestplugin1_module.py",
+                    "  mpyproject-None at */mytestplugin2_module.py",
+                ]
+            )
         else:
             assert loaded == ["myplugin1", "myplugin2", "mycov"]
+            result.stderr.fnmatch_lines(
+                [
+                    "setuptools registered plugins:",
+                    "  mpyproject-None at */mytestplugin1_module.py",
+                    "  mpyproject-None at */mytestplugin2_module.py",
+                    "  mpyproject-None at */mycov_module.py",
+                ]
+            )
+        assert result.ret == 0
 
     def test_assertion_magic(self, testdir):
         p = testdir.makepyfile(
