@@ -39,7 +39,6 @@ def getcfg(
     """
     inibasenames = ["pytest.ini", "tox.ini", "setup.cfg"]
     for arg in args:
-        assert isinstance(arg, py.path.local)
         for base in arg.parts(reverse=True):
             for inibasename in inibasenames:
                 p = base.join(inibasename)
