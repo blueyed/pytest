@@ -947,6 +947,7 @@ def test_popen_default_stdin_stderr_and_stdin_None(testdir: Testdir) -> None:
     assert proc.returncode == 0
 
 
+@pytest.mark.py35_specific
 def test_popen_encoding_and_close_stdin_sentinel(testdir: Testdir) -> None:
     if sys.version_info < (3, 6):
         with pytest.raises(TypeError):

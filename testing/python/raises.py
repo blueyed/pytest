@@ -155,6 +155,7 @@ class TestRaises:
         else:
             assert False, "Expected pytest.raises.Exception"
 
+    @pytest.mark.py35_specific
     @pytest.mark.parametrize("method", ["function", "function_match", "with"])
     def test_raises_cyclic_reference(self, method):
         """

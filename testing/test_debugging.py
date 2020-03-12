@@ -961,6 +961,7 @@ class TestPDB:
 
 
 class TestDebuggingBreakpoints:
+    @pytest.mark.py35_specific
     def test_supports_breakpoint_module_global(self):
         """
         Test that supports breakpoint global marks on Python 3.7+ and not on
