@@ -548,13 +548,54 @@ def test_linematcher_consecutive():
     with pytest.raises(pytest.fail.Exception) as excinfo:
         lm.re_match_lines(["1", r"\d", r"\d"], consecutive=True)
     assert str(excinfo.value).splitlines() == [
-        r"no consecutive match: '\\d' with 'other'",
+        "no consecutive match: '\\\\d' with 'other'",
+        "Log:",
+        "exact match: '1'",
+        "re.match: '\\\\d'",
+        "    with: '2'",
+        " nomatch: '\\\\d'",
+        "     and: 'other'",
+    ]
+
+
+def test_linematcher_complete():
+    lm = LineMatcher(["1", "2", "other"])
+
+    lm.fnmatch_lines(["1", "*", "other"])
+
+    # Behaves like mode=consecutive.
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["1", "*", "3"], complete=True)
+    assert str(excinfo.value).splitlines() == [
+        "no complete match: '3' with 'other'",
+        "Log:",
+        "exact match: '1'",
+        "fnmatch: '*'",
+        "   with: '2'",
+        "nomatch: '3'",
+        "    and: 'other'",
+    ]
+
+    lm.re_match_lines(["1", r"\d?", "other"], complete=True)
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.re_match_lines(["1", r"\d", r"\d"], complete=True)
+    assert str(excinfo.value).splitlines() == [
+        r"no complete match: '\\d' with 'other'",
         r"Log:",
         r"exact match: '1'",
         r"re.match: '\\d'",
         r"    with: '2'",
         r" nomatch: '\\d'",
         r"     and: 'other'",
+    ]
+
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["2", "other"], complete=True)
+    assert str(excinfo.value).splitlines() == [
+        "no complete match: '2' with '1'",
+        "Log:",
+        "nomatch: '2'",
+        "    and: '1'",
     ]
 
 
