@@ -234,8 +234,9 @@ def get_plugin_manager():
 
 
 def _prepareconfig(
-    args: Optional[Union[py.path.local, List[str]]] = None, plugins=None
-):
+    args: Optional[Union[py.path.local, Sequence[Union[str, py.path.local]]]] = None,
+    plugins=None,
+) -> "Config":
     if args is None:
         args = sys.argv[1:]
     elif isinstance(args, py.path.local):
@@ -253,7 +254,7 @@ def _prepareconfig(
                     pluginmanager.consider_pluginarg(plugin)
                 else:
                     pluginmanager.register(plugin)
-        return pluginmanager.hook.pytest_cmdline_parse(
+        return pluginmanager.hook.pytest_cmdline_parse(  # type: ignore
             pluginmanager=pluginmanager, args=args
         )
     except BaseException:
