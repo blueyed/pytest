@@ -290,12 +290,7 @@ class TestReport(BaseReport):
                 longrepr = (str(r.path), r.lineno, r.message)
             else:
                 outcome = "failed"
-                if call.when == "call":
-                    longrepr = item.repr_failure(excinfo)
-                else:  # exception in setup or teardown
-                    longrepr = item._repr_failure_py(
-                        excinfo, style=item.config.getoption("tbstyle", "auto")
-                    )
+                longrepr = item.repr_failure(excinfo)
         for rwhen, key, content in item._report_sections:
             sections.append(("Captured {} {}".format(key, rwhen), content))
         return cls(
