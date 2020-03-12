@@ -1042,19 +1042,20 @@ class Testdir:
         res.reprec = reprec  # type: ignore
         return res
 
-    def runpytest(self, *args, tty=None, **kwargs) -> RunResult:
+    def runpytest(self, *args_, tty=None, **kwargs) -> RunResult:
         """Run pytest inline or in a subprocess, depending on the command line
         option "--runpytest" and return a :py:class:`RunResult`.
-
         """
-        args = self._ensure_basetemp(args)
+        args = self._ensure_basetemp(args_)
         if self._method == "inprocess":
             return self.runpytest_inprocess(*args, tty=tty, **kwargs)
         elif self._method == "subprocess":
             return self.runpytest_subprocess(*args, **kwargs)
         raise RuntimeError("Unrecognized runpytest option: {}".format(self._method))
 
-    def _ensure_basetemp(self, args):
+    def _ensure_basetemp(
+        self, args: Sequence[Union[str, py.path.local]]
+    ) -> List[Union[str, py.path.local]]:
         args = list(args)
         for x in args:
             if str(x).startswith("--basetemp"):
@@ -1063,7 +1064,7 @@ class Testdir:
             args.append("--basetemp=%s" % self.tmpdir.dirpath("basetemp"))
         return args
 
-    def parseconfig(self, *args: Union[str, py.path.local]) -> Config:
+    def parseconfig(self, *args_: Union[str, py.path.local]) -> Config:
         """Return a new pytest Config instance from given commandline args.
 
         This invokes the pytest bootstrapping code in _pytest.config to create
@@ -1075,7 +1076,7 @@ class Testdir:
         to be registered with the PluginManager.
 
         """
-        args = self._ensure_basetemp(args)
+        args = self._ensure_basetemp(args_)
 
         import _pytest.config
 
