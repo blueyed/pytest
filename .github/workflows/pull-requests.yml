@@ -37,10 +37,10 @@ jobs:
     - name: Cache .tox
       uses: actions/cache@v1
       with:
-        path: ~/work/pytest/pytest/.tox/${{ matrix.tox_env }}
+        path: ${{ env.GITHUB_WORKSPACE }}/pytest/pytest/.tox/${{ matrix.tox_env }}
         key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
     - name: Cache .pre-commit
-      if: (matrix.tox_env == 'linting')
+      if: (matrix.tox_env == 'linting_ci')
       uses: actions/cache@v1
       with:
         path: ~/.cache/pre-commit
