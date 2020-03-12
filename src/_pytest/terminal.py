@@ -240,7 +240,7 @@ def pytest_addoption(parser):
         help=(
             "don't cut any tracebacks (default is to cut). "
             "When used `-tb` defaults to 'long'."
-        )
+        ),
     )
     group._addoption(
         "--color",

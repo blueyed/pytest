@@ -340,7 +340,13 @@ class Node(metaclass=NodeMeta):
         if fulltrace:
             style = "long" if tbstyle == "auto" else tbstyle  # type: _TracebackStyle
         else:
-            style = default_style if tbstyle == "auto" else tbstyle
+            if tbstyle == "auto":
+                if default_style is None:
+                    style = "long"
+                else:
+                    style = default_style
+            else:
+                style = tbstyle
             self._prunetraceback(excinfo)
 
         if self.config.getoption("verbose", 0) > 1:

@@ -44,8 +44,6 @@ def test_fulltrace_with_tb_native(testdir: Testdir) -> None:
     result = testdir.runpytest(str(p1), "--fulltrace", "--tb=native")
     result.stdout.fnmatch_lines(
         [
-            "test_repr_failure_py.py F *",
-            "",
             "*= FAILURES =*",
             "*_ test _*",
             "Traceback (most recent call last):",
@@ -54,3 +52,46 @@ def test_fulltrace_with_tb_native(testdir: Testdir) -> None:
             "AssertionError: assert 0",
         ]
     )
+
+
+def test_tbstyle_with_non_python(testdir: Testdir) -> None:
+    testdir.makeconftest(
+        """
+        import pytest
+
+        class MyItem(pytest.Item):
+            nodeid = 'foo'
+
+            def runtest(self):
+                assert 0, "failure"
+                # XXX
+                pytest.fail("failure")
+
+        def pytest_collect_file(path, parent):
+            return MyItem.from_parent(parent, name="foo")
+    """
+    )
+
+    # Defaults to "--tb=long".
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines(
+        [
+            "_ _ _ _ _ *",
+            "",
+            "    def runtest(self):",
+            '>       assert 0, "failure"',
+            "E       AssertionError: failure",
+            "E       assert 0",
+            "",
+            "conftest.py:7: AssertionError: failure...",
+        ]
+    )
+
+    # Honors to "--tb=short".
+    result = testdir.runpytest("--tb=short")
+    result.stdout.fnmatch_lines([
+        "conftest.py:7: in runtest",
+        '    assert 0, "failure"',
+        "E   AssertionError: failure",
+        "E   assert 0",
+    ])
