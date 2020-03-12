@@ -4,6 +4,7 @@ per-test stdout/stderr capturing mechanism.
 """
 import collections
 import contextlib
+import enum
 import io
 import os
 import sys
@@ -27,6 +28,14 @@ if TYPE_CHECKING:
     _CaptureMethod = Literal["fd", "sys", "no", "tee-sys"]
 
 patchsysdict = {0: "stdin", 1: "stdout", 2: "stderr"}
+
+
+class CloseStdinType(enum.Enum):
+    CLOSE_STDIN = 1
+
+
+CLOSE_STDIN = CloseStdinType.CLOSE_STDIN
+"""Sentinel to close stdin."""
 
 
 def pytest_addoption(parser):
@@ -629,8 +638,7 @@ class FDCapture(FDCaptureBinary):
 
 
 class SysCaptureBinary:
-    class CLOSE_STDIN:
-        pass
+    CLOSE_STDIN = CLOSE_STDIN
 
     EMPTY_BUFFER = b""
     _state = None

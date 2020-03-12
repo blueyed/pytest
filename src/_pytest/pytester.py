@@ -12,9 +12,12 @@ import time
 import traceback
 from fnmatch import fnmatch
 from io import StringIO
+from typing import AnyStr
 from typing import Callable
 from typing import Dict
 from typing import Generator
+from typing import Generic
+from typing import IO
 from typing import Iterable
 from typing import List
 from typing import Mapping
@@ -28,8 +31,11 @@ import py
 
 import pytest
 from _pytest._code import Source
+from _pytest.capture import CLOSE_STDIN
+from _pytest.capture import CloseStdinType
 from _pytest.capture import MultiCapture
 from _pytest.capture import SysCapture
+from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import _PluggyPlugin
 from _pytest.config import ExitCode
@@ -570,7 +576,7 @@ def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
         mp.undo()
 
 
-class Testdir:
+class Testdir(Generic[AnyStr]):
     """Temporary test directory with tools to test/run pytest itself.
 
     This is based on the ``tmpdir`` fixture but provides a number of methods
@@ -590,8 +596,8 @@ class Testdir:
 
     __test__ = False
 
-    class CLOSE_STDIN:
-        pass
+    CLOSE_STDIN = CLOSE_STDIN
+    """Sentinel to close stdin."""
 
     class TimeoutExpired(Exception):
         pass
@@ -983,11 +989,9 @@ class Testdir:
             if "-s" in args:
                 stdin = sys.stdin
             else:
-                stdin = self.CLOSE_STDIN
+                stdin = CLOSE_STDIN
 
-        if stdin is self.CLOSE_STDIN:
-            stdin = SysCapture.CLOSE_STDIN
-        elif isinstance(stdin, str):
+        if isinstance(stdin, str):
 
             class EchoingInput(StringIO):
                 def readline(self, *args, **kwargs):
@@ -1004,7 +1008,7 @@ class Testdir:
             from _pytest.compat import CaptureIO
 
             if fd == 0:
-                if not stdin or stdin is SysCapture.CLOSE_STDIN:
+                if not stdin or stdin is CLOSE_STDIN:
                     tmpfile = None
                 else:
                     from _pytest.capture import safe_text_dupfile
@@ -1182,21 +1186,50 @@ class Testdir:
                 return colitem
         return None
 
+    @overload
     def popen(
         self,
         cmdargs,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        stdin=CLOSE_STDIN,
+        stdout: Optional[Union[int, IO]] = subprocess.PIPE,
+        stderr: Optional[Union[int, IO]] = subprocess.PIPE,
+        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        *,
+        encoding: None = ...,
         **kw
-    ):
+    ) -> "subprocess.Popen[bytes]":
+        ...
+
+    @overload
+    def popen(  # noqa: F811
+        self,
+        cmdargs,
+        stdout: Optional[Union[int, IO]] = subprocess.PIPE,
+        stderr: Optional[Union[int, IO]] = subprocess.PIPE,
+        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        *,
+        encoding: str,
+        **kw
+    ) -> "subprocess.Popen[str]":
+        ...
+
+    def popen(  # noqa: F811
+        self,
+        cmdargs,
+        stdout: Optional[Union[int, IO]] = subprocess.PIPE,
+        stderr: Optional[Union[int, IO]] = subprocess.PIPE,
+        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        *,
+        encoding: Optional[str] = None,
+        **kw
+    ) -> "Union[subprocess.Popen[bytes], subprocess.Popen[str]]":
         """Invoke subprocess.Popen.
 
         This calls subprocess.Popen making sure the current working directory
         is in the PYTHONPATH.
 
-        You probably want to use :py:meth:`run` instead.
+        `encoding` is only supported with Python 3.6+.
 
+        You probably want to use :py:meth:`run` instead.
         """
         env = os.environ.copy()
         env["PYTHONPATH"] = os.pathsep.join(
@@ -1204,36 +1237,45 @@ class Testdir:
         )
         kw["env"] = env
 
-        if stdin is Testdir.CLOSE_STDIN:
+        if stdin is CLOSE_STDIN:
             kw["stdin"] = subprocess.PIPE
         elif isinstance(stdin, bytes):
             kw["stdin"] = subprocess.PIPE
         else:
             kw["stdin"] = stdin
 
+        if encoding is not None:
+            kw["encoding"] = encoding
         popen = subprocess.Popen(cmdargs, stdout=stdout, stderr=stderr, **kw)
-        if stdin is Testdir.CLOSE_STDIN:
+        if stdin is CLOSE_STDIN:
+            assert popen.stdin
             popen.stdin.close()
         elif isinstance(stdin, bytes):
+            assert popen.stdin
             popen.stdin.write(stdin)
 
         return popen
 
-    def run(self, *cmdargs, timeout=None, stdin=CLOSE_STDIN) -> RunResult:
+    def run(
+        self,
+        *cmdargs,
+        timeout=None,
+        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN
+    ) -> RunResult:
         """Run a command with arguments.
 
-        Run a process using subprocess.Popen saving the stdout and stderr.
+        Run a process using :class:<python:subprocess.Popen> saving the stdout and stderr.
 
         :param args: the sequence of arguments to pass to `subprocess.Popen()`
         :kwarg timeout: the period in seconds after which to timeout and raise
             :py:class:`Testdir.TimeoutExpired`
         :kwarg stdin: optional standard input.  Bytes are being send, closing
             the pipe, otherwise it is passed through to ``popen``.
-            Defaults to ``CLOSE_STDIN``, which translates to using a pipe
-            (``subprocess.PIPE``) that gets closed.
+
+            Defaults to :attr:`CLOSE_STDIN`, which translates to using a pipe
+            (:data:`python:subprocess.PIPE`) that gets closed.
 
         Returns a :py:class:`RunResult`.
-
         """
         __tracebackhide__ = True
 
@@ -1255,6 +1297,7 @@ class Testdir:
                 close_fds=(sys.platform != "win32"),
             )
             if isinstance(stdin, bytes):
+                assert popen.stdin
                 popen.stdin.close()
 
             def handle_timeout():
