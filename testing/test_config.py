@@ -4,7 +4,6 @@ import sys
 import textwrap
 
 import py.path
-from py._vendored_packages.iniconfig import SectionWrapper
 
 import _pytest._code
 import pytest
@@ -52,7 +51,6 @@ class TestParseIni:
         """correctly handle zero length arguments (a la pytest '')"""
         ret = determine_setup(None, args=[""])
         assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))  # type: ignore[comparison-overlap]  # noqa: F821
-        assert isinstance(ret[2], SectionWrapper)
 
     def test_setupcfg_uses_toolpytest_with_pytest(self, testdir: Testdir) -> None:
         p1 = testdir.makepyfile("def test(): pass")
