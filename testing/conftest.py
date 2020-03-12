@@ -165,6 +165,27 @@ def testdir(testdir: Testdir) -> Testdir:
     return testdir
 
 
+@pytest.fixture
+def symlink_or_skip():
+    """Return a function that creates a symlink or raises ``Skip``.
+
+    On Windows `os.symlink` is available, but normal users require special
+    admin privileges to create symlinks.
+    """
+
+    def wrap_os_symlink(src, dst, *args, **kwargs):
+        if os.path.islink(dst):
+            return
+
+        try:
+            os.symlink(src, dst, *args, **kwargs)
+        except OSError as e:
+            pytest.skip("os.symlink({!r}) failed: {!r}".format((src, dst), e))
+        assert os.path.islink(dst)
+
+    return wrap_os_symlink
+
+
 @pytest.fixture(scope="session")
 def color_mapping():
     """Returns a utility class which can replace keys in strings in the form "{NAME}"

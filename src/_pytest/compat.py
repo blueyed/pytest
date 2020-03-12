@@ -34,6 +34,7 @@ else:
 
 
 if TYPE_CHECKING:
+    from types import ModuleType  # noqa: F401 (used in type string)
     from typing import Type  # noqa: F401 (used in type string)
 
 
@@ -336,28 +337,28 @@ def safe_isclass(obj: object) -> bool:
         return False
 
 
-COLLECT_FAKEMODULE_ATTRIBUTES = (
-    "Collector",
-    "Module",
-    "Function",
-    "Instance",
-    "Session",
-    "Item",
-    "Class",
-    "File",
-    "_fillfuncargs",
-)
-
-
-def _setup_collect_fakemodule() -> None:
+def _setup_collect_fakemodule() -> "ModuleType":
+    """Setup pytest.collect fake module for backward compatibility."""
     from types import ModuleType
-    import pytest
+    import _pytest.nodes
 
-    # Types ignored because the module is created dynamically.
-    pytest.collect = ModuleType("pytest.collect")  # type: ignore
-    pytest.collect.__all__ = []  # type: ignore  # used for setns
-    for attr_name in COLLECT_FAKEMODULE_ATTRIBUTES:
-        setattr(pytest.collect, attr_name, getattr(pytest, attr_name))  # type: ignore
+    collect_fakemodule_attributes = (
+        ("Collector", _pytest.nodes.Collector),
+        ("Module", _pytest.python.Module),
+        ("Function", _pytest.python.Function),
+        ("Instance", _pytest.python.Instance),
+        ("Session", _pytest.main.Session),
+        ("Item", _pytest.nodes.Item),
+        ("Class", _pytest.python.Class),
+        ("File", _pytest.nodes.File),
+        ("_fillfuncargs", _pytest.fixtures.fillfixtures),
+    )
+
+    mod = ModuleType("pytest.collect")
+    mod.__all__ = []  # type: ignore  # used for setns (obsolete?)
+    for attr_name, value in collect_fakemodule_attributes:
+        setattr(mod, attr_name, value)
+    return mod
 
 
 class CaptureIO(io.TextIOWrapper):
