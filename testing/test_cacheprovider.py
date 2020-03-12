@@ -1,7 +1,9 @@
 import os
+import re
 import shutil
 import stat
 import sys
+import warnings
 
 import py
 
@@ -32,12 +34,19 @@ class TestNewAPI:
         assert val == -2
 
     @pytest.mark.filterwarnings("default")
-    def test_cache_writefail_cachfile_silent(self, testdir):
+    def test_cache_writefail_uses_warnings(self, testdir):
         testdir.makeini("[pytest]")
         testdir.tmpdir.join(".pytest_cache").write("gone wrong")
         config = testdir.parseconfigure()
         cache = config.cache
-        cache.set("test/broken", [])
+        with warnings.catch_warnings(record=True) as warnrecords:
+            cache.set("test/broken", [])
+        assert len(warnrecords) == 1
+        assert warnrecords[0].filename == __file__
+        assert re.match(
+            r"could not create cache path .*, setting readonly\.$",
+            str(warnrecords[0].message),
+        )
 
     @pytest.mark.skipif(sys.platform.startswith("win"), reason="no chmod on windows")
     @pytest.mark.filterwarnings(
