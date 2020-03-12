@@ -148,21 +148,19 @@ Examples for modifying traceback printing:
     pytest -l           # show local variables (shortcut)
 
     pytest --tb=auto    # (default) 'long' tracebacks for the first and last
-                         # entry, but 'short' style for the other entries
+                        # entry, but 'short' style for the other entries.
     pytest --tb=long    # exhaustive, informative traceback formatting
     pytest --tb=short   # shorter traceback format
     pytest --tb=line    # only one line per failure
     pytest --tb=native  # Python standard library formatting
     pytest --tb=no      # no traceback at all
 
-The ``--full-trace`` causes very long traces to be printed on error (longer
+The ``--full-trace`` option causes very long traces to be printed (longer
 than ``--tb=long``). It also ensures that a stack trace is printed on
 **KeyboardInterrupt** (Ctrl+C).
 This is very useful if the tests are taking too long and you interrupt them
 with Ctrl+C to find out where the tests are *hanging*. By default no output
-will be shown (because KeyboardInterrupt is caught by pytest). By using this
-option you make sure a trace is shown.
-
+will be shown (because KeyboardInterrupt is caught by pytest).
 
 .. _`pytest.detailed_failed_tests_usage`:
 

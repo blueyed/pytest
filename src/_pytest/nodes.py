@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     # Imported here due to circular import.
     from _pytest.main import Session  # noqa: F401
 
+    from _pytest._code.code import _TracebackStyle  # noqa: F401
+
 SEP = "/"
 
 tracebackcutdir = py.path.local(_pytest.__file__).dirpath()
@@ -318,7 +320,9 @@ class Node(metaclass=NodeMeta):
         pass
 
     def _repr_failure_py(
-        self, excinfo: ExceptionInfo[Union[Failed, FixtureLookupError]], style=None
+        self,
+        excinfo: ExceptionInfo[Union[Failed, FixtureLookupError]],
+        default_style: "_TracebackStyle" = None,
     ) -> Union[str, ReprExceptionInfo, ExceptionChainRepr, FixtureLookupErrorRepr]:
         fulltrace = self.config.getoption("fulltrace", False)
         if (
@@ -329,18 +333,21 @@ class Node(metaclass=NodeMeta):
             return str(excinfo.value)
         if isinstance(excinfo.value, FixtureLookupError):
             return excinfo.value.formatrepr()
-        if fulltrace:
-            style = "long"
-        else:
-            self._prunetraceback(excinfo)
-            if style == "auto":
-                style = "long"
+
         # XXX should excinfo.getrepr record all data and toterminal() process it?
-        if style is None:
-            if self.config.getoption("tbstyle", "auto") == "short":
-                style = "short"
+        # XXX: does not distinguish between default/unset and --tb=auto.
+        tbstyle = self.config.getoption("tbstyle", "auto")
+        if fulltrace:
+            style = "long" if tbstyle == "auto" else tbstyle  # type: _TracebackStyle
+        else:
+            if tbstyle == "auto":
+                if default_style is None:
+                    style = "long"
+                else:
+                    style = default_style
             else:
-                style = "long"
+                style = tbstyle
+            self._prunetraceback(excinfo)
 
         if self.config.getoption("verbose", 0) > 1:
             truncate_locals = False
@@ -411,13 +418,7 @@ class Collector(Node):
             exc = excinfo.value
             return str(exc.args[0])
 
-        # Respect explicit tbstyle option, but default to "short"
-        # (_repr_failure_py uses "long" with "fulltrace" option always).
-        tbstyle = self.config.getoption("tbstyle", "auto")
-        if tbstyle == "auto":
-            tbstyle = "short"
-
-        return self._repr_failure_py(excinfo, style=tbstyle)
+        return self._repr_failure_py(excinfo, default_style="short")
 
     def _prunetraceback(self, excinfo):
         if hasattr(self, "fspath"):

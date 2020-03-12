@@ -221,7 +221,16 @@ def pytest_addoption(parser):
         dest="tbstyle",
         default="auto",
         choices=["auto", "long", "short", "no", "line", "native"],
-        help="traceback print mode (auto/long/short/line/native/no).",
+        help=(
+            "traceback print mode (auto/long/short/line/native/no):\n"
+            " - auto (default): 'long' tracebacks for the first and last entry,"
+            " but 'short' style for the other entries\n"
+            " - long: exhaustive, informative traceback formatting\n"
+            " - short: shorter traceback format\n"
+            " - line: only one line per failure\n"
+            " - native: Python standard library formatting\n"
+            " - no: no traceback at all\n"
+        ),
     )
     group._addoption(
         "--show-capture",
@@ -237,7 +246,10 @@ def pytest_addoption(parser):
         "--full-trace",
         action="store_true",
         default=False,
-        help="don't cut any tracebacks (default is to cut).",
+        help=(
+            "don't cut any tracebacks (default is to cut). "
+            "When used `-tb` defaults to 'long'."
+        ),
     )
     group._addoption(
         "--color",

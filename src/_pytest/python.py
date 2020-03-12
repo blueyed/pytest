@@ -1549,10 +1549,7 @@ class Function(PyobjMixin, nodes.Item):
 
     def repr_failure(self, excinfo, outerr=None):
         assert outerr is None, "XXX outerr usage is deprecated"
-        style = self.config.getoption("tbstyle", "auto")
-        if style == "auto":
-            style = "long"
-        return self._repr_failure_py(excinfo, style=style)
+        return self._repr_failure_py(excinfo, default_style="long")
 
 
 class FunctionDefinition(Function):
