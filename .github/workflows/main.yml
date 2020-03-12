@@ -79,7 +79,7 @@ jobs:
           - name: "linting"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "linting"
+            tox_env: "linting_ci"
           - name: "docs"
             python: "3.8"
             os: ubuntu-latest
@@ -109,7 +109,7 @@ jobs:
         path: ${{ env.GITHUB_WORKSPACE }}/pytest/pytest/.tox/${{ matrix.tox_env }}
         key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
     - name: Cache .pre-commit
-      if: (matrix.tox_env == 'linting')
+      if: (matrix.tox_env == 'linting_ci')
       uses: actions/cache@v1
       with:
         path: ~/.cache/pre-commit
