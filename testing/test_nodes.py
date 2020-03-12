@@ -64,8 +64,6 @@ def test_tbstyle_with_non_python(testdir: Testdir) -> None:
 
             def runtest(self):
                 assert 0, "failure"
-                # XXX
-                pytest.fail("failure")
 
         def pytest_collect_file(path, parent):
             return MyItem.from_parent(parent, name="foo")
