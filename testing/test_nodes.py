@@ -87,9 +87,11 @@ def test_tbstyle_with_non_python(testdir: Testdir) -> None:
 
     # Honors to "--tb=short".
     result = testdir.runpytest("--tb=short")
-    result.stdout.fnmatch_lines([
-        "conftest.py:7: in runtest",
-        '    assert 0, "failure"',
-        "E   AssertionError: failure",
-        "E   assert 0",
-    ])
+    result.stdout.fnmatch_lines(
+        [
+            "conftest.py:7: in runtest",
+            '    assert 0, "failure"',
+            "E   AssertionError: failure",
+            "E   assert 0",
+        ]
+    )
