@@ -552,7 +552,12 @@ def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
     active during teardown (e.g. with the terminal plugin's reporting), where
     it might mess with the column width etc.
     """
-    testdir = item.funcargs.get("testdir")
+    try:
+        funcargs = item.funcargs
+    except AttributeError:
+        testdir = None
+    else:
+        testdir = funcargs.get("testdir")
     if not isinstance(testdir, Testdir):
         yield
         return

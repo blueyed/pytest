@@ -1184,3 +1184,34 @@ def test_makefile_warts(testdir: Testdir) -> None:
     assert p1.basename == "foo.txt"
     p1 = testdir.makefile(ext="", **{"foo.txt.txt.meh": ""})
     assert p1.basename == "foo.txt.txt"
+
+
+def test_handles_non_python_items(testdir: Testdir):
+    p1 = testdir.makeconftest(
+        """
+        import pytest
+
+        class MyItem(pytest.Item):
+            def runtest(self):
+                print()
+                print("runtest_was_called")
+                pytest.fail("failure")
+
+        def pytest_collect_file(path, parent):
+            return MyItem.from_parent(parent, name="fooitem")
+        """
+    )
+    result = testdir.runpytest("-p", "pytester", str(p1))
+    result.stdout.fnmatch_lines(
+        [
+            # NOTE: does not prune tracebacks.
+            "    def fail*",
+            "        __tracebackhide__ = True",
+            ">       raise Failed(msg=msg, pytrace=pytrace)",
+            "E       Failed: failure",
+            "runtest_was_called",
+            "*= short test summary info =*",
+            "FAILED ::fooitem (*runner.py:*) - failure",
+            "=* 1 failed in *",
+        ]
+    )
