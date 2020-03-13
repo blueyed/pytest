@@ -264,7 +264,7 @@ def pytest_runtest_makereport(item, call):
 
 def pytest_make_collect_report(collector: Collector) -> CollectReport:
     call = CallInfo.from_call(
-        lambda: list(collector.collect()), "collect", reraise=(KeyboardInterrupt,)
+        lambda: list(collector.collect()), "collect", reraise=(Exit, KeyboardInterrupt,)
     )
     longrepr = None
     if not call.excinfo:

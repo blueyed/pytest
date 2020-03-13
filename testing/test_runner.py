@@ -1048,3 +1048,25 @@ def test_outcome_exception_bad_msg() -> None:
     with pytest.raises(TypeError) as excinfo:
         OutcomeException(func)  # type: ignore
     assert str(excinfo.value) == expected
+
+
+def test_collect_outcomes_exit(testdir) -> None:
+    testdir.makepyfile("")
+    testdir.makeconftest(
+        """
+        import pytest
+
+        def pytest_collect_file():
+            pytest.exit("ciao")
+        """
+    )
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines(
+        [
+            "collected 0 items",
+            "",
+            "*! _pytest.outcomes.Exit: ciao !*",
+            "*= no tests ran in *",
+        ],
+        consecutive=True,
+    )
