@@ -1,6 +1,8 @@
 import sys
 
 import pytest
+from _pytest.pytester import Testdir
+from _pytest.recwarn import WarningsRecorder
 from _pytest.runner import runtestprotocol
 from _pytest.skipping import MarkEvaluator
 from _pytest.skipping import pytest_runtest_setup
@@ -13,7 +15,7 @@ class TestEvaluator:
         assert not evalskipif
         assert not evalskipif.istrue()
 
-    def test_marked_no_args(self, testdir):
+    def test_marked_no_args(self, testdir: Testdir, recwarn: WarningsRecorder):
         item = testdir.getitem(
             """
             import pytest
@@ -33,12 +35,12 @@ class TestEvaluator:
         item = testdir.getitem(
             """
             import pytest
-            @pytest.mark.xyz("hasattr(os, 'sep')")
+            @pytest.mark.foo("hasattr(os, 'sep')")
             def test_func():
                 pass
         """
         )
-        ev = MarkEvaluator(item, "xyz")
+        ev = MarkEvaluator(item, "foo")
         assert ev
         assert ev.istrue()
         expl = ev.getexplanation()
@@ -48,12 +50,12 @@ class TestEvaluator:
         item = testdir.getitem(
             """
             import pytest
-            @pytest.mark.xyz("hasattr(os, 'sep')", attr=2, reason="hello world")
+            @pytest.mark.foo("hasattr(os, 'sep')", attr=2, reason="hello world")
             def test_func():
                 pass
         """
         )
-        ev = MarkEvaluator(item, "xyz")
+        ev = MarkEvaluator(item, "foo")
         assert ev
         assert ev.istrue()
         expl = ev.getexplanation()
