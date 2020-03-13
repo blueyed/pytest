@@ -31,6 +31,10 @@ class TestEvaluator:
         assert expl == ""
         assert not ev.get("run", False)
 
+        # `Testdir.getitem` sees default warnings (unlike runpytest).
+        assert len(recwarn) == 1
+        assert str(recwarn[0].message).startswith("Unknown pytest.mark.xyz")
+
     def test_marked_one_arg(self, testdir):
         item = testdir.getitem(
             """

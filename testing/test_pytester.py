@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import time
+import warnings
 from collections import OrderedDict
 from typing import List
 
@@ -1381,7 +1382,9 @@ class TestTestdirMakefiles:
 
 
 @pytest.mark.filterwarnings("error")
-def test_filterwarnings_does_not_affect_pytester(testdir: Testdir) -> None:
+def test_filterwarnings_does_not_affect_pytester_runs(testdir: Testdir) -> None:
+    assert warnings.filters[0][0] == "error"
+
     testdir.makepyfile(
         """
         import warnings
@@ -1390,13 +1393,36 @@ def test_filterwarnings_does_not_affect_pytester(testdir: Testdir) -> None:
             warnings.warn("ww")
     """
     )
-    result = testdir.runpytest("-Werror::pytest.PytestWarning")
+
+    # Ignore any outer "python -Werror".
+    testdir.monkeypatch.setattr("sys.warnoptions", [])
+
+    result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         [
             "*= warnings summary [[]runtest[]] =*",
-            "test_filterwarnings_does_not_affect_pytester.py::test",
+            "*::test",
             "  *:4: UserWarning: ww",
             '    warnings.warn("ww")',
             "*= 1 passed, 1 warning in *",
         ]
     )
+    # Gets restored to filterwarnings setting.
+    assert warnings.filters[0][0] == "error"
+
+    hookrecorder = testdir.inline_run()
+    assert hookrecorder.countoutcomes() == [1, 0, 0]
+
+    # Fails with "error" in sys.warnoptions.
+    testdir.monkeypatch.setattr("sys.warnoptions", ["error"])
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines(
+        [
+            "E       UserWarning: ww",
+            "FAILED test_filterwarnings_does_not_affect_pytester_runs.py:4::test"
+            " - UserWarning: ww",
+            "*= 1 failed in *",
+        ]
+    )
+    hookrecorder = testdir.inline_run()
+    assert hookrecorder.countoutcomes() == [0, 0, 1]
