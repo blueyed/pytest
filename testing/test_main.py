@@ -129,3 +129,13 @@ def test_session_shouldfail_with_different_failed(testdir: Testdir) -> None:
     result = testdir.runpytest()
     assert result.ret == 1
     result.stdout.fnmatch_lines(["*= no tests ran in *s (session_shouldfail) =*"])
+
+
+def test_collect_ignores_hidden_file(testdir: Testdir) -> None:
+    """Hidden modules should not being tried, importing them fails anyway.
+
+    For directories the default of "norecursedirs" handles this already/also.
+    """
+    testdir.makepyfile(**{"tests/.test_hidden@meh.py": "def test(): assert 0"})
+    result = testdir.runpytest("-o", "python_files=tests/*.py")
+    assert result.ret == ExitCode.NO_TESTS_COLLECTED

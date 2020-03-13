@@ -304,6 +304,9 @@ def _in_venv(path):
 def pytest_ignore_collect(
     path: py.path.local, config: Config
 ) -> "Optional[Literal[True]]":
+    if path.basename[:1] == ".":
+        return True
+
     ignore_paths = config._getconftest_pathlist("collect_ignore", path=path.dirpath())
     ignore_paths = ignore_paths or []
     excludeopt = config.getoption("ignore")
