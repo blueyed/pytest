@@ -1543,6 +1543,20 @@ def test_diff_different_line_endings():
         r"+ ",
     ]
 
+    # Only escapes with empty line at end.
+    assert callequal("foo", "foobar\nbaz") == [
+        r"'foo' == 'foobar\nbaz'",
+        r"+ foo",
+        r"- foobar",
+        r"- baz",
+    ]
+    assert callequal("foobar\nbaz", "foo") == [
+        r"'foobar\nbaz' == 'foo'",
+        r"- foo",
+        r"+ foobar",
+        r"+ baz",
+    ]
+
 
 @pytest.mark.filterwarnings("default")
 def test_assert_tuple_warning(testdir):
