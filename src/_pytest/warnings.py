@@ -49,7 +49,14 @@ def pytest_addoption(parser):
 
 
 initial_warning_filters = None
-"""Initial warning filters."""
+"""Initial warning filters.
+
+This picks up any warning filter configuration after imports, which appears to
+be a use case that should be supported (#2430, test_works_with_filterwarnings).
+
+It allows to use enable all +:ref:`"default" warnings
+<python:default-warning-filter>` (:PEP:`0565`).
+"""
 
 
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)

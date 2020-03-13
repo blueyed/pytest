@@ -1378,3 +1378,25 @@ class TestTestdirMakefiles:
         assert str(
             excinfo.value
         ) == "path is not a file/symlink, not clobbering: {!r}".format(str(directory))
+
+
+@pytest.mark.filterwarnings("error")
+def test_filterwarnings_does_not_affect_pytester(testdir: Testdir) -> None:
+    testdir.makepyfile(
+        """
+        import warnings
+
+        def test():
+            warnings.warn("ww")
+    """
+    )
+    result = testdir.runpytest("-Werror::pytest.PytestWarning")
+    result.stdout.fnmatch_lines(
+        [
+            "*= warnings summary [[]runtest[]] =*",
+            "test_filterwarnings_does_not_affect_pytester.py::test",
+            "  *:4: UserWarning: ww",
+            '    warnings.warn("ww")',
+            "*= 1 passed, 1 warning in *",
+        ]
+    )

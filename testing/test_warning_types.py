@@ -19,7 +19,6 @@ def test_warning_types(warning_class):
     assert warning_class.__module__ == "pytest"
 
 
-@pytest.mark.filterwarnings("error::pytest.PytestWarning")
 def test_pytest_warnings_repr_integration_test(testdir):
     """Small integration test to ensure our small hack of setting the __module__ attribute
     of our warnings actually works (#5452).
@@ -33,5 +32,5 @@ def test_pytest_warnings_repr_integration_test(testdir):
             warnings.warn(pytest.PytestWarning("some warning"))
     """
     )
-    result = testdir.runpytest()
+    result = testdir.runpytest("-Werror::pytest.PytestWarning")
     result.stdout.fnmatch_lines(["E       pytest.PytestWarning: some warning"])
