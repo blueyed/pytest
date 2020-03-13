@@ -1,5 +1,6 @@
 import functools
 import inspect
+import itertools
 import sys
 import warnings
 from collections import defaultdict
@@ -862,19 +863,19 @@ class FixtureDef:
         self._finalizers.append(finalizer)
 
     def finish(self, request):
-        exceptions = []
+        exc = None
         try:
             while self._finalizers:
                 try:
                     func = self._finalizers.pop()
                     func()
-                except:  # noqa
-                    exceptions.append(sys.exc_info())
-            if exceptions:
-                _, val, tb = exceptions[0]
-                # Ensure to not keep frame references through traceback.
-                del exceptions
-                raise val.with_traceback(tb)
+                except BaseException as e:
+                    # XXX Only first exception will be seen by user,
+                    #     ideally all should be reported.
+                    if exc is None:
+                        exc = e
+            if exc:
+                raise exc
         finally:
             hook = self._fixturemanager.session.gethookproxy(request.node.fspath)
             hook.pytest_fixture_post_finalizer(fixturedef=self, request=request)
@@ -1281,8 +1282,10 @@ class FixtureManager:
         else:
             argnames = ()
 
-        usefixtures = get_use_fixtures_for_node(node)
-        initialnames = usefixtures + argnames
+        usefixtures = itertools.chain.from_iterable(
+            mark.args for mark in node.iter_markers(name="usefixtures")
+        )
+        initialnames = tuple(usefixtures) + argnames
         fm = node.session._fixturemanager
         initialnames, names_closure, arg2fixturedefs = fm.getfixtureclosure(
             initialnames, node, ignore_args=self._get_direct_parametrize_args(node)
@@ -1479,12 +1482,3 @@ class FixtureManager:
         for fixturedef in fixturedefs:
             if nodes.ischildnode(fixturedef.baseid, nodeid):
                 yield fixturedef
-
-
-def get_use_fixtures_for_node(node) -> Tuple[str, ...]:
-    """Returns the names of all the usefixtures() marks on the given node"""
-    return tuple(
-        str(name)
-        for mark in node.iter_markers(name="usefixtures")
-        for name in mark.args
-    )

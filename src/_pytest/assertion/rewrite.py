@@ -27,9 +27,18 @@ from _pytest.assertion.util import (  # noqa: F401
     format_explanation as _format_explanation,
 )
 from _pytest.compat import fspath
+from _pytest.compat import TYPE_CHECKING
 from _pytest.pathlib import fnmatch_ex
 from _pytest.pathlib import Path
 from _pytest.pathlib import PurePath
+from _pytest.store import StoreKey
+
+if TYPE_CHECKING:
+    from _pytest.assertion import AssertionState  # noqa: F401
+
+
+assertstate_key = StoreKey["AssertionState"]()
+
 
 # pytest caches rewritten pycs in pycache dirs
 PYTEST_TAG = "{}-pytest-{}".format(sys.implementation.cache_tag, version)
@@ -37,7 +46,7 @@ PYC_EXT = ".py" + (__debug__ and "c" or "o")
 PYC_TAIL = "." + PYTEST_TAG + PYC_EXT
 
 
-class AssertionRewritingHook(importlib.abc.MetaPathFinder):
+class AssertionRewritingHook(importlib.abc.MetaPathFinder, importlib.abc.Loader):
     """PEP302/PEP451 import hook which rewrites asserts."""
 
     def __init__(self, config):
@@ -66,7 +75,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
     def find_spec(self, name, path=None, target=None):
         if self._writing_pyc:
             return None
-        state = self.config._assertstate
+        state = self.config._store[assertstate_key]
         if self._early_rewrite_bailout(name, state):
             return None
         state.trace("find_module called for: %s" % name)
@@ -105,7 +114,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
 
     def exec_module(self, module):
         fn = Path(module.__spec__.origin)
-        state = self.config._assertstate
+        state = self.config._store[assertstate_key]
 
         self._rewritten_names.add(module.__name__)
 

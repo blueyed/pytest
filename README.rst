@@ -22,6 +22,10 @@ integration branch).
 .. image:: https://travis-ci.org/blueyed/pytest.svg?branch=my-master
     :target: https://travis-ci.org/blueyed/pytest
 
+.. image:: https://readthedocs.org/projects/pytest/badge/?version=latest
+    :target: https://pytest.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
+
 The ``pytest`` framework makes it easy to write small tests, yet
 scales to support complex functional testing for applications and libraries.
 

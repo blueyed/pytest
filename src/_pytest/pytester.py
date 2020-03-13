@@ -371,7 +371,7 @@ class HookRecorder:
 
 
 @pytest.fixture
-def linecomp(request: FixtureRequest) -> "LineComp":
+def linecomp() -> "LineComp":
     return LineComp()
 
 
@@ -614,7 +614,11 @@ class Testdir(Generic[AnyStr]):
         self._mod_collections = (
             WeakKeyDictionary()
         )  # type: WeakKeyDictionary[Module, List[Union[Item, Collector]]]
-        name = request.function.__name__
+        if request.function:
+            name = request.function.__name__  # type: str
+        else:
+            name = request.node.name
+        self._name = name
         self.tmpdir = tmpdir_factory.mktemp(name, numbered=True)
         self.test_tmproot = tmpdir_factory.mktemp("tmp-" + name, numbered=True)
         self.plugins = []  # type: List[Union[str, _PluggyPlugin]]
@@ -681,9 +685,9 @@ class Testdir(Generic[AnyStr]):
             return s.decode(encoding) if isinstance(s, bytes) else str(s)
 
         if lines:
-            funcname = self.request.function.__name__  # type: str
-            lines = "\n".join(to_text(x) for x in lines)
-            items.insert(0, (funcname, lines))
+            source = "\n".join(to_text(x) for x in lines)
+            basename = self._name
+            items.insert(0, (basename, source))
 
         if not items:
             raise ValueError("no files to create")
@@ -788,7 +792,7 @@ class Testdir(Generic[AnyStr]):
             example_dir = example_dir.join(*extra_element.args)
 
         if name is None:
-            func_name = self.request.function.__name__
+            func_name = self._name
             maybe_dir = example_dir / func_name
             maybe_file = example_dir / (func_name + ".py")
 
@@ -1168,7 +1172,7 @@ class Testdir(Generic[AnyStr]):
             path = self.tmpdir.join(str(source))
             assert not withinit, "not supported for paths"
         else:
-            kw = {self.request.function.__name__: Source(source).strip()}
+            kw = {self._name: Source(source).strip()}
             path = self.makepyfile(**kw)
         if withinit:
             self.makepyfile(__init__="#")
@@ -1449,21 +1453,21 @@ class Testdir(Generic[AnyStr]):
 
 
 class LineComp:
-    def __init__(self):
+    def __init__(self) -> None:
         self.stringio = StringIO()
+        """:class:`python:io.StringIO()` instance used for input."""
 
-    def assert_contains_lines(self, lines2):
-        """Assert that lines2 are contained (linearly) in lines1.
+    def assert_contains_lines(self, lines2: Sequence[str]) -> None:
+        """Assert that ``lines2`` are contained (linearly) in :attr:`stringio`'s value.
 
-        Return a list of extralines found.
-
+        Lines are matched using :func:`LineMatcher.fnmatch_lines`.
         """
         __tracebackhide__ = True
         val = self.stringio.getvalue()
         self.stringio.truncate(0)
         self.stringio.seek(0)
         lines1 = val.split("\n")
-        return LineMatcher(lines1).fnmatch_lines(lines2)
+        LineMatcher(lines1).fnmatch_lines(lines2)
 
 
 # TODO: toterminal method that can apply colors?

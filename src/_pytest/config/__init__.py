@@ -42,6 +42,7 @@ from _pytest.compat import TYPE_CHECKING
 from _pytest.outcomes import fail
 from _pytest.outcomes import Skipped
 from _pytest.pathlib import Path
+from _pytest.store import Store
 from _pytest.warning_types import PytestConfigWarning
 
 if TYPE_CHECKING:
@@ -616,13 +617,9 @@ class PytestPluginManager(PluginManager):
         try:
             __import__(importspec)
         except ImportError as e:
-            new_exc_message = 'Error importing plugin "{}": {}'.format(
-                modname, str(e.args[0])
-            )
-            new_exc = ImportError(new_exc_message)
-            tb = sys.exc_info()[2]
-
-            raise new_exc.with_traceback(tb)
+            raise ImportError(
+                'Error importing plugin "{}": {}'.format(modname, str(e.args[0]))
+            ).with_traceback(e.__traceback__)
 
         except Skipped as e:
             from _pytest.warnings import _issue_warning_captured
@@ -796,6 +793,9 @@ class Config:
         self._override_ini = ()  # type: Sequence[str]
         self._opt2dest = {}  # type: Dict[str, str]
         self._cleanup = []  # type: List[Callable[[], None]]
+        # A place where plugins can store information on the config for their
+        # own use. Currently only intended for internal plugins.
+        self._store = Store()
         self.pluginmanager.register(self, "pytestconfig")
         self._configured = False
         self.hook.pytest_addoption.call_historic(

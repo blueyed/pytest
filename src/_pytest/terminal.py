@@ -9,6 +9,7 @@ import os
 import platform
 import sys
 import time
+import warnings
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -29,6 +30,7 @@ from wcwidth import wcswidth
 import pytest
 from _pytest import nodes
 from _pytest._code.code import ReprFileLocation
+from _pytest._io import TerminalWriter
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
 from _pytest.config import Config
@@ -385,7 +387,7 @@ class TerminalReporter:
         self.startdir = config.invocation_dir
         if file is None:
             file = sys.stdout
-        self.writer = self._tw = _pytest.config.create_terminal_writer(config, file)
+        self._tw = _pytest.config.create_terminal_writer(config, file)
         self.currentfspath = None  # type: Any
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup
@@ -393,6 +395,24 @@ class TerminalReporter:
         self._progress_nodeids_reported = set()  # type: Set[str]
         self._show_progress_info = self._determine_show_progress_info()
         self._collect_report_last_write = None  # type: Optional[float]
+
+    def _warn_deprecated_writer(self):
+        warnings.warn(
+            pytest.PytestDeprecationWarning(
+                "TerminalReporter.writer attribute is deprecated, use TerminalReporter._tw instead at your own risk.\n"
+                "See https://docs.pytest.org/en/latest/deprecations.html#terminalreporter-writer for more information."
+            ), stacklevel=3
+        )
+
+    @property
+    def writer(self) -> TerminalWriter:
+        self._warn_deprecated_writer()
+        return self._tw
+
+    @writer.setter
+    def writer(self, value: TerminalWriter) -> None:
+        self._warn_deprecated_writer()
+        self._tw = value
 
     def _determine_show_progress_info(self):
         """Return True if we should display progress information based on the current config"""
@@ -958,6 +978,26 @@ class TerminalReporter:
         if not warning_reports:
             return
 
+        def collapsed_location_report(reports: List[WarningReport]) -> str:
+            locations = []
+            for w in reports:
+                location = w.get_location(self.config)
+                if location:
+                    locations.append(location)
+
+            if len(locations) < 10:
+                return "\n".join(map(str, locations))
+
+            counts_by_filename = collections.Counter(
+                str(loc).split("::", 1)[0] for loc in locations
+            )
+            return "\n".join(
+                "{0}: {1} test{2} with warning{2}".format(
+                    k, v, "s" if v > 1 else ""
+                )
+                for k, v in counts_by_filename.items()
+            )
+
         grouped = (
             collections.OrderedDict()
         )  # type: collections.OrderedDict[str, List[WarningReport]]
@@ -972,13 +1012,9 @@ class TerminalReporter:
             ) + " [{}]".format(when)
             self.write_sep("=", title, yellow=True, bold=False)
             for message, warning_reports in grouped_by_message.items():
-                has_any_location = False
-                for w in warning_reports:
-                    location = w.get_location(self.config)
-                    if location:
-                        self._tw.line(str(location))
-                        has_any_location = True
-                if has_any_location:
+                maybe_location = collapsed_location_report(warning_reports)
+                if maybe_location:
+                    self._tw.line(maybe_location)
                     lines = message.splitlines()
                     indented = "\n".join("  " + x for x in lines)
                     message = indented.rstrip()

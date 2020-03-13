@@ -6,6 +6,7 @@ import pytest
 from _pytest.resultlog import pytest_configure
 from _pytest.resultlog import pytest_unconfigure
 from _pytest.resultlog import ResultLog
+from _pytest.resultlog import resultlog_key
 
 pytestmark = pytest.mark.filterwarnings("ignore:--result-log is deprecated")
 
@@ -179,17 +180,53 @@ def test_makedir_for_resultlog(testdir, LineMatcher):
 def test_no_resultlog_on_slaves(testdir):
     config = testdir.parseconfig("-p", "resultlog", "--resultlog=resultlog")
 
-    assert not hasattr(config, "_resultlog")
+    assert resultlog_key not in config._store
     pytest_configure(config)
-    assert hasattr(config, "_resultlog")
+    assert resultlog_key in config._store
     pytest_unconfigure(config)
-    assert not hasattr(config, "_resultlog")
+    assert resultlog_key not in config._store
 
     config.slaveinput = {}
     pytest_configure(config)
-    assert not hasattr(config, "_resultlog")
+    assert resultlog_key not in config._store
     pytest_unconfigure(config)
-    assert not hasattr(config, "_resultlog")
+    assert resultlog_key not in config._store
+
+
+def test_unknown_teststatus(testdir):
+    """Ensure resultlog correctly handles unknown status from pytest_report_teststatus
+
+    Inspired on pytest-rerunfailures.
+    """
+    testdir.makepyfile(
+        """
+        def test():
+            assert 0
+    """
+    )
+    testdir.makeconftest(
+        """
+        import pytest
+
+        def pytest_report_teststatus(report):
+            if report.outcome == 'rerun':
+                return "rerun", "r", "RERUN"
+
+        @pytest.hookimpl(hookwrapper=True)
+        def pytest_runtest_makereport():
+            res = yield
+            report = res.get_result()
+            if report.when == "call":
+                report.outcome = 'rerun'
+    """
+    )
+    result = testdir.runpytest("--resultlog=result.log")
+    result.stdout.fnmatch_lines(
+        ["test_unknown_teststatus.py r *[[]100%[]]", "* 1 rerun *"]
+    )
+
+    lines = testdir.tmpdir.join("result.log").readlines(cr=0)
+    assert lines[0] == "r test_unknown_teststatus.py::test"
 
 
 def test_failure_issue380(testdir):
