@@ -252,7 +252,12 @@ def _diff_text(left: str, right: str, verbose: int = 0) -> List[str]:
             "NOTE: Strings contain non-printable characters. Escaping them using repr()."
         ]
     else:
-        max_split = min(len(left_lines), len(right_lines)) + 1
+        max_split = min(len(left_lines), len(right_lines))
+        if (len(left_lines) and left_lines[-1] == "") or (
+            len(right_lines) and right_lines[-1] == ""
+        ):
+            # Escape with trailing newline.
+            max_split += 1
         left_ends = left_split[1:max_split:2]
         right_ends = right_split[1:max_split:2]
         if left_ends != right_ends:
