@@ -7,6 +7,7 @@ from _pytest.fixtures import FixtureLookupError
 from _pytest.fixtures import FixtureRequest
 from _pytest.pathlib import Path
 from _pytest.pytester import get_public_names
+from _pytest.pytester import Testdir
 
 
 def test_getfuncargnames_functions():
@@ -4293,3 +4294,24 @@ def test_fixture_arg_ordering(testdir):
     )
     result = testdir.runpytest("-vv", str(p1))
     assert result.ret == 0
+
+
+def test__get_direct_parametrize_args(testdir: Testdir) -> None:
+    """It should report the TypeError via/for parametrize."""
+    p1 = testdir.makepyfile(
+        test="""
+        import pytest
+
+        @pytest.mark.parametrize
+        def test():
+            pass
+    """
+    )
+    result = testdir.runpytest(str(p1))
+    result.stdout.fnmatch_lines(
+        [
+            "E   TypeError: parametrize() missing 2 required positional arguments: 'argnames' and 'argvalues'",
+            "ERROR collecting test.py (*python.py:*) - TypeError: *",
+            "=* 1 error in *",
+        ]
+    )

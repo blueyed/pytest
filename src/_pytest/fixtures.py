@@ -1264,10 +1264,14 @@ class FixtureManager:
         parametrize_argnames = []
         for marker in node.iter_markers(name="parametrize"):
             if not marker.kwargs.get("indirect", False):
-                p_argnames, _ = ParameterSet._parse_parametrize_args(
-                    *marker.args, **marker.kwargs
-                )
-                parametrize_argnames.extend(p_argnames)
+                try:
+                    p_argnames, _ = ParameterSet._parse_parametrize_args(
+                        *marker.args, **marker.kwargs
+                    )
+                except TypeError:
+                    pass
+                else:
+                    parametrize_argnames.extend(p_argnames)
 
         return parametrize_argnames
 
