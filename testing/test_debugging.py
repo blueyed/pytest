@@ -799,7 +799,11 @@ class TestPDB:
             [
                 "*> PDB set_trace (IO-capturing turned off) >*",
                 "'x=5'",
-                "E   _pytest.outcomes.Exit: Quitting debugger",
+                "(Pdb*) q",
+                "collected 0 items",
+                "",
+                "*! _pytest.outcomes.Exit: Quitting debugger !*",
+                "*= no tests ran in *",
             ]
         )
 
