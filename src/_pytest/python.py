@@ -519,7 +519,7 @@ class Module(nodes.File, PyCollector):
             mod = fspath.pyimport(ensuresyspath=importmode)
         except SyntaxError:
             raise self.CollectError(ExceptionInfo.from_current().getrepr(style="short"))
-        except self.fspath.ImportMismatchError as e:
+        except fspath.ImportMismatchError as e:
             raise self.CollectError(
                 "import file mismatch:\n"
                 "imported module %r has this __file__ attribute:\n"
@@ -543,7 +543,7 @@ class Module(nodes.File, PyCollector):
                 "ImportError while importing test module '{fspath}'.\n"
                 "Hint: make sure your test modules/packages have valid Python names.\n"
                 "Traceback:\n"
-                "{traceback}".format(fspath=self.fspath, traceback=formatted_tb)
+                "{traceback}".format(fspath=fspath, traceback=formatted_tb)
             )
         except _pytest.runner.Skipped as e:
             if e.allow_module_level:
