@@ -7,6 +7,7 @@ import io
 import os
 import re
 import sys
+import warnings
 from contextlib import contextmanager
 from inspect import Parameter
 from inspect import signature
@@ -323,10 +324,11 @@ def safe_getattr(object: Any, name: str, default: Any) -> Any:
     It catches OutcomeException because of #2490 (issue #580), new outcomes are derived from BaseException
     instead of Exception (for more details check #2707)
     """
-    try:
-        return getattr(object, name, default)
-    except TEST_OUTCOME:
-        return default
+    with warnings.catch_warnings(record=True):
+        try:
+            return getattr(object, name, default)
+        except TEST_OUTCOME:
+            return default
 
 
 def safe_isclass(obj: object) -> bool:
