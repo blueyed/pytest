@@ -19,12 +19,16 @@ import os
 import re
 import sys
 
+from sphinx.util.logging import getLogger
+
 from _pytest import __version__ as version
 from _pytest.compat import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import sphinx.application
 
+
+logger = getLogger(__name__)
 
 release = ".".join(version.split(".")[:2])
 
@@ -385,10 +389,28 @@ def handle_changelog_draft(app: "sphinx.application.Sphinx") -> None:
     if include_draft:
         import subprocess
 
-        with open("_changelog_towncrier_draft.rst", "w") as f:
-            subprocess.check_call(["towncrier", "--draft"], stdout=f, cwd="../..")
-
         app.tags.add("changelog_towncrier_draft")
+
+        logger.info("Writing _changelog_towncrier_draft...")
+        proc = subprocess.run(
+            ["towncrier", "--draft"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd="../..",
+        )
+        if proc.returncode != 0:
+            logger.error("ERROR: {}".format(proc.stderr.decode("utf8")))
+            return
+
+        output = proc.stdout.decode("utf8")
+        output = re.sub(
+            "^\n.*\n=+",
+            "Changelog draft (unreleased)\n"
+            "============================",
+            output,
+        )
+        with open("_changelog_towncrier_draft.rst", "w") as f:
+            f.write(output)
 
 
 def setup(app: "sphinx.application.Sphinx") -> None:
