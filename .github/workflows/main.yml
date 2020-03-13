@@ -56,7 +56,7 @@ jobs:
             # (https://github.com/blueyed/pytest/issues/195)
             tox_env: "py38-lsof-pexpect-coverage"
             pytest_addopts: "-m 'uses_pexpect or integration' --run-integration-tests"
-            script_prefix: "env -u COLUMNS"
+            script_prefix: "env -u COLUMNS PYTHONWARNINGS=error"
 
           # Coverage for:
           # - osx
