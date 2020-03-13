@@ -11,6 +11,7 @@ from collections import Counter
 from collections import defaultdict
 from collections.abc import Sequence
 from functools import partial
+from types import ModuleType
 from typing import Callable
 from typing import Dict
 from typing import Iterable
@@ -510,15 +511,15 @@ class Module(nodes.File, PyCollector):
 
         self.obj.__pytest_setup_function = xunit_setup_function_fixture
 
-    def _importtestmodule(self):
+    def _importtestmodule(self) -> ModuleType:
         # we assume we are only called once per module
         importmode = self.config.getoption("--import-mode")
+        fspath = self.fspath
         try:
-            mod = self.fspath.pyimport(ensuresyspath=importmode)
+            mod = fspath.pyimport(ensuresyspath=importmode)
         except SyntaxError:
             raise self.CollectError(ExceptionInfo.from_current().getrepr(style="short"))
-        except self.fspath.ImportMismatchError:
-            e = sys.exc_info()[1]
+        except self.fspath.ImportMismatchError as e:
             raise self.CollectError(
                 "import file mismatch:\n"
                 "imported module %r has this __file__ attribute:\n"
