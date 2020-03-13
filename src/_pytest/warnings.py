@@ -48,6 +48,22 @@ def pytest_addoption(parser):
     )
 
 
+initial_warning_filters = None
+"""Initial warning filters."""
+
+
+@pytest.hookimpl(hookwrapper=True, tryfirst=True)
+def pytest_load_initial_conftests() -> Generator[None, None, None]:
+    global initial_warning_filters
+
+    if not sys.warnoptions:
+        warnings.simplefilter("default")
+
+    yield
+
+    initial_warning_filters = warnings.filters
+
+
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
@@ -71,10 +87,7 @@ def catch_warnings_for_item(config, ihook, when, item):
         # mypy can't infer that record=True means log is not None; help it.
         assert log is not None
 
-        if not sys.warnoptions:
-            # if user is not explicitly configuring warning filters, show deprecation warnings by default (#2908)
-            warnings.filterwarnings("always", category=DeprecationWarning)
-            warnings.filterwarnings("always", category=PendingDeprecationWarning)
+        warnings.filters = initial_warning_filters
 
         # filters should have this precedence: mark, cmdline options, ini
         # filters should be applied in the inverse order of precedence
