@@ -1383,7 +1383,7 @@ class TestTestdirMakefiles:
 
 @pytest.mark.filterwarnings("error")
 def test_filterwarnings_does_not_affect_pytester_runs(testdir: Testdir) -> None:
-    assert warnings.filters[0][0] == "error"
+    assert warnings.filters[0][0] == "error"  # type: ignore[attr-defined]
 
     testdir.makepyfile(
         """
@@ -1408,7 +1408,7 @@ def test_filterwarnings_does_not_affect_pytester_runs(testdir: Testdir) -> None:
         ]
     )
     # Gets restored to filterwarnings setting.
-    assert warnings.filters[0][0] == "error"
+    assert warnings.filters[0][0] == "error"  # type: ignore[attr-defined]
 
     hookrecorder = testdir.inline_run()
     assert hookrecorder.countoutcomes() == [1, 0, 0]
