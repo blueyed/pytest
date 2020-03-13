@@ -124,7 +124,7 @@ class Node(metaclass=NodeMeta):
             self.session = parent.session
 
         #: filesystem path where this node was collected from (can be None)
-        self.fspath = fspath or getattr(parent, "fspath", None)
+        self.fspath = fspath or getattr(parent, "fspath", None)  # type: py.path.local
 
         #: keywords/markers collected from all scopes
         self.keywords = NodeKeywords(self)
