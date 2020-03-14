@@ -35,6 +35,10 @@ release = ".".join(version.split(".")[:2])
 autodoc_member_order = "bysource"
 todo_include_todos = 1
 
+rst_epilog = """
+.. |pytest| replace:: :program:`pytest`
+"""
+
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.

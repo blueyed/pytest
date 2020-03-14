@@ -3,9 +3,7 @@
 Warnings Capture
 ================
 
-
-
-Starting from version ``3.1``, pytest now automatically catches warnings during test execution
+Starting from version ``3.1``, |pytest| now automatically catches warnings during test execution
 and displays them at the end of the session:
 
 .. code-block:: python
@@ -22,7 +20,7 @@ and displays them at the end of the session:
     def test_one():
         assert api_v1() == 1
 
-Running pytest now produces this output:
+Running |pytest| now produces this output:
 
 .. code-block:: pytest
 
@@ -43,8 +41,10 @@ Running pytest now produces this output:
     -- Docs: https://docs.pytest.org/en/latest/warnings.html
     ======================= 1 passed, 1 warning in 0.12s =======================
 
-The ``-W`` flag can be passed to control which warnings will be displayed or even turn
-them into errors:
+.. cmdoption:: -W arg
+
+   The ``-W`` flag can be passed to control which warnings will be displayed,
+   and can turn them also into errors:
 
 .. code-block:: pytest
 
@@ -81,16 +81,16 @@ all other warnings into errors.
 When a warning matches more than one option in the list, the action for the last matching option
 is performed.
 
-Both ``-W`` command-line option and ``filterwarnings`` ini option are based on Python's own
-`-W option`_ and `warnings.simplefilter`_, so please refer to those sections in the Python
-documentation for other examples and advanced usage.
+Both the ``-W`` command-line option and the ``filterwarnings`` ini option are
+based on Python's own :option:`-W option <python:-W>` and
+:func:`python:warnings.simplefilter`.
+Please refer to those sections in the Python documentation for other examples
+and advanced usage.
 
 .. _`filterwarnings`:
 
 ``@pytest.mark.filterwarnings``
 -------------------------------
-
-
 
 You can use the ``@pytest.mark.filterwarnings`` to add warning filters to specific test items,
 allowing you to have finer control of which warnings should be captured at test, class or
@@ -122,13 +122,9 @@ decorator or to all tests in a module by setting the ``pytestmark`` variable:
     # turns all warnings into errors for this module
     pytestmark = pytest.mark.filterwarnings("error")
 
-
-
 *Credits go to Florian Schulze for the reference implementation in the* `pytest-warnings`_
 *plugin.*
 
-.. _`-W option`: https://docs.python.org/3/using/cmdline.html#cmdoption-w
-.. _warnings.simplefilter: https://docs.python.org/3/library/warnings.html#warnings.simplefilter
 .. _`pytest-warnings`: https://github.com/fschulze/pytest-warnings
 
 Disabling warnings summary
@@ -156,16 +152,23 @@ using an external system.
 DeprecationWarning and PendingDeprecationWarning
 ------------------------------------------------
 
+|pytest| will enable all
+:ref:`"default" warnings <python:default-warning-filter>` by default, which
+includes :exc:`python:DeprecationWarning` and
+:exc:`python:PendingDeprecationWarning`, as recommended by :PEP:`0565`.
 
+This helps developers to keep their code modern and avoid breakages when
+deprecated code if effectively removed.
 
+.. note::
 
-By default pytest will display ``DeprecationWarning`` and ``PendingDeprecationWarning`` warnings from
-user code and third-party libraries, as recommended by `PEP-0565 <https://www.python.org/dev/peps/pep-0565>`_.
-This helps users keep their code modern and avoid breakages when deprecated warnings are effectively removed.
+  If warnings are configured at the interpreter level, using the
+  :envvar:`python:PYTHONWARNINGS` environment variable or :program:`python`'s :option:`python:-W`
+  command-line option, |pytest| will not configure any filters by default.
 
-Sometimes it is useful to hide some specific deprecation warnings that happen in code that you have no control over
-(such as third-party libraries), in which case you might use the warning filters options (ini or marks) to ignore
-those warnings.
+You can use the below warning filter options to ignore those (and other)
+warnings, e.g. in case you have no control over them (as with third-party
+libraries).
 
 For example:
 
@@ -175,24 +178,11 @@ For example:
     filterwarnings =
         ignore:.*U.*mode is deprecated:DeprecationWarning
 
-
 This will ignore all warnings of type ``DeprecationWarning`` where the start of the message matches
 the regular expression ``".*U.*mode is deprecated"``.
 
-.. note::
-
-    If warnings are configured at the interpreter level, using
-    the `PYTHONWARNINGS <https://docs.python.org/3/using/cmdline.html#envvar-PYTHONWARNINGS>`_ environment variable or the
-    ``-W`` command-line option, pytest will not configure any filters by default.
-
-    Also pytest doesn't follow ``PEP-0506`` suggestion of resetting all warning filters because
-    it might break test suites that configure warning filters themselves
-    by calling ``warnings.simplefilter`` (see issue `#2430 <https://github.com/pytest-dev/pytest/issues/2430>`_
-    for an example of that).
-
 
 .. _`ensuring a function triggers a deprecation warning`:
-
 .. _ensuring_function_triggers:
 
 Ensuring code triggers a deprecation warning
@@ -247,9 +237,7 @@ filter at the end of the test, so no global state is leaked.
 Asserting warnings with the warns function
 ------------------------------------------
 
-
-
-You can check that code raises a particular warning using ``pytest.warns``,
+You can check that code raises a particular warning using :func:`pytest.warns`,
 which works in a similar manner to :ref:`raises <assertraises>`:
 
 .. code-block:: python
@@ -262,8 +250,9 @@ which works in a similar manner to :ref:`raises <assertraises>`:
         with pytest.warns(UserWarning):
             warnings.warn("my warning", UserWarning)
 
-The test will fail if the warning in question is not raised. The keyword
-argument ``match`` to assert that the exception matches a text or regex::
+The test will fail if the warning in question is not raised.
+The keyword argument ``match`` can be used to assert that the exception
+matches a regular expression::
 
     >>> with warns(UserWarning, match='must be 0 or None'):
     ...     warnings.warn("value must be 0 or None", UserWarning)
@@ -379,11 +368,10 @@ custom error message.
 Internal pytest warnings
 ------------------------
 
+|pytest| may generate its own warnings in some situations, such as improper
+usage or deprecated features.
 
-
-pytest may generate its own warnings in some situations, such as improper usage or deprecated features.
-
-For example, pytest will emit a warning if it encounters a class that matches :confval:`python_classes` but also
+For example, a warning is emitted if it encounters a class that matches :confval:`python_classes` but also
 defines an ``__init__`` constructor, as this prevents the class from being instantiated:
 
 .. code-block:: python
@@ -413,7 +401,7 @@ These warnings might be filtered using the same builtin mechanisms used to filte
 Please read our :ref:`backwards-compatibility` to learn how we proceed about deprecating and eventually removing
 features.
 
-The following warning types are used by pytest and are part of the public API:
+The following warning types are used by |pytest| and are part of the public API:
 
 .. autoclass:: pytest.PytestWarning
 
