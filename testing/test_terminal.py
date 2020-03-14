@@ -1835,7 +1835,7 @@ class TestProgressOutputStyle:
         )
 
     @pytest.fixture
-    def non_verbose_pregress_test_files(self, testdir):
+    def progress_files_non_verbose(self, testdir: Testdir) -> None:
         testdir.makepyfile(
             test_more_than_width="""
                 import pytest
@@ -1862,7 +1862,7 @@ class TestProgressOutputStyle:
         output.stdout.no_fnmatch_line("*ZeroDivisionError*")
         output.stdout.fnmatch_lines(["=* 2 passed in *="])
 
-    def test_normal(self, many_tests_files, non_verbose_pregress_test_files, testdir):
+    def test_normal(self, many_tests_files, progress_files_non_verbose, testdir):
         output = testdir.runpytest()
         output.stdout.fnmatch_lines(
             [
@@ -1965,7 +1965,7 @@ class TestProgressOutputStyle:
             )
         )
 
-    def test_count(self, many_tests_files, non_verbose_pregress_test_files, testdir):
+    def test_count(self, many_tests_files, progress_files_non_verbose, testdir):
         testdir.makeini(
             """
             [pytest]
