@@ -13,10 +13,10 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Mapping
 from typing import Optional
-from typing import Set
 from typing import Tuple
 from typing import Union
 
@@ -390,7 +390,7 @@ class TerminalReporter:
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup
         self.isatty = file.isatty()
-        self._progress_nodeids_reported = set()  # type: Set[str]
+        self._progress_items_reported = 0
         self._show_progress_info = self._determine_show_progress_info()
         self._collect_report_last_write = None  # type: Optional[float]
 
@@ -553,6 +553,8 @@ class TerminalReporter:
         else:
             markup = None
         self._add_stats(category, [rep])
+        if rep.when == "call" or (rep.when == "setup" and rep.failed):
+            self._progress_items_reported += 1
         if not letter and not word:
             # probably passed setup/teardown
             return
@@ -575,7 +577,6 @@ class TerminalReporter:
             else:
                 self._tw.write(letter, **markup)
         else:
-            self._progress_nodeids_reported.add(rep.nodeid)
             line = self._locationline(rep.nodeid, *rep.location)
             if not running_xdist:
                 self.write_ensure_prefix(line, word, **markup)
@@ -596,44 +597,51 @@ class TerminalReporter:
 
     @property
     def _is_last_item(self):
-        return len(self._progress_nodeids_reported) == self._session.testscollected
+        return self._progress_items_reported == self._session.testscollected
 
-    def pytest_runtest_logfinish(self, nodeid):
-        assert self._session
-        if self.verbosity <= 0 and self._show_progress_info:
-            if self._show_progress_info == "count":
-                num_tests = self._session.testscollected
-                progress_length = len(" [{}/{}]".format(str(num_tests), str(num_tests)))
-            else:
-                progress_length = len(" [100%]")
+    def pytest_runtest_logfinish(self) -> None:
+        """Write progress if past edge."""
+        if self.verbosity > 0 or not self._show_progress_info:
+            return
 
-            self._progress_nodeids_reported.add(nodeid)
+        if self._show_progress_info == "count":
+            assert self._session
+            num_tests = self._session.testscollected
+            progress_length = len(" [{0}/{0}]".format(num_tests))
+        else:
+            progress_length = len(" [100%]")
 
-            if self._is_last_item:
-                self._write_progress_information_filling_space()
-            else:
-                main_color, _ = self._get_main_color()
-                w = self._width_of_current_line
-                screen_width = self._tw.fullwidth
-                past_edge = w + progress_length + 1 >= screen_width
-                if past_edge:
-                    msg = self._get_progress_information_message()
-                    self._tw.write(msg + "\n", **{main_color: True})
+        w = self._width_of_current_line
+        past_edge = w + progress_length + 1 >= self._tw.fullwidth
+        if past_edge:
+            msg = self._get_progress_information_message()
+            main_color, _ = self._get_main_color()
+            self._tw.write(msg + "\n", **{main_color: True})
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_runtestloop(self) -> Generator[None, None, None]:
+        """Write final progress indicator."""
+        yield
+        if (
+            getattr(self, "_tests_ran", False)
+            and self.verbosity <= 0
+            and self._show_progress_info
+        ):
+            self._write_progress_information_filling_space()
 
     def _get_progress_information_message(self) -> str:
         assert self._session
         collected = self._session.testscollected
         if self._show_progress_info == "count":
             if collected:
-                progress = self._progress_nodeids_reported
                 counter_format = "{{:{}d}}".format(len(str(collected)))
                 format_string = " [{}/{{}}]".format(counter_format)
-                return format_string.format(len(progress), collected)
+                return format_string.format(self._progress_items_reported, collected)
             return " [ {} / {} ]".format(collected, collected)
         else:
             if collected:
                 return " [{:3d}%]".format(
-                    len(self._progress_nodeids_reported) * 100 // collected
+                    self._progress_items_reported * 100 // collected
                 )
             return " [100%]"
 

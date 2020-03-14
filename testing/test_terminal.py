@@ -1836,6 +1836,16 @@ class TestProgressOutputStyle:
             """,
         )
 
+    @pytest.fixture
+    def progress_files_non_verbose(self, testdir: Testdir) -> None:
+        testdir.makepyfile(
+            test_more_than_width="""
+                import pytest
+                @pytest.mark.parametrize('i', range(100))
+                def test_more_than_width(i): pass
+            """,
+        )
+
     def test_zero_tests_collected(self, testdir):
         """Some plugins (testmon for example) might issue pytest_runtest_logreport without any tests being
         actually collected (#2971)."""
@@ -1854,14 +1864,57 @@ class TestProgressOutputStyle:
         output.stdout.no_fnmatch_line("*ZeroDivisionError*")
         output.stdout.fnmatch_lines(["=* 2 passed in *="])
 
-    def test_normal(self, many_tests_files, testdir):
+    def test_normal(self, many_tests_files, progress_files_non_verbose, testdir):
         output = testdir.runpytest()
-        output.stdout.re_match_lines(
+        output.stdout.fnmatch_lines(
             [
-                r"test_bar.py \.{10} \s+ \[ 50%\]",
-                r"test_foo.py \.{5} \s+ \[ 75%\]",
-                r"test_foobar.py \.{5} \s+ \[100%\]",
+                "test_bar.py ..........                                                   [[]  8%[]]",
+                "test_foo.py .....                                                        [[] 12%[]]",
+                "test_foobar.py .....                                                     [[] 16%[]]",
+                "test_more_than_width.py ................................................ [[] 56%[]]",
+                "....................................................                     [[]100%[]]",
+                "*= 120 passed in *",
             ]
+        )
+
+    def test_same_nodeids(self, testdir: Testdir, color_mapping) -> None:
+        p1 = testdir.makeconftest(
+            """
+            def pytest_collection_modifyitems(items):
+                for item in items[1:]:
+                    item._nodeid = items[0].nodeid
+            """
+        )
+        p1 = testdir.makepyfile(
+            """
+            import pytest
+
+            @pytest.fixture
+            def err_setup():
+                assert 0, "setup-error"
+
+            @pytest.fixture
+            def err_teardown():
+                yield
+                assert 0, "teardown-error"
+
+            def test1(err_setup): pass
+            def test2(err_teardown): pass
+            def test3(): pass
+            def test4(): pass
+            """
+        )
+        result = testdir.runpytest("-v", str(p1))
+        result.stdout.fnmatch_lines(
+            color_mapping.format_for_fnmatch(
+                [
+                    "test_same_nodeids.py::test1 ERROR  * [ 25%]",
+                    "test_same_nodeids.py::test1 PASSED * [ 50%]",
+                    "test_same_nodeids.py::test1 ERROR  * [ 50%]",
+                    "test_same_nodeids.py::test1 PASSED * [ 75%]",
+                    "test_same_nodeids.py::test1 PASSED * [100%]",
+                ]
+            )
         )
 
     def test_colored_progress(self, testdir, monkeypatch, color_mapping):
@@ -1914,7 +1967,7 @@ class TestProgressOutputStyle:
             )
         )
 
-    def test_count(self, many_tests_files, testdir):
+    def test_count(self, many_tests_files, progress_files_non_verbose, testdir):
         testdir.makeini(
             """
             [pytest]
@@ -1922,11 +1975,14 @@ class TestProgressOutputStyle:
         """
         )
         output = testdir.runpytest()
-        output.stdout.re_match_lines(
+        output.stdout.fnmatch_lines(
             [
-                r"test_bar.py \.{10} \s+ \[10/20\]",
-                r"test_foo.py \.{5} \s+ \[15/20\]",
-                r"test_foobar.py \.{5} \s+ \[20/20\]",
+                "test_bar.py ..........                                                [[] 10/120[]]",
+                "test_foo.py .....                                                     [[] 15/120[]]",
+                "test_foobar.py .....                                                  [[] 20/120[]]",
+                "test_more_than_width.py ............................................. [[] 65/120[]]",
+                ".......................................................               [[]120/120[]]",
+                "*= 120 passed in *",
             ]
         )
 
