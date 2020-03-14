@@ -986,7 +986,7 @@ class TerminalReporter:
                     message = message.rstrip()
                 self._tw.line(message)
                 self._tw.line()
-            self._tw.line("-- Docs: https://docs.pytest.org/en/latest/warnings.html")
+        self._tw.line("-- Docs: https://docs.pytest.org/en/latest/warnings.html")
 
     def summary_passes(self):
         if self.config.option.tbstyle != "no":
