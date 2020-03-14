@@ -1862,6 +1862,46 @@ class TestProgressOutputStyle:
             ]
         )
 
+    def test_same_nodeids(self, testdir: Testdir, color_mapping) -> None:
+        p1 = testdir.makeconftest(
+            """
+            def pytest_collection_modifyitems(items):
+                for item in items[1:]:
+                    item._nodeid = items[0].nodeid
+            """
+        )
+        p1 = testdir.makepyfile(
+            """
+            import pytest
+
+            @pytest.fixture
+            def err_setup():
+                assert 0, "setup-error"
+
+            @pytest.fixture
+            def err_teardown():
+                yield
+                assert 0, "teardown-error"
+
+            def test1(err_setup): pass
+            def test2(err_teardown): pass
+            def test3(): pass
+            def test4(): pass
+            """
+        )
+        result = testdir.runpytest("-v", str(p1))
+        result.stdout.fnmatch_lines(
+            color_mapping.format_for_fnmatch(
+                [
+                    "test_same_nodeids.py::test1 ERROR  * [ 25%]",
+                    "test_same_nodeids.py::test1 PASSED * [ 50%]",
+                    "test_same_nodeids.py::test1 ERROR  * [ 50%]",
+                    "test_same_nodeids.py::test1 PASSED * [ 75%]",
+                    "test_same_nodeids.py::test1 PASSED * [100%]",
+                ]
+            )
+        )
+
     def test_colored_progress(self, testdir, monkeypatch, color_mapping):
         monkeypatch.setenv("PY_COLORS", "1")
         testdir.makepyfile(
