@@ -445,11 +445,20 @@ class TestDeprecationWarningsByDefault:
         result.stdout.fnmatch_lines(
             [
                 "*== %s [[]collect[]] ==*" % WARNINGS_SUMMARY_HEADER,
+                "test_shown_by_default.py:3",
                 "*test_shown_by_default.py:3: DeprecationWarning: collection",
+                '    warnings.warn(DeprecationWarning("collection"))',
+                "",
                 "*== %s [[]runtest[]] ==*" % WARNINGS_SUMMARY_HEADER,
+                "test_shown_by_default.py::test_foo",
                 "*test_shown_by_default.py:7: PendingDeprecationWarning: test run",
+                '    warnings.warn(PendingDeprecationWarning("test run"))',
+                "",
+                # Docs link is displayed only once.
+                "-- Docs: https://docs*",
                 "* 1 passed, 2 warnings*",
-            ]
+            ],
+            consecutive=True,
         )
 
     def test_hidden_by_ini(self, testdir):
