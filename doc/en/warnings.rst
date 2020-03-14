@@ -3,7 +3,7 @@
 Warnings Capture
 ================
 
-Starting from version ``3.1``, |pytest| now automatically catches warnings during test execution
+|pytest| automatically catches warnings during test execution
 and displays them at the end of the session:
 
 .. code-block:: python
@@ -66,9 +66,9 @@ Running |pytest| now produces this output:
     test_show_warnings.py:5: UserWarning
     1 failed in 0.12s
 
-The same option can be set in the ``pytest.ini`` file using the ``filterwarnings`` ini option.
-For example, the configuration below will ignore all user warnings, but will transform
-all other warnings into errors.
+The same can be done via the :confval:`filterwarnings` ini options, e.g. in a
+``pytest.ini`` file: the configuration below will ignore all user warnings, but
+will transform all other warnings into errors.
 
 .. code-block:: ini
 
@@ -92,7 +92,9 @@ and advanced usage.
 ``@pytest.mark.filterwarnings``
 -------------------------------
 
-You can use the ``@pytest.mark.filterwarnings`` to add warning filters to specific test items,
+You can use the
+:ref:`@pytest.mark.filterwarnings decorator <pytest.mark.filterwarnings ref>`
+to add warning filters to specific test items,
 allowing you to have finer control of which warnings should be captured at test, class or
 even module level:
 
@@ -111,8 +113,8 @@ even module level:
         assert api_v1() == 1
 
 
-Filters applied using a mark take precedence over filters passed on the command line or configured
-by the ``filterwarnings`` ini option.
+Filters applied using a mark take precedence over filters passed on the
+command line, or configured with the ``filterwarnings`` ini option.
 
 You may apply a filter to all tests of a class by using the ``filterwarnings`` mark as a class
 decorator or to all tests in a module by setting the ``pytestmark`` variable:
@@ -157,7 +159,7 @@ DeprecationWarning and PendingDeprecationWarning
 includes :exc:`python:DeprecationWarning` and
 :exc:`python:PendingDeprecationWarning`, as recommended by :PEP:`0565`.
 
-This helps developers to keep their code modern and avoid breakages when
+This helps developers to keep their code modern and avoids breakages when
 deprecated code if effectively removed.
 
 .. note::
@@ -188,7 +190,7 @@ the regular expression ``".*U.*mode is deprecated"``.
 Ensuring code triggers a deprecation warning
 --------------------------------------------
 
-You can also use :func:`pytest.deprecated_call` for checking
+You can use :func:`pytest.deprecated_call` for checking
 that a certain function call triggers a ``DeprecationWarning`` or
 ``PendingDeprecationWarning``:
 
@@ -234,11 +236,12 @@ filter at the end of the test, so no global state is leaked.
 
 .. _warns:
 
-Asserting warnings with the warns function
-------------------------------------------
+Asserting warnings with `pytest.warns`
+--------------------------------------
 
-You can check that code raises a particular warning using :func:`pytest.warns`,
-which works in a similar manner to :ref:`raises <assertraises>`:
+You can check that code raises a particular warning using
+:ref:`pytest.warns() <pytest.warns ref>`, which works similar to
+:ref:`pytest.raises() <pytest.raises ref>`:
 
 .. code-block:: python
 
@@ -273,7 +276,7 @@ You can also call ``pytest.warns`` on a function or code string:
     pytest.warns(expected_warning, func, *args, **kwargs)
     pytest.warns(expected_warning, "func(*args, **kwargs)")
 
-The function also returns a list of all raised warnings (as
+The function returns a list of all raised warnings (as
 ``warnings.WarningMessage`` objects), which you can query for
 additional information:
 
@@ -301,8 +304,8 @@ Alternatively, you can examine raised warnings in detail using the
 Recording warnings
 ------------------
 
-You can record raised warnings either using ``pytest.warns`` or with
-the ``recwarn`` fixture.
+You can record raised warnings either using :func:`pytest.warns` or with
+the :fixture:`recwarn fixture <recwarn>`.
 
 To record with ``pytest.warns`` without asserting anything about the warnings,
 pass ``None`` as the expected warning type:
@@ -340,7 +343,7 @@ warnings, or index into it to get a particular recorded warning.
 
 .. currentmodule:: _pytest.warnings
 
-Full API: :class:`WarningsRecorder`.
+Full API: :class:`~_pytest.recwarn.WarningsRecorder`.
 
 .. _custom_failure_messages:
 
