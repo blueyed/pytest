@@ -601,7 +601,7 @@ class TerminalReporter:
 
     def pytest_runtest_logfinish(self) -> None:
         """Write progress if past edge."""
-        if self.verbosity >= 0 or not self._show_progress_info:
+        if self.verbosity > 0 or not self._show_progress_info:
             return
 
         if self._show_progress_info == "count":
