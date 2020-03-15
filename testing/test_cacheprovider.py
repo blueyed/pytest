@@ -11,8 +11,6 @@ import pytest
 from _pytest.config import ExitCode
 from _pytest.pytester import Testdir
 
-pytest_plugins = ("pytester",)
-
 
 class TestNewAPI:
     def test_config_cache_makedir(self, testdir):
