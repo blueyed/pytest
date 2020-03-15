@@ -5,3 +5,4 @@ import pytest
 def test_fixture(tmpdir, a):
     tmpdir.check(dir=1)
     assert tmpdir.listdir() == []
+    print("\nusing tmpdir={}".format(tmpdir))
