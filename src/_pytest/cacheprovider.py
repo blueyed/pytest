@@ -199,8 +199,17 @@ class LFPluginCollWrapper:
                 out = yield
                 res = out.get_result()
 
+                session = collector.session
+                lastfailed = self.lfplugin.lastfailed
                 filtered_result = [
-                    x for x in res.result if x.nodeid in self.lfplugin.lastfailed
+                    x
+                    for x in res.result
+                    if x.nodeid in lastfailed
+                    # Include any passed arguments.
+                    # This includes the whole module then (and deselects
+                    # later), because it is not trivial / error-prone to match
+                    # initial args to nodeids again.
+                    or session.isinitpath(x.fspath)
                 ]
                 if filtered_result:
                     res.result = filtered_result

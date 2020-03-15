@@ -9,6 +9,7 @@ import py
 
 import pytest
 from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
 
 pytest_plugins = ("pytester",)
 
@@ -275,9 +276,9 @@ class TestLastFailed:
         result = testdir.runpytest(str(p), "--lf")
         result.stdout.fnmatch_lines(
             [
-                "collected 2 items",
+                "collected 3 items / 1 deselected / 2 selected",
                 "run-last-failure: rerun previous 2 failures",
-                "*= 2 passed in *",
+                "*= 2 passed, 1 deselected in *",
             ]
         )
         result = testdir.runpytest(str(p), "--lf")
@@ -372,7 +373,13 @@ class TestLastFailed:
         result = testdir.runpytest("--lf", p2)
         result.stdout.fnmatch_lines(["*1 passed*"])
         result = testdir.runpytest("--lf", p)
-        result.stdout.fnmatch_lines(["collected 1 item", "*= 1 failed in *"])
+        result.stdout.fnmatch_lines(
+            [
+                "collected 2 items / 1 deselected / 1 selected",
+                "run-last-failure: rerun previous 1 failure",
+                "*= 1 failed, 1 deselected in *",
+            ]
+        )
 
     def test_lastfailed_usecase_splice(self, testdir, monkeypatch):
         monkeypatch.setattr("sys.dont_write_bytecode", True)
@@ -722,9 +729,9 @@ class TestLastFailed:
         result = testdir.runpytest(test_foo, "--last-failed")
         result.stdout.fnmatch_lines(
             [
-                "collected 1 item",
+                "collected 2 items / 1 deselected / 1 selected",
                 "run-last-failure: rerun previous 1 failure",
-                "*= 1 passed in *",
+                "*= 1 passed, 1 deselected in *",
             ]
         )
         assert self.get_cached_last_failed(testdir) == []
@@ -881,6 +888,49 @@ class TestLastFailed:
                 "pkg1/test_2.py . *",
                 "FAILED pkg1/test_1.py:1::test_renamed - assert 0",
                 "* 1 failed, 1 passed in *",
+            ]
+        )
+
+    def test_lastfailed_args_with_deselected(self, testdir: Testdir) -> None:
+        """Test regression with --lf running into NoMatch error.
+
+        This was caused by it not collecting (non-failed) nodes given as
+        arguments.
+        """
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    def test_pass(): pass
+                    def test_fail(): assert 0
+                """,
+            }
+        )
+        result = testdir.runpytest()
+        result.stdout.fnmatch_lines(["collected 2 items", "* 1 failed, 1 passed in *"])
+        assert result.ret == 1
+
+        result = testdir.runpytest("pkg1/test_1.py::test_pass", "--lf", "--co")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                '*collected 1 item',
+                '<Module pkg1/test_1.py>',
+                '  <Function test_pass>',
+                'run-last-failure: 1 known failures not in selected tests',
+            ]
+        )
+
+        result = testdir.runpytest(
+            "pkg1/test_1.py::test_pass", "pkg1/test_1.py::test_fail", "--lf", "--co"
+        )
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                'collected 2 items / 1 deselected / 1 selected',
+                '<Module pkg1/test_1.py>',
+                '  <Function test_fail>',
+                'run-last-failure: rerun previous 1 failure',
+                '*= 1 deselected in *',
             ]
         )
 
