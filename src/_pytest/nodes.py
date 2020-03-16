@@ -494,11 +494,19 @@ class FSCollector(Collector):
             proxy = self.config.hook
         return proxy
 
+    def _is_ignored(self, ihook, path: py.path.local) -> bool:
+        """Wrap pytest_ignore_collect to support tuple return value."""
+        ret = ihook.pytest_ignore_collect(
+            path=path, config=self.config
+        )  # type: Optional[Union[bool, Tuple[bool, Optional[str]]]]
+        if isinstance(ret, tuple):
+            return ret[0]
+        return bool(ret)
+
     def _recurse(self, dirpath: py.path.local) -> bool:
         if dirpath.basename == "__pycache__":
             return False
-        ihook = self._gethookproxy(dirpath.dirpath())
-        if ihook.pytest_ignore_collect(path=dirpath, config=self.config):
+        if self._is_ignored(self._gethookproxy(dirpath.dirpath()), dirpath):
             return False
         for pat in self._norecursepatterns:
             if dirpath.check(fnmatch=pat):
@@ -514,9 +522,8 @@ class FSCollector(Collector):
             path, path.isdir(), path.exists(), path.islink()
         )
         ihook = self.gethookproxy(path)
-        if not self.isinitpath(path):
-            if ihook.pytest_ignore_collect(path=path, config=self.config):
-                return ()
+        if not self.isinitpath(path) and self._is_ignored(ihook, path):
+            return ()
 
         if handle_dupes:
             keepduplicates = self.config.getoption("keepduplicates")

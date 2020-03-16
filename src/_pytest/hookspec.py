@@ -1,12 +1,15 @@
 """ hook specifications for pytest plugins, invoked from main.py and builtin plugins.  """
 from typing import Any
 from typing import Optional
+from typing import Tuple
+from typing import Union
 
 from pluggy import HookspecMarker
 
 from _pytest.compat import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from _pytest.config import Config
     from _pytest.main import Session
 
 
@@ -193,13 +196,20 @@ def pytest_collection_finish(session):
 
 
 @hookspec(firstresult=True)
-def pytest_ignore_collect(path, config):
+def pytest_ignore_collect(
+    path, config: "Config"
+) -> Optional[Union[bool, Tuple[bool, Optional[str]]]]:
     """ return True to prevent considering this path for collection.
     This hook is consulted for all files and directories prior to calling
     more specific hooks.
 
     Stops at first non-None result, see :ref:`firstresult`, i.e. you should
     only return `False` if the file should never get ignored (by other hooks).
+
+    It can also return a tuple with a reason/description instead, which gets
+    used for reporting::
+
+        return (True, "collect_ignore")
 
     :param path: a :py:class:`py.path.local` - the path to analyze
     :param _pytest.config.Config config: pytest config object

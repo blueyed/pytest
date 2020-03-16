@@ -911,11 +911,13 @@ class TestLastFailed:
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
-                '*collected 1 item',
-                '<Module pkg1/test_1.py>',
-                '  <Function test_pass>',
-                'run-last-failure: 1 known failures not in selected tests',
-            ]
+                "*collected 1 item",
+                "run-last-failure: 1 known failures not in selected tests",
+                "",
+                "" "<Module pkg1/test_1.py>",
+                "  <Function test_pass>",
+            ],
+            consecutive=True,
         )
 
         result = testdir.runpytest(
@@ -924,12 +926,13 @@ class TestLastFailed:
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
-                'collected 2 items / 1 deselected / 1 selected',
-                '<Module pkg1/test_1.py>',
-                '  <Function test_fail>',
-                'run-last-failure: rerun previous 1 failure',
-                '*= 1 deselected in *',
-            ]
+                "collected 2 items / 1 deselected / 1 selected",
+                "run-last-failure: rerun previous 1 failure",
+                "",
+                "<Module pkg1/test_1.py>",
+                "  <Function test_fail>",
+                "*= 1 deselected in *",
+            ],
         )
 
 
