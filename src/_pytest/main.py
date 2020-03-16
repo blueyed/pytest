@@ -386,9 +386,6 @@ class Session(nodes.FSCollector):
 
         self._deselected = []  # type: List[nodes.Item]
 
-        #: Count of ignored paths (for reporting).
-        self._collect_ignored = {}  # type: Dict[str, int]
-
     @classmethod
     def from_config(cls, config):
         return cls._create(config)
@@ -413,28 +410,22 @@ class Session(nodes.FSCollector):
         if self.shouldstop:
             raise self.Interrupted(self.shouldstop)
 
-    def _register_collect_ignored(self, when: str) -> None:
-        self._collect_ignored.setdefault(when, 0)
-        self._collect_ignored[when] += 1
-
     def pytest_ignore_collect(
         self, path: py.path.local, config: Config
-    ) -> "Optional[Literal[True]]":
+    ) -> "Optional[Tuple[Literal[True], Optional[str]]]":
         if path.basename[:1] == ".":
-            return True
+            return (True, None)
 
         collect_ignore = config._getconftest_pathlist(
             "collect_ignore", path=path.dirpath()
         )
         if collect_ignore and py.path.local(path) in collect_ignore:
-            self._register_collect_ignored("collect_ignore")
-            return True
+            return (True, "collect_ignore")
         excludeopt = config.getoption("ignore")
         if excludeopt:
             ignore_paths = [py.path.local(x) for x in excludeopt]
             if py.path.local(path) in ignore_paths:
-                self._register_collect_ignored("--ignore")
-                return True
+                return (True, "--ignore")
 
         collect_ignore_glob = config._getconftest_pathlist(
             "collect_ignore_glob", path=path.dirpath()
@@ -442,36 +433,17 @@ class Session(nodes.FSCollector):
         if collect_ignore_glob and any(
             fnmatch.fnmatch(str(path), str(glob)) for glob in collect_ignore_glob
         ):
-            self._register_collect_ignored("collect_ignore_glob")
-            return True
+            return (True, "collect_ignore_glob")
         excludeglobopt = config.getoption("ignore_glob")
         if excludeglobopt:
             ignore_globs = [py.path.local(x) for x in excludeglobopt]
             if any(fnmatch.fnmatch(str(path), str(glob)) for glob in ignore_globs):
-                self._register_collect_ignored("--ignore_glob")
-                return True
+                return (True, "--ignore_glob")
 
         allow_in_venv = config.getoption("collect_in_virtualenv")
         if not allow_in_venv and _in_venv(path):
-            self._register_collect_ignored("--collect-in-virtualenv")
-            return True
+            return (True, "--collect-in-virtualenv")
         return None
-
-    def pytest_report_collectionfinish(self) -> Optional[str]:
-        if not self._collect_ignored:
-            return None
-
-        total = 0
-        desc = []
-        for via, count in self._collect_ignored.items():
-            total += count
-            if len(self._collect_ignored) > 1:
-                desc.append("{} ({})".format(via, count))
-            else:
-                desc.append("via {}".format(via))
-        return "ignored {} {} ({})".format(
-            total, "path" if total == 1 else "paths", ", ".join(desc)
-        )
 
     @hookimpl(tryfirst=True)
     def pytest_runtest_logreport(self, report):

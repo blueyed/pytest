@@ -272,9 +272,8 @@ def test_exclude(testdir):
     testdir.makepyfile(test_ok="def test_pass(): pass")
     result = testdir.runpytest("--ignore=hello", "--ignore=hello2")
     assert result.ret == 0
-    result.stdout.fnmatch_lines(
-        ["collected 1 item", "ignored 2 paths (via --ignore)", "*1 passed*"]
-    )
+    result.stdout.fnmatch_lines(["collected 1 item (2 paths ignored)", "*1 passed*"])
+    assert "ignored 2 paths" not in result.stdout.str()
 
 
 def test_exclude_glob(testdir):
@@ -289,10 +288,50 @@ def test_exclude_glob(testdir):
     testdir.makepyfile(test_ok="def test_pass(): pass")
     result = testdir.runpytest("--ignore-glob=*h[ea]llo*")
     assert result.ret == 0
-    result.stdout.fnmatch_lines(["*1 passed*"])
     result.stdout.fnmatch_lines(
-        ["collected 1 item", "ignored 4 paths (via --ignore_glob)", "*1 passed*"]
+        [
+            "collected 1 item (4 paths ignored)",
+            "",
+            "test_ok.py . *",
+            "",
+            "*= 1 passed in *",
+        ],
+        consecutive=True,
     )
+    args = ("--ignore-glob=*h[ea]llo*", "--collect-only")
+    result = testdir.runpytest(*args, "-vv")
+    assert result.ret == 0
+    result.stdout.fnmatch_lines(
+        [
+            "collecting ... collected 1 item (4 paths ignored)",
+            "ignored 4 paths (via --ignore_glob):",
+            " - *",
+            " - *",
+            " - *",
+            " - *",
+            "",
+            "<Module test_ok.py>",
+            "  <Function test_pass>",
+            "",
+            "*= no tests ran in *",
+        ],
+        consecutive=True,
+    )
+    result.stdout.fnmatch_lines_random(
+        [" - hallo3", " - hello2", " - hello", " - sub/test_hello4.py"]
+    )
+
+    # Test with -q / -qq.
+    result = testdir.runpytest(*args, "-q")
+    assert result.ret == 0
+    assert len(result.stdout.lines) == 3
+    result.stdout.fnmatch_lines(["test_ok.py::test_pass", "", "no tests ran in *"])
+    result = testdir.runpytest(*args, "-qq")
+    assert result.ret == 0
+    result.stdout.lines == [
+        "test_ok.py: 1",
+        "",
+    ]
 
 
 def test_deselect(testdir):

@@ -142,14 +142,20 @@ class TestCollectFS:
         testfile.write("def test_hello(): pass")
 
         # by default, ignore tests inside a virtualenv
-        result = testdir.runpytest()
+        result = testdir.runpytest("-v", tty=True)
         result.stdout.no_fnmatch_line("*test_invenv*")
         result.stdout.fnmatch_lines(
-            ["collected 0 items", "ignored 1 path (via --collect-in-virtualenv)"]
+            [
+                "collected 0 items (1 path ignored) *",
+                "ignored 1 path (via --collect-in-virtualenv)",
+            ]
         )
         # allow test collection if user insists
+        # NOTE: does not report ignored ".pytest_cache".
         result = testdir.runpytest("--collect-in-virtualenv")
-        result.stdout.fnmatch_lines(["collected 1 item"])
+        result.stdout.fnmatch_lines(
+            ["collected 1 item", "", "virtual/test_invenv.py .*"]
+        )
         assert "test_invenv" in result.stdout.str()
         # allow test collection if user directly passes in the directory
         result = testdir.runpytest("virtual")
@@ -370,9 +376,12 @@ class TestCustomConftests:
         )
         testdir.mkdir("hello")
         testdir.makepyfile(test_world="def test_hello(): pass")
-        result = testdir.runpytest()
+        result = testdir.runpytest("-v", tty=True)
         result.stdout.fnmatch_lines(
-            ["collected 0 items", "ignored 2 paths (via collect_ignore)"]
+            [
+                "collected 0 items (2 paths ignored) *",
+                "ignored 2 paths (via collect_ignore)",
+            ]
         )
         assert result.ret == ExitCode.NO_TESTS_COLLECTED
         result.stdout.no_fnmatch_line("*passed*")
@@ -382,18 +391,28 @@ class TestCustomConftests:
 
         # collect_ignore and --ignore.
         testdir.makepyfile(test_ignore="")
-        result = testdir.runpytest("--ignore", "test_ignore.py")
+        result = testdir.runpytest("-vv", "--ignore", "test_ignore.py")
         result.stdout.fnmatch_lines(
             [
-                "collected 0 items",
+                "collecting ... collected 0 items (3 paths ignored)",
                 (
                     sys.version_info < (3, 6)
-                    and "ignored 3 paths (*)"
-                    or "ignored 3 paths (collect_ignore (2), --ignore (1))"
+                    and "ignored 3 paths (*):"
+                    or "ignored 3 paths (collect_ignore (2), --ignore (1)):"
                 ),
                 "*= no tests ran in *",
             ]
         )
+        if sys.version_info >= (3, 6):
+            result.stdout.fnmatch_lines(
+                [
+                    "  via collect_ignore:",
+                    "   - hello",
+                    "   - test_world.py",
+                    "  via --ignore:",
+                    "   - test_ignore.py",
+                ]
+            )
         assert result.ret == ExitCode.NO_TESTS_COLLECTED
 
     def test_collectignoreglob_exclude_on_option(self, testdir):
@@ -411,7 +430,8 @@ class TestCustomConftests:
         testdir.makepyfile(test_welt="def test_hallo(): pass")
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(
-            ["collected 0 items", "ignored 2 paths (via collect_ignore_glob)"]
+            ["collected 0 items (2 paths ignored)", "", "*= no tests ran in *"],
+            consecutive=True,
         )
         assert result.ret == ExitCode.NO_TESTS_COLLECTED
         result.stdout.fnmatch_lines(["*collected 0 items*"])

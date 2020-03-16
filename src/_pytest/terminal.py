@@ -394,6 +394,9 @@ class TerminalReporter:
         self._show_progress_info = self._determine_show_progress_info()
         self._collect_report_last_write = None  # type: Optional[float]
 
+        self._collect_ignored = {}  # type: Dict[str, List[py.path.local]]
+        """Information about ignored paths (for reporting)."""
+
     def _determine_show_progress_info(self):
         """Return True if we should display progress information based on the current config"""
         # do not show progress if we are not capturing output (#3038)
@@ -679,7 +682,7 @@ class TerminalReporter:
         if self.isatty:
             self.report_collect()
 
-    def report_collect(self, final=False):
+    def report_collect(self, final: bool = False) -> None:
         if self.config.option.verbose < 0:
             return
 
@@ -712,12 +715,53 @@ class TerminalReporter:
             line += " / %d skipped" % skipped
         if self._numcollected > selected > 0:
             line += " / %d selected" % selected
+        if self._collect_ignored:
+            ignored_count = sum(len(x) for x in self._collect_ignored.values())
+            line += " ({} {} ignored)".format(
+                ignored_count, "path" if ignored_count == 1 else "paths"
+            )
         if self.isatty:
             self.rewrite(line, bold=True, erase=True)
             if final:
                 self.write("\n")
         else:
             self.write_line(line)
+
+    def _verbose_collect_ignored(self) -> Optional[List[str]]:
+        """Get information about ignored files during collection."""
+        verbosity = self.config.option.verbose
+        if not self._collect_ignored or verbosity < 1:
+            return []
+
+        total = 0
+        desc = []
+        ret = []
+        for via, paths in self._collect_ignored.items():
+            count = len(paths)
+            total += count
+            if len(self._collect_ignored) > 1:
+                desc.append("{} ({})".format(via, count))
+            else:
+                desc.append("via {}".format(via))
+
+        ret = [
+            "ignored {} {} ({})".format(
+                total, "path" if total == 1 else "paths", ", ".join(desc)
+            )
+        ]
+        if verbosity > 1:
+            ret[-1] += ":"
+            indent = "  " if len(self._collect_ignored) > 1 else ""
+            for via, paths in self._collect_ignored.items():
+                if indent:
+                    ret.append("  via {}:".format(via))
+                for path in paths:
+                    ret.append(
+                        "{} - {}".format(
+                            indent, self.config.invocation_dir.bestrelpath(path)
+                        )
+                    )
+        return ret
 
     @pytest.hookimpl(trylast=True)
     def pytest_sessionstart(self, session: Session) -> None:
@@ -790,16 +834,37 @@ class TerminalReporter:
 
         return result
 
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_ignore_collect(
+        self, path: py.path.local
+    ) -> Generator[
+        None, pluggy.callers._Result, None,
+    ]:
+        """Register ignored files during collection for reporting."""
+        outcome = yield
+        ret = (
+            outcome.get_result()
+        )  # type: Optional[Union[bool, Tuple[bool, Optional[str]]]]
+        if isinstance(ret, tuple):
+            ignored, desc = ret[:2]
+            if ignored and desc:
+                self._collect_ignored.setdefault(desc, []).append(path)
+
     def pytest_collection_finish(self, session):
         self.report_collect(True)
 
-        if self.config.getoption("collectonly"):
-            self._printcollecteditems(session.items)
+        for line in self._verbose_collect_ignored():
+            self._tw.line(line)
 
         lines = self.config.hook.pytest_report_collectionfinish(
             config=self.config, startdir=self.startdir, items=session.items
         )
         self._write_report_lines_from_hooks(lines)
+
+        if self.config.getoption("collectonly"):
+            if self.config.option.verbose > -1:
+                self._tw.line("")
+            self._printcollecteditems(session.items)
 
         if self.config.getoption("collectonly"):
             failed = self.stats.get("failed")

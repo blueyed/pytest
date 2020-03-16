@@ -12,12 +12,14 @@ from _pytest.pathlib import Path
 def test_tmpdir_fixture(testdir):
     p = testdir.copy_example("tmpdir/tmpdir_fixture.py")
     results = testdir.runpytest(str(p), "-v", "-s")
-    results.stdout.fnmatch_lines([
-        r"tmpdir_fixture.py::test_fixture[[]qwe/\\abc[]] ",
-        r"using tmpdir=*/basetemp/test_fixture_qwe_abc_*",
-        r"PASSED",
-        r"*1 passed*",
-    ])
+    results.stdout.fnmatch_lines(
+        [
+            r"tmpdir_fixture.py::test_fixture[[]qwe/\\abc[]] ",
+            r"using tmpdir=*/basetemp/test_fixture_qwe_abc_*",
+            r"PASSED",
+            r"*1 passed*",
+        ]
+    )
 
 
 @attr.s
