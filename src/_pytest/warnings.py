@@ -8,6 +8,9 @@ from _pytest.config import Config
 from _pytest.main import Session
 
 
+original_warning_filters = warnings.filters[:]
+
+
 def _setoption(wmod, arg):
     """
     Copy of the warning._setoption function but does not escape arguments.

@@ -241,6 +241,19 @@ class TestInlineRunModulesCleanup:
         assert sys.modules == original
         assert all(sys.modules[x] is original[x] for x in sys.modules)
 
+    def test_inline_run_taking_and_restoring_a_warnings_snapshot(
+        self, testdir
+    ) -> None:
+        test_mod = testdir.makepyfile(
+            """
+            import warnings
+            warnings.filters = ["default:changed"]
+            """
+        )
+        orig_warnings = warnings.filters[:]
+        testdir.inline_run(str(test_mod))
+        assert warnings.filters == orig_warnings
+
     def test_inline_run_sys_modules_snapshot_restore_preserving_modules(
         self, testdir, monkeypatch
     ) -> None:
