@@ -887,8 +887,13 @@ class Config:
 
         for dist in importlib_metadata.distributions():
             for ep in dist.entry_points:
-                if ep.group == "pytest11":
-                    hook.mark_rewrite(ep.value)
+                if ep.group == "pytest11":  # type: ignore[attr-defined]
+                    top_level_lines = dist.read_text("top_level.txt")
+                    if top_level_lines:
+                        for top_level in top_level_lines.splitlines():
+                            hook.mark_rewrite(ep.value)
+                    else:
+                        hook.mark_rewrite(ep.value)
 
     def _validate_args(self, args: List[str], via: str) -> List[str]:
         """Validate known args."""
