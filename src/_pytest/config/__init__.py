@@ -873,7 +873,7 @@ class Config:
                 self._mark_plugins_for_rewrite(hook)
         _warn_about_missing_assertion(mode)
 
-    def _mark_plugins_for_rewrite(self, hook):
+    def _mark_plugins_for_rewrite(self, hook) -> None:
         """
         Given an importhook, mark for rewrite any top-level
         modules or packages in the distribution package for
