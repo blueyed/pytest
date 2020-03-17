@@ -120,21 +120,15 @@ class TestGeneralUsage:
 
         loaded = []
 
-        @attr.s
-        class DummyEntryPoint:
-            name = attr.ib()
-            module = attr.ib()
-            group = "pytest11"
-
+        class DummyEntryPoint(importlib_metadata.EntryPoint):
             def load(self):
-                __import__(self.module)
                 loaded.append(self.name)
-                return sys.modules[self.module]
+                return super().load()
 
         entry_points = [
-            DummyEntryPoint("myplugin1", "mytestplugin1_module"),
-            DummyEntryPoint("myplugin2", "mytestplugin2_module"),
-            DummyEntryPoint("mycov", "mycov_module"),
+            DummyEntryPoint("myplugin1", "mytestplugin1_module", "pytest11"),
+            DummyEntryPoint("myplugin2", "mytestplugin2_module", "pytest11"),
+            DummyEntryPoint("mycov", "mycov_module", "pytest11"),
         ]
 
         @attr.s

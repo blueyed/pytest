@@ -9,7 +9,6 @@ import _pytest._code
 import pytest
 from _pytest.compat import importlib_metadata
 from _pytest.compat import TYPE_CHECKING
-from _pytest.config import _iter_rewritable_modules
 from _pytest.config import _strtobool
 from _pytest.config import Config
 from _pytest.config import ExitCode
@@ -497,25 +496,6 @@ class TestConfigAPI:
         )
         assert config.getoption("confcutdir") == str(testdir.tmpdir.join("dir"))
 
-    @pytest.mark.parametrize(
-        "names, expected",
-        [
-            # dist-info based distributions root are files as will be put in PYTHONPATH
-            (["bar.py"], ["bar"]),
-            (["foo/bar.py"], ["bar"]),
-            (["foo/bar.pyc"], []),
-            (["foo/__init__.py"], ["foo"]),
-            (["bar/__init__.py", "xz.py"], ["bar", "xz"]),
-            (["setup.py"], []),
-            # egg based distributions root contain the files from the dist root
-            (["src/bar/__init__.py"], ["bar"]),
-            (["src/bar/__init__.py", "setup.py"], ["bar"]),
-            (["source/python/bar/__init__.py", "setup.py"], ["bar"]),
-        ],
-    )
-    def test_iter_rewritable_modules(self, names, expected):
-        assert list(_iter_rewritable_modules(names)) == expected
-
 
 class TestConfigFromdictargs:
     def test_basic_behavior(self, _sys_snapshot):
@@ -614,6 +594,7 @@ def test_preparse_ordering_with_setuptools(testdir, monkeypatch):
     class EntryPoint:
         name = "mytestplugin"
         group = "pytest11"
+        value = None
 
         def load(self):
             class PseudoPlugin:
@@ -629,11 +610,7 @@ def test_preparse_ordering_with_setuptools(testdir, monkeypatch):
         return (Dist,)
 
     monkeypatch.setattr(importlib_metadata, "distributions", my_dists)
-    testdir.makeconftest(
-        """
-        pytest_plugins = "mytestplugin",
-    """
-    )
+    testdir.makeconftest("pytest_plugins = 'mytestplugin'")
     monkeypatch.setenv("PYTEST_PLUGINS", "mytestplugin")
     config = testdir.parseconfig()
     plugin = config.pluginmanager.getplugin("mytestplugin")
@@ -646,6 +623,7 @@ def test_setuptools_importerror_issue1479(testdir, monkeypatch):
     class DummyEntryPoint:
         name = "mytestplugin"
         group = "pytest11"
+        value = None
 
         def load(self):
             raise ImportError("Don't hide me!")
@@ -670,6 +648,7 @@ def test_importlib_metadata_broken_distribution(testdir, monkeypatch):
     class DummyEntryPoint:
         name = "mytestplugin"
         group = "pytest11"
+        value = None
 
         def load(self):
             return object()
@@ -695,6 +674,7 @@ def test_plugin_preparse_prevents_setuptools_loading(testdir, monkeypatch, block
     class DummyEntryPoint:
         name = "mytestplugin"
         group = "pytest11"
+        value = None
 
         def load(self):
             return plugin_module_placeholder
