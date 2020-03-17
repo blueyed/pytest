@@ -591,11 +591,7 @@ def test_options_on_small_file_do_not_blow_up(testdir):
 def test_preparse_ordering_with_setuptools(testdir, monkeypatch):
     monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
 
-    class EntryPoint:
-        name = "mytestplugin"
-        group = "pytest11"
-        value = None
-
+    class EntryPoint(importlib_metadata.EntryPoint):
         def load(self):
             class PseudoPlugin:
                 x = 42
@@ -604,7 +600,7 @@ def test_preparse_ordering_with_setuptools(testdir, monkeypatch):
 
     class Dist:
         files = ()
-        entry_points = (EntryPoint(),)
+        entry_points = (EntryPoint("mytestplugin", "mytestplugin", "pytest11"),)
 
     def my_dists():
         return (Dist,)
@@ -620,18 +616,14 @@ def test_preparse_ordering_with_setuptools(testdir, monkeypatch):
 def test_setuptools_importerror_issue1479(testdir, monkeypatch):
     monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
 
-    class DummyEntryPoint:
-        name = "mytestplugin"
-        group = "pytest11"
-        value = None
-
+    class EntryPoint(importlib_metadata.EntryPoint):
         def load(self):
             raise ImportError("Don't hide me!")
 
     class Distribution:
         version = "1.0"
         files = ("foo.txt",)
-        entry_points = (DummyEntryPoint(),)
+        entry_points = (EntryPoint("mytestplugin", "mytestplugin", "pytest11"),)
 
     def distributions():
         return (Distribution(),)
@@ -645,18 +637,14 @@ def test_importlib_metadata_broken_distribution(testdir, monkeypatch):
     """Integration test for broken distributions with 'files' metadata being None (#5389)"""
     monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
 
-    class DummyEntryPoint:
-        name = "mytestplugin"
-        group = "pytest11"
-        value = None
-
+    class EntryPoint(importlib_metadata.EntryPoint):
         def load(self):
             return object()
 
     class Distribution:
         version = "1.0"
         files = None
-        entry_points = (DummyEntryPoint(),)
+        entry_points = (EntryPoint("mytestplugin", "mytestplugin", "pytest11"),)
 
     def distributions():
         return (Distribution(),)
@@ -671,18 +659,14 @@ def test_plugin_preparse_prevents_setuptools_loading(testdir, monkeypatch, block
 
     plugin_module_placeholder = object()
 
-    class DummyEntryPoint:
-        name = "mytestplugin"
-        group = "pytest11"
-        value = None
-
+    class EntryPoint(importlib_metadata.EntryPoint):
         def load(self):
             return plugin_module_placeholder
 
     class Distribution:
         version = "1.0"
         files = ("foo.txt",)
-        entry_points = (DummyEntryPoint(),)
+        entry_points = (EntryPoint("mytestplugin", "mytestplugin", "pytest11"),)
 
     def distributions():
         return (Distribution(),)
