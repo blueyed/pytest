@@ -1301,6 +1301,14 @@ class TestTestdirMakefiles:
         with open("bar", "r") as fp:
             assert fp.read() == "  1"
 
+    def test_makefiles_basepath(self, testdir: Testdir) -> None:
+        assert testdir.makefiles({"bar": ""}, base_path="foo") == [
+            Path("foo/bar").absolute()
+        ]
+        assert testdir.makefiles({"baz": ""}, base_path=Path("foo")) == [
+            Path("foo/baz").absolute()
+        ]
+
     def test_makefiles_dangling_symlink_outside(
         self, testdir: Testdir, symlink_or_skip
     ) -> None:
