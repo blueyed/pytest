@@ -274,6 +274,7 @@ class TestConfigAPI:
             def pytest_addoption(parser):
                 import pytest
                 from _pytest.config import notset
+                from _pytest.config.argparsing import INI_TYPES
 
                 parser.addini("myname", "my new ini value")
 
@@ -288,14 +289,24 @@ class TestConfigAPI:
                 parser.addini("d_notset_arg", "", None, notset)
                 parser.addini("d_notset_kwarg", "", None, default=notset)
 
-                with pytest.raises(TypeError):
+                parser.addini("myint", "help", "int")
+                parser.addini("myintdefault", "help", "int", default=-1)
+                parser.addini("myintnodefault", "help", "int")
+                parser.addini("myinvalidint", "help", "int")
+
+                with pytest.raises(TypeError) as excinfo:
                     parser.addini("invalid_type", "", "invalid")
+                assert str(
+                    excinfo.value
+                ) == "invalid type: 'invalid', must be one of {!r}".format(INI_TYPES)
         """
         )
         testdir.makeini(
             """
             [pytest]
             myname=hello
+            myint=42
+            myinvalidint=ciao
         """
         )
         config = testdir.parseconfig()
@@ -311,6 +322,13 @@ class TestConfigAPI:
 
         assert config.getini("d_notset_arg") is notset
         assert config.getini("d_notset_kwarg") is notset
+
+        assert config.getini("myint") == 42
+        assert config.getini("myintdefault") == -1
+        assert config.getini("myintnodefault") == 0
+        with pytest.raises(ValueError) as excinfo:
+            config.getini("myinvalidint")
+        assert str(excinfo.value) == "invalid literal for int() with base 10: 'ciao'"
 
         pytest.raises(ValueError, config.getini, "other")
 

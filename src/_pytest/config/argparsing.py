@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from typing_extensions import Literal  # noqa: F401
 
 FILE_OR_DIR = "file_or_dir"
+INI_TYPES = (None, "pathlist", "args", "linelist", "bool", "int")
 
 
 class Parser:
@@ -189,29 +190,36 @@ class Parser:
         self,
         name: str,
         help: str,
-        type: Optional["Literal['pathlist', 'args', 'linelist', 'bool']"] = None,
+        type: Optional["Literal['pathlist', 'args', 'linelist', 'bool', 'int']"] = None,
         *args,
         **kwargs
     ) -> None:
         """ register an ini-file option.
 
-        :name: name of the ini-variable
-        :type: type of the variable, can be ``pathlist``, ``args``, ``linelist``
-               or ``bool``.
-        :default: default value if no ini-file option exists but is queried.
+        :param str name: name of the ini-variable
+        :param str type: type of the variable, one of
+          ``pathlist``, ``args``, ``linelist``, ``bool``, or ``int``.
+        :kwparam default: default value if no ini-file option exists but is queried.
 
         The value of ini-variables can be retrieved via a call to
         :py:func:`config.getini(name) <_pytest.config.Config.getini>`.
         """
-        if type not in (None, "pathlist", "args", "linelist", "bool"):
-            raise TypeError("invalid type: {!r}".format(type))
+        if type not in INI_TYPES:
+            raise TypeError(
+                "invalid type: {!r}, must be one of {!r}".format(type, INI_TYPES)
+            )
 
         if len(args) == 1:
             (default,) = args
         elif "default" in kwargs:
             default = kwargs.pop("default")
         else:
-            default = kwargs.pop("default", "" if type is None else [])
+            if type == "int":
+                default = 0
+            elif type is None:
+                default = ""
+            else:
+                default = []
         self._inidict[name] = (help, type, default)
         self._ininames.append(name)
 
