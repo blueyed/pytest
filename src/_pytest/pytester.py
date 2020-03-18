@@ -822,8 +822,7 @@ class Testdir(Generic[AnyStr]):
     def syspathinsert(self, path=None):
         """Prepend a directory to sys.path, defaults to :py:attr:`tmpdir`.
 
-        This is undone automatically when this object dies at the end of each
-        test.
+        This is undone automatically at the end of each test.
         """
         if path is None:
             path = self.tmpdir
