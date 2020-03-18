@@ -190,7 +190,7 @@ class Parser:
         self,
         name: str,
         help: str,
-        type: Optional["Literal['pathlist', 'args', 'linelist', 'bool']"] = None,
+        type: Optional["Literal['pathlist', 'args', 'linelist', 'bool', 'int']"] = None,
         *args,
         **kwargs
     ) -> None:
