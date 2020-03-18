@@ -50,13 +50,8 @@ def test_help(testdir: Testdir) -> None:
 def test_help_unconfigures_always(method: str, testdir: Testdir) -> None:
     testdir.makeconftest(
         """
-        def pytest_configure():
-            import _pytest.helpconfig
-
-            def crash(config):
-                assert 0, "crash"
-
-            _pytest.helpconfig.showhelp = crash
+        def pytest_addoption(parser):
+            parser._usage = "%(crash_help)s"
         """
     )
     testdir.makepyfile(
@@ -74,7 +69,7 @@ def test_help_unconfigures_always(method: str, testdir: Testdir) -> None:
         "plugin pytest_configure",
         "plugin pytest_unconfigure",
     ]
-    assert "AssertionError: crash" in result.stderr.lines
+    assert "KeyError: 'crash_help'" in result.stderr.lines
 
     # XXX: should have the same exitcode?!
     if method == "runpytest_inprocess":
