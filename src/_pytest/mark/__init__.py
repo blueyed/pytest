@@ -98,7 +98,6 @@ def pytest_cmdline_main(config):
             tw.write("@pytest.mark.%s:" % name, bold=True)
             tw.line(rest)
             tw.line()
-        config._ensure_unconfigure()
         return 0
 
 
