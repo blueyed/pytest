@@ -747,9 +747,10 @@ class Testdir(Generic[AnyStr]):
         self,
         files: Mapping[str, str],
         *,
-        dedent=True,
-        strip_outer_newlines=True,
-        clobber=False
+        base_path: Optional[Union[str, Path]] = None,
+        dedent: bool = True,
+        strip_outer_newlines: bool = True,
+        clobber: bool = False
     ) -> List[Path]:
         """Create the given set of files.
 
@@ -760,6 +761,9 @@ class Testdir(Generic[AnyStr]):
             Mapping of filenames to file contents.
 
             Absolute paths are handled, but have to be inside of :attr:`tmpdir`.
+        :param base_path:
+            Optional base path for relative paths
+            (defaults to current working directory).
         :param bool dedent:
             Dedent the contents (via :py:func:`python:textwrap.dedent`).
         :param bool strip_outer_newlines:
@@ -773,10 +777,13 @@ class Testdir(Generic[AnyStr]):
         tmpdir_path = Path(str(self.tmpdir)).resolve()
 
         # Validate that files are inside of tmpdir, might raise ValueError.
-        cwd = Path.cwd()
+        if base_path:
+            base_path = Path(base_path).absolute()
+        else:
+            base_path = Path.cwd()
         validated_files = []
         for k, v in files.items():
-            abspath = Path(os.path.normpath(cwd / k))
+            abspath = Path(os.path.normpath(base_path / k))
             assert abspath.is_absolute(), abspath
             if clobber:
                 if not (abspath.is_file() or abspath.is_symlink()):
