@@ -142,7 +142,6 @@ def pytest_cmdline_main(config: Config) -> Optional["Literal[0]"]:
     elif config.option.help:
         config._do_configure()
         showhelp(config)
-        config._ensure_unconfigure()
         return 0
     return None
 
