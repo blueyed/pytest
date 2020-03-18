@@ -46,6 +46,43 @@ def test_help(testdir: Testdir) -> None:
     result.stdout.no_fnmatch_line("logging:")
 
 
+@pytest.mark.parametrize("method", ("runpytest_inprocess", "runpytest_subprocess"))
+def test_help_unconfigures_always(method: str, testdir: Testdir) -> None:
+    testdir.makeconftest(
+        """
+        def pytest_configure():
+            import _pytest.helpconfig
+
+            def crash(config):
+                assert 0, "crash"
+
+            _pytest.helpconfig.showhelp = crash
+        """
+    )
+    testdir.makepyfile(
+        myplugin="""
+        def pytest_configure():
+            print("plugin pytest_configure")
+
+        def pytest_unconfigure():
+            print("plugin pytest_unconfigure")
+        """
+    )
+    testdir.syspathinsert()
+    result = getattr(testdir, method)("--help", "-p", "no:[defaults]", "-p", "myplugin")
+    assert result.stdout.lines == [
+        "plugin pytest_configure",
+        "plugin pytest_unconfigure",
+    ]
+    assert "AssertionError: crash" in result.stderr.lines
+
+    # XXX: should have the same exitcode?!
+    if method == "runpytest_inprocess":
+        assert result.ret == ExitCode.INTERNAL_ERROR
+    else:
+        assert result.ret == ExitCode.TESTS_FAILED
+
+
 def test_hookvalidation_unknown(testdir):
     testdir.makeconftest(
         """
