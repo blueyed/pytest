@@ -292,6 +292,7 @@ class TestConfigAPI:
                 parser.addini("myint", "help", "int")
                 parser.addini("myintdefault", "help", "int", default=-1)
                 parser.addini("myintnodefault", "help", "int")
+                parser.addini("myinvalidint", "help", "int")
 
                 with pytest.raises(TypeError) as excinfo:
                     parser.addini("invalid_type", "", "invalid")
@@ -305,6 +306,7 @@ class TestConfigAPI:
             [pytest]
             myname=hello
             myint=42
+            myinvalidint=ciao
         """
         )
         config = testdir.parseconfig()
@@ -324,6 +326,9 @@ class TestConfigAPI:
         assert config.getini("myint") == 42
         assert config.getini("myintdefault") == -1
         assert config.getini("myintnodefault") == 0
+        with pytest.raises(ValueError) as excinfo:
+            config.getini("myinvalidint")
+        assert str(excinfo.value) == "invalid literal for int() with base 10: 'ciao'"
 
         pytest.raises(ValueError, config.getini, "other")
 
