@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import time
+from collections import OrderedDict
 from typing import List
 
 import py.path
@@ -10,6 +11,7 @@ import _pytest.pytester as pytester
 import pytest
 from _pytest.config import ExitCode
 from _pytest.config import PytestPluginManager
+from _pytest.pathlib import Path
 from _pytest.pytester import CwdSnapshot
 from _pytest.pytester import HookRecorder
 from _pytest.pytester import LineMatcher
@@ -1215,3 +1217,156 @@ def test_handles_non_python_items(testdir: Testdir):
             "=* 1 failed in *",
         ]
     )
+
+
+class TestTestdirMakefiles:
+    def test_makefiles(self, testdir: Testdir) -> None:
+        tmpdir = testdir.tmpdir
+
+        abspath = str(tmpdir / "bar")
+        created_paths = testdir.makefiles(OrderedDict((("foo", ""), (abspath, ""))))
+        p1 = created_paths[0]
+        assert isinstance(p1, Path)
+        relpath = tmpdir / "foo"
+        assert str(p1) == str(relpath)
+
+        p2 = created_paths[1]
+        assert p2.exists()
+        assert str(p2) == abspath
+
+        assert testdir.makefiles({}) == []
+
+        # Disallows creation outside of tmpdir by default.
+        expected_abspath = Path("/abspath").resolve().absolute()
+        with pytest.raises(ValueError) as exc:
+            testdir.makefiles({"shouldnotbecreated": "", "/abspath": ""})
+        assert str(exc.value) == "{!r} does not start with {!r}".format(
+            str(expected_abspath), str(tmpdir)
+        )
+        assert len(exc.traceback) == 2
+        # Validation before creating anything.
+        assert not Path("shouldnotbecreated").exists()
+
+        expected_resolved_path = Path("../outside").resolve()
+        with pytest.raises(ValueError) as exc:
+            testdir.makefiles({"../outside": ""})
+        assert str(exc.value) == "{!r} does not start with {!r}".format(
+            str(expected_resolved_path), str(tmpdir)
+        )
+
+        # Creates directories.
+        testdir.makefiles({"sub/inside": "1"})
+        with open("sub/inside", "r") as fp:
+            assert fp.read() == "1"
+
+        # Paths are relative to cwd.
+        with testdir.monkeypatch.context() as mp:
+            mp.chdir("sub")
+            testdir.makefiles({"../inside": "2"})
+        with open("inside", "r") as fp:
+            assert fp.read() == "2"
+
+        # Duplicated files (absolute and relative).
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles(OrderedDict((("bar", "1"), (abspath, "2"))))
+        assert str(excinfo.value) == "path exists already: {!r}".format(
+            str(tmpdir / "bar")
+        )
+        created_paths = testdir.makefiles(
+            OrderedDict((("bar", "1"), (abspath, "2"))), clobber=True
+        )
+        with open("bar", "r") as fp:
+            assert fp.read() == "2"
+        created_paths = testdir.makefiles(
+            OrderedDict(((abspath, "2"), ("bar", "1"))), clobber=True
+        )
+        with open("bar", "r") as fp:
+            assert fp.read() == "1"
+
+        # strip_outer_newlines
+        testdir.makefiles({"bar": "\n\n1\n\n2\n"}, clobber=True)
+        with open("bar", "r") as fp:
+            assert fp.read() == "1\n\n2"
+        testdir.makefiles(
+            {"bar": "\n\n1\n\n2\n"}, strip_outer_newlines=False, clobber=True
+        )
+        with open("bar", "r") as fp:
+            assert fp.read() == "\n\n1\n\n2\n"
+
+        # dedent
+        testdir.makefiles({"bar": "  1"}, clobber=True)
+        with open("bar", "r") as fp:
+            assert fp.read() == "1"
+        testdir.makefiles({"bar": "  1"}, dedent=False, clobber=True)
+        with open("bar", "r") as fp:
+            assert fp.read() == "  1"
+
+    def test_makefiles_dangling_symlink_outside(
+        self, testdir: Testdir, symlink_or_skip
+    ) -> None:
+        symlink_or_skip(os.path.join("..", "outside"), "symlink")
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles({"symlink": ""})
+        assert str(excinfo.value) == "path is a dangling symlink: {!r}".format(
+            str(Path("symlink").absolute())
+        )
+
+    def test_makefiles_symlink_outside(self, testdir: Testdir, symlink_or_skip) -> None:
+        symlink_or_skip(os.path.join("..", "outside"), "symlink")
+        Path("../outside").resolve().touch()
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles({"symlink": ""})
+        assert str(excinfo.value) == "path exists already: {!r}".format(
+            str(Path("symlink").absolute())
+        )
+
+        ret = testdir.makefiles({"symlink": ""}, clobber=True)
+        assert len(ret) == 1
+        rp = ret[0]
+        assert (rp.name, rp.is_symlink(), rp.exists(), rp.is_absolute(),) == (
+            "symlink",
+            False,
+            True,
+            True,
+        )
+
+    def test_makefiles_dangling_symlink_inside(
+        self, testdir: Testdir, symlink_or_skip
+    ) -> None:
+        symlink_or_skip("target", "symlink")
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles({"symlink": ""})
+        assert str(excinfo.value) == "path is a dangling symlink: {!r}".format(
+            str(Path("symlink").absolute())
+        )
+
+    def test_makefiles_symlink_inside(self, testdir: Testdir, symlink_or_skip) -> None:
+        symlink_or_skip("target", "symlink")
+        Path("target").touch()
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles({"symlink": ""})
+        assert str(excinfo.value) == "path exists already: {!r}".format(
+            str(Path("symlink").absolute())
+        )
+        ret = testdir.makefiles({"symlink": ""}, clobber=True)
+        assert len(ret) == 1
+        rp = ret[0]
+        assert (rp.name, rp.is_symlink(), rp.is_absolute(), rp.exists()) == (
+            "symlink",
+            False,
+            True,
+            True,
+        )
+
+    def test_makefiles_dir(self, testdir: Testdir) -> None:
+        directory = Path(str(testdir)) / "subdir"
+        directory.mkdir()
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles({"subdir": ""})
+        assert str(excinfo.value) == "path exists already: {!r}".format(str(directory))
+
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles({"subdir": ""}, clobber=True)
+        assert str(
+            excinfo.value
+        ) == "path is not a file/symlink, not clobbering: {!r}".format(str(directory))
