@@ -43,11 +43,11 @@ def test_normal_flow(testdir, pyfile_with_warnings):
     result.stdout.fnmatch_lines(
         [
             "*== %s [[]runtest[]] ==*" % WARNINGS_SUMMARY_HEADER,
-            "normal_flow_module.py:3",
+            "test_normal_flow.py::test_func (normal_flow_module.py:3)",
             '    warnings.warn(UserWarning("user warning"))',
             "  UserWarning: user warning",
             "",
-            "normal_flow_module.py:4",
+            "test_normal_flow.py::test_func (normal_flow_module.py:4)",
             '    warnings.warn(RuntimeWarning("runtime warning"))',
             "  RuntimeWarning: runtime warning",
             "",
