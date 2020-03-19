@@ -340,21 +340,18 @@ def pytest_report_teststatus(report: TestReport) -> Tuple[str, str, str]:
 
 @attr.s
 class WarningReport:
-    """
-    Simple structure to hold warnings information captured by ``pytest_warning_captured``.
-
-    :ivar str when: when the warning was emitted, e.g. "config", "collect", or
-      "runtest" (see :func:`_pytest.hookspec.pytest_warning_captured`)
-    :ivar str|None nodeid: node id that generated the warning (see ``get_location``).
-    :ivar tuple|py.path.local fslocation:
-        file system location of the source of the warning (see ``get_location``).
-    """
+    """Holds information for warnings captured by
+    :func:`TerminalReporter.pytest_warning_captured`."""
 
     warning = attr.ib(type=warnings.WarningMessage)  # type: ignore
     """The original warning."""
     when = attr.ib(type=str)
+    """When the warning was captured, e.g. "config", "collect", or
+    "runtest" (see :func:`_pytest.hookspec.pytest_warning_captured`)."""
     fslocation = attr.ib(type=Tuple[str, int])
+    """Source of the warning (file system location, see :func:`get_location`)."""
     nodeid = attr.ib(type=Optional[str], default=None)
+    """Node id that generated the warning (see :func:`get_location`)."""
     count_towards_summary = True
 
     @property
@@ -375,7 +372,7 @@ class WarningReport:
     def get_location(self, config: Config) -> Optional[str]:
         """
         Returns the more user-friendly information about the location
-        of a warning, or None.
+        of a warning.
         """
         filename, linenum = self.fslocation[:2]
         relpath = config.invocation_dir.bestrelpath(py.path.local(filename))
