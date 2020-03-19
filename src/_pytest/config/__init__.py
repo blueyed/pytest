@@ -1015,7 +1015,9 @@ class Config:
 
                 _issue_warning_captured(
                     PytestConfigWarning(
-                        "could not load initial conftests: {}".format(e.path)
+                        "could not load initial conftests ({}): {}: {}".format(
+                            e.path, e.excinfo[0].__name__, e.excinfo[1]
+                        )
                     ),
                     self.hook,
                     stacklevel=2,

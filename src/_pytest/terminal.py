@@ -342,7 +342,6 @@ class WarningReport:
     """
     Simple structure to hold warnings information captured by ``pytest_warning_captured``.
 
-    :ivar str message: user friendly message about the warning
     :ivar str when: when the warning was emitted, e.g. "config", "collect", or
       "runtest" (see :func:`_pytest.hookspec.pytest_warning_captured`)
     :ivar str|None nodeid: node id that generated the warning (see ``get_location``).
@@ -353,18 +352,17 @@ class WarningReport:
     warning = attr.ib(type=warnings.WarningMessage)  # type: ignore
     """The original warning."""
     when = attr.ib(type=str)
-    _message = attr.ib(type=str, default=None)
     nodeid = attr.ib(type=Optional[str], default=None)
     fslocation = attr.ib(default=None)
     count_towards_summary = True
 
     @property
-    def message(self):
-        if not self._message:
-            from _pytest.warnings import warning_record_to_str
-
-            self._message = warning_record_to_str(self.warning)
-        return self._message
+    def message(self) -> str:
+        """Formatted warning (the standard way)."""
+        wm = self.warning
+        return warnings.formatwarning(
+            wm.message, wm.category, wm.filename, wm.lineno, wm.line,
+        ).rstrip()
 
     def get_location(self, config: Config) -> Optional[str]:
         """

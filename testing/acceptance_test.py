@@ -220,11 +220,19 @@ class TestGeneralUsage:
         )
         result = testdir.runpytest("--help")
         result.stdout.fnmatch_lines(
-            """
-            *--version*
-            *warning*conftest.py*
-        """
+            [
+                "*shown according to specified*",
+                "",
+                "warning : *_pytest/config/__init__.py:*:"
+                " PytestConfigWarning: could not load initial conftests ({}):"
+                " ModuleNotFoundError: No module named 'qwerty'".format(conftest),
+                "  _issue_warning_captured(",
+            ],
+            consecutive=True,
         )
+        assert "--version" in result.stdout.str()
+        assert result.ret == 0
+
         result = testdir.runpytest()
         exc_name = (
             "ModuleNotFoundError" if sys.version_info >= (3, 6) else "ImportError"
