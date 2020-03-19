@@ -478,7 +478,7 @@ class TestDeprecationWarningsByDefault:
                 "  PendingDeprecationWarning: test run",
                 "",
                 # Docs link is displayed only once.
-                "-- Docs: https://docs*",
+                "-- Docs: *",
                 "*= 1 passed, 2 warnings in *",
             ],
             consecutive=True,
@@ -776,7 +776,7 @@ class TestStackLevel:
                 "    @pytest.mark.unknown",
                 "  PytestUnknownMarkWarning: Unknown pytest.mark.unknown - *",
                 "",
-                "-- Docs: https://docs*",
+                "-- Docs: *",
                 "*= 1 passed, 1 warning in *",
             ],
             consecutive=True,
