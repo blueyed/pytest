@@ -350,7 +350,7 @@ class WarningReport:
         file system location of the source of the warning (see ``get_location``).
     """
 
-    warning = attr.ib(type=warnings.WarningMessage)
+    warning = attr.ib(type=warnings.WarningMessage)  # type: ignore[name-defined]
     """The original warning."""
     when = attr.ib(type=str)
     _message = attr.ib(type=str, default=None)
@@ -534,7 +534,7 @@ class TerminalReporter:
         return 1
 
     def pytest_warning_captured(
-        self, when: str, warning_message: warnings.WarningMessage, item
+        self, when: str, warning_message: warnings.WarningMessage, item  # type: ignore[name-defined]
     ) -> None:
         fslocation = warning_message.filename, warning_message.lineno
 
