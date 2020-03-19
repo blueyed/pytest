@@ -223,7 +223,7 @@ class TestGeneralUsage:
             [
                 "*shown according to specified*",
                 "",
-                "warning : *_pytest/config/__init__.py:*:"
+                "warning : *_pytest?config?__init__.py:*:"
                 " PytestConfigWarning: could not load initial conftests ({}):"
                 " ModuleNotFoundError: No module named 'qwerty'".format(conftest),
                 "  _issue_warning_captured(",
