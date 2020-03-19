@@ -350,7 +350,7 @@ class WarningReport:
         file system location of the source of the warning (see ``get_location``).
     """
 
-    warning = attr.ib(type=warnings.WarningMessage)  # type: ignore[name-defined]
+    warning = attr.ib(type=warnings.WarningMessage)  # type: ignore
     """The original warning."""
     when = attr.ib(type=str)
     _message = attr.ib(type=str, default=None)
