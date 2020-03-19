@@ -5,6 +5,7 @@ This is a good source for looking at the various reporting hooks.
 import argparse
 import collections
 import datetime
+import linecache
 import os
 import platform
 import sys
@@ -363,6 +364,12 @@ class WarningReport:
         return warnings.formatwarning(
             wm.message, wm.category, wm.filename, wm.lineno, wm.line,
         ).rstrip()
+
+    def source_line(self) -> Optional[str]:
+        line = self.warning.line
+        if line is None:
+            line = linecache.getline(self.warning.filename, self.warning.lineno)
+        return line
 
     def get_location(self, config: Config) -> Optional[str]:
         """
@@ -1053,20 +1060,18 @@ class TerminalReporter:
                 source_locs = []
                 for w in warning_reports:
                     location = w.get_location(self.config)
-                    if location and location not in locations:
-                        self._tw.line(location)
-                        locations.append(location)
+                    if not location or location in locations:
+                        continue
+                    self._tw.line(location)
+                    locations.append(location)
 
-                        source_loc = w.warning.filename, w.warning.lineno
-                        if source_loc not in source_locs:
-                            source_locs.append(source_loc)
-                            line = w.warning.line
-                            if line is None:
-                                import linecache
-
-                                line = linecache.getline(*source_loc)
-                            if line:
-                                self._tw.line("    {}".format(line.strip()))
+                    source_loc = w.warning.filename, w.warning.lineno
+                    if source_loc in source_locs:
+                        continue
+                    source_locs.append(source_loc)
+                    line = w.source_line
+                    if line:
+                        self._tw.line("    {}".format(line.strip()))
 
                 if locations:
                     lines = message.splitlines()
