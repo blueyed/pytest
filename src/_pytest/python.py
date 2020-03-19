@@ -161,7 +161,6 @@ def pytest_configure(config):
 
 
 def async_warn(pyfuncitem: "Function") -> None:
-    filename, lineno = pyfuncitem.location[:2]
     msg = "async def functions are not natively supported and have been skipped.\n"
     msg += (
         "You need to install a suitable plugin for your async framework, for example:\n"
@@ -169,8 +168,10 @@ def async_warn(pyfuncitem: "Function") -> None:
     msg += "  - pytest-asyncio\n"
     msg += "  - pytest-trio\n"
     msg += "  - pytest-tornasync"
+    filename, lineno = pyfuncitem.location[:2]
+    lineno = lineno + 1 if lineno is not None else 0
     warnings.warn_explicit(
-        msg.format(pyfuncitem.nodeid), PytestUnhandledCoroutineWarning, filename, lineno+1
+        msg.format(pyfuncitem.nodeid), PytestUnhandledCoroutineWarning, filename, lineno
     )
     skip(msg="async def function and no async plugin installed (see warnings)")
 

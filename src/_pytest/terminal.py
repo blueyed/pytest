@@ -366,7 +366,7 @@ class WarningReport:
             self._message = warning_record_to_str(self.warning)
         return self._message
 
-    def get_location(self, config: Config) -> str:
+    def get_location(self, config: Config) -> Optional[str]:
         """
         Returns the more user-friendly information about the location
         of a warning, or None.
@@ -1048,7 +1048,7 @@ class TerminalReporter:
 
         grouped = (
             collections.OrderedDict()
-        )  # type: collections.OrderedDict[str, List[WarningReport]]
+        )  # type: collections.OrderedDict[str, collections.OrderedDict[str, List[WarningReport]]]
         for wr in warning_reports:
             if wr.when not in grouped:
                 grouped[wr.when] = collections.OrderedDict()
@@ -1065,7 +1065,7 @@ class TerminalReporter:
                 source_locs = []
                 for w in warning_reports:
                     location = w.get_location(self.config)
-                    if location not in locations:
+                    if location and location not in locations:
                         self._tw.line(location)
                         locations.append(location)
 
