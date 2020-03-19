@@ -352,8 +352,8 @@ class WarningReport:
     warning = attr.ib(type=warnings.WarningMessage)  # type: ignore
     """The original warning."""
     when = attr.ib(type=str)
+    fslocation = attr.ib(type=Tuple[str, int])
     nodeid = attr.ib(type=Optional[str], default=None)
-    fslocation = attr.ib(default=None)
     count_towards_summary = True
 
     @property
@@ -369,26 +369,15 @@ class WarningReport:
         Returns the more user-friendly information about the location
         of a warning, or None.
         """
-        if self.nodeid and not self.fslocation:
-            return self.nodeid
-        if self.fslocation:
-            if isinstance(self.fslocation, tuple) and len(self.fslocation) >= 2:
-                filename, linenum = self.fslocation[:2]
-                relpath = py.path.local(filename).relto(config.invocation_dir)
-                if not relpath:
-                    relpath = str(filename)
-                if not self.nodeid:
-                    return "{}:{}".format(relpath, linenum)
-                if self.nodeid.startswith(relpath):
-                    names = self.nodeid[len(relpath) :]
-                    if names.startswith("::"):
-                        return "{}:{}{}".format(relpath, linenum, names)
-                return "{} ({}:{})".format(self.nodeid, relpath, linenum)
-            elif self.nodeid:
-                return "{} ({})".format(self.nodeid, self.fslocation)
-            else:
-                return str(self.fslocation)
-        return None
+        filename, linenum = self.fslocation[:2]
+        relpath = config.invocation_dir.bestrelpath(filename)
+        if not self.nodeid:
+            return "{}:{}".format(relpath, linenum)
+        if self.nodeid.startswith(relpath):
+            names = self.nodeid[len(relpath) :]
+            if names.startswith("::"):
+                return "{}:{}{}".format(relpath, linenum, names)
+        return "{} ({}:{})".format(self.nodeid, relpath, linenum)
 
 
 class TerminalReporter:
@@ -537,7 +526,6 @@ class TerminalReporter:
         self, when: str, warning_message: warnings.WarningMessage, item  # type: ignore[name-defined]
     ) -> None:
         fslocation = warning_message.filename, warning_message.lineno
-
         nodeid = item.nodeid if item is not None else ""
         warning_report = WarningReport(
             warning=warning_message, fslocation=fslocation, nodeid=nodeid, when=when
