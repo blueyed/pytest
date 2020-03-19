@@ -1200,7 +1200,11 @@ def test_record_attribute(testdir, run_and_parse):
     tnode.assert_attr(bar="1")
     tnode.assert_attr(foo="<1")
     result.stdout.fnmatch_lines(
-        ["*test_record_attribute.py:6:*record_xml_attribute is an experimental feature"]
+        [
+            "test_record_attribute.py:6::test_record",
+            "    def test_record(record_xml_attribute, other):",
+            "  PytestExperimentalApiWarning: record_xml_attribute is an experimental feature",
+        ]
     )
 
 
@@ -1236,10 +1240,9 @@ def test_record_fixtures_xunit2(testdir, fixture_name, run_and_parse):
             "*test_record_fixtures_xunit2.py:6:*record_xml_attribute is an experimental feature"
         )
     expected_lines = [
-        "*test_record_fixtures_xunit2.py:6:*{fixture_name} is incompatible "
-        "with junit_family 'xunit2' (use 'legacy' or 'xunit1')".format(
-            fixture_name=fixture_name
-        )
+        "test_record_fixtures_xunit2.py:6::test_record",
+        "  PytestWarning: {fixture_name} is incompatible with junit_family"
+        " 'xunit2' (use 'legacy' or 'xunit1')".format(fixture_name=fixture_name),
     ]
     result.stdout.fnmatch_lines(expected_lines)
 

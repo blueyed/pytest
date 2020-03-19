@@ -9,6 +9,7 @@ import os
 import platform
 import sys
 import time
+import warnings
 from functools import partial
 from typing import Any
 from typing import Callable
@@ -349,18 +350,28 @@ class WarningReport:
         file system location of the source of the warning (see ``get_location``).
     """
 
-    message = attr.ib(type=str)
+    warning = attr.ib(type=warnings.WarningMessage)
+    """The original warning."""
     when = attr.ib(type=str)
+    _message = attr.ib(type=str, default=None)
     nodeid = attr.ib(type=Optional[str], default=None)
     fslocation = attr.ib(default=None)
     count_towards_summary = True
 
-    def get_location(self, config):
+    @property
+    def message(self):
+        if not self._message:
+            from _pytest.warnings import warning_record_to_str
+
+            self._message = warning_record_to_str(self.warning)
+        return self._message
+
+    def get_location(self, config: Config) -> str:
         """
         Returns the more user-friendly information about the location
         of a warning, or None.
         """
-        if self.nodeid:
+        if self.nodeid and not self.fslocation:
             return self.nodeid
         if self.fslocation:
             if isinstance(self.fslocation, tuple) and len(self.fslocation) >= 2:
@@ -368,7 +379,13 @@ class WarningReport:
                 relpath = py.path.local(filename).relto(config.invocation_dir)
                 if not relpath:
                     relpath = str(filename)
+                if self.nodeid and self.nodeid.startswith(relpath):
+                    names = self.nodeid[len(relpath) :]
+                    assert names.startswith("::")
+                    return "{}:{}{}".format(relpath, linenum, names)
                 return "{}:{}".format(relpath, linenum)
+            elif self.nodeid:
+                return "{} ({})".format(self.nodeid, self.fslocation)
             else:
                 return str(self.fslocation)
         return None
@@ -516,16 +533,14 @@ class TerminalReporter:
             self.write_line("INTERNALERROR> " + line)
         return 1
 
-    def pytest_warning_captured(self, when: str, warning_message, item) -> None:
-        # from _pytest.nodes import get_fslocation_from_item
-        from _pytest.warnings import warning_record_to_str
-
+    def pytest_warning_captured(
+        self, when: str, warning_message: warnings.WarningMessage, item
+    ) -> None:
         fslocation = warning_message.filename, warning_message.lineno
-        message = warning_record_to_str(warning_message)
 
         nodeid = item.nodeid if item is not None else ""
         warning_report = WarningReport(
-            fslocation=fslocation, message=message, nodeid=nodeid, when=when,
+            warning=warning_message, fslocation=fslocation, nodeid=nodeid, when=when
         )
         self._add_stats("warnings", [warning_report])
 
@@ -1037,7 +1052,8 @@ class TerminalReporter:
         for wr in warning_reports:
             if wr.when not in grouped:
                 grouped[wr.when] = collections.OrderedDict()
-            grouped[wr.when].setdefault(wr.message, []).append(wr)
+            wmsg = "{}: {}".format(wr.warning.category.__name__, wr.warning.message)
+            grouped[wr.when].setdefault(wmsg, []).append(wr)
 
         for when, grouped_by_message in grouped.items():
             title = (
@@ -1045,13 +1061,26 @@ class TerminalReporter:
             ) + " [{}]".format(when)
             self.write_sep("=", title, yellow=True, bold=False)
             for message, warning_reports in grouped_by_message.items():
-                has_any_location = False
+                locations = []
+                source_locs = []
                 for w in warning_reports:
                     location = w.get_location(self.config)
-                    if location:
-                        self._tw.line(str(location))
-                        has_any_location = True
-                if has_any_location:
+                    if location not in locations:
+                        self._tw.line(location)
+                        locations.append(location)
+
+                        source_loc = w.warning.filename, w.warning.lineno
+                        if source_loc not in source_locs:
+                            source_locs.append(source_loc)
+                            line = w.warning.line
+                            if line is None:
+                                import linecache
+
+                                line = linecache.getline(*source_loc)
+                            if line:
+                                self._tw.line("    {}".format(line.strip()))
+
+                if locations:
                     lines = message.splitlines()
                     indented = "\n".join("  " + x for x in lines)
                     message = indented.rstrip()

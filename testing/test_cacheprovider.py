@@ -81,9 +81,9 @@ class TestNewAPI:
                 # Validate location/stacklevel of warning from cacheprovider.
                 "*= warnings summary [[]config[]] =*",
                 "*/cacheprovider.py:*",
-                "  */cacheprovider.py:*: PytestCacheWarning: could not create cache path "
-                "{}/v/cache/nodeids (my OSError), setting readonly.".format(cache_dir),
                 '    config.cache.set("cache/nodeids", *',
+                "  PytestCacheWarning: could not create cache path"
+                " {}/v/cache/nodeids (my OSError), setting readonly.".format(cache_dir),
                 "*1 failed, 1 warning in*",
             ]
         )

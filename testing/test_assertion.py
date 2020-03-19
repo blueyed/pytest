@@ -1576,7 +1576,18 @@ def test_assert_tuple_warning(testdir):
     """
     )
     result = testdir.runpytest()
-    result.stdout.fnmatch_lines(["*test_assert_tuple_warning.py:2:*{}*".format(msg)])
+    result.stdout.fnmatch_lines(
+        [
+            "*= warnings summary [[]collect[]] =*",
+            "test_assert_tuple_warning.py:2",
+            "    assert(False, 'you shall not pass')",
+            "  PytestAssertRewriteWarning: assertion is always true, perhaps remove parentheses?",
+            "",
+            "-- Docs: *",
+            "*= 1 passed, 1 warning in *",
+        ],
+        consecutive=True,
+    )
 
     # tuples with size != 2 should not trigger the warning
     testdir.makepyfile(

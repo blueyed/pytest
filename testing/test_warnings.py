@@ -43,13 +43,18 @@ def test_normal_flow(testdir, pyfile_with_warnings):
     result.stdout.fnmatch_lines(
         [
             "*== %s [[]runtest[]] ==*" % WARNINGS_SUMMARY_HEADER,
-            "test_normal_flow.py::test_func",
-            "*normal_flow_module.py:3: UserWarning: user warning",
-            '*  warnings.warn(UserWarning("user warning"))',
-            "*normal_flow_module.py:4: RuntimeWarning: runtime warning",
-            '*  warnings.warn(RuntimeWarning("runtime warning"))',
+            "normal_flow_module.py:3",
+            '    warnings.warn(UserWarning("user warning"))',
+            "  UserWarning: user warning",
+            "",
+            "normal_flow_module.py:4",
+            '    warnings.warn(RuntimeWarning("runtime warning"))',
+            "  RuntimeWarning: runtime warning",
+            "",
+            "-- Docs: *",
             "* 1 passed, 2 warnings*",
-        ]
+        ],
+        consecutive=True,
     )
 
 
@@ -74,12 +79,17 @@ def test_setup_teardown_warnings(testdir, pyfile_with_warnings):
     result.stdout.fnmatch_lines(
         [
             "*== %s [[]runtest[]] ==*" % WARNINGS_SUMMARY_HEADER,
-            "*test_setup_teardown_warnings.py:6: UserWarning: warning during setup",
-            '*warnings.warn(UserWarning("warning during setup"))',
-            "*test_setup_teardown_warnings.py:8: UserWarning: warning during teardown",
-            '*warnings.warn(UserWarning("warning during teardown"))',
-            "* 1 passed, 2 warnings*",
-        ]
+            "test_setup_teardown_warnings.py:6::test_func",
+            '    warnings.warn(UserWarning("warning during setup"))',
+            "  UserWarning: warning during setup",
+            "",
+            "test_setup_teardown_warnings.py:8::test_func",
+            '    warnings.warn(UserWarning("warning during teardown"))',
+            "  UserWarning: warning during teardown",
+            "",
+            "-- Docs: *",
+        ],
+        consecutive=True,
     )
 
 
@@ -142,9 +152,14 @@ def test_unicode(testdir, pyfile_with_warnings):
     result.stdout.fnmatch_lines(
         [
             "*== %s [[]runtest[]] ==*" % WARNINGS_SUMMARY_HEADER,
-            "*test_unicode.py:7: UserWarning: \u6d4b\u8bd5*",
+            "test_unicode.py:7::test_func",
+            '    warnings.warn("测试")',
+            "  UserWarning: 测试",
+            "",
+            "-- Docs: *",
             "* 1 passed, 1 warning*",
-        ]
+        ],
+        consecutive=True,
     )
 
 
@@ -301,10 +316,13 @@ def test_collection_warnings(testdir):
     result.stdout.fnmatch_lines(
         [
             "*== %s [[]collect[]] ==*" % WARNINGS_SUMMARY_HEADER,
-            "  *collection_warnings.py:3: UserWarning: collection warning",
+            "test_collection_warnings.py:3",
             '    warnings.warn(UserWarning("collection warning"))',
-            "* 1 passed, 1 warning*",
-        ]
+            "  UserWarning: collection warning",
+            "",
+            "-- Docs: *",
+        ],
+        consecutive=True,
     )
 
 
@@ -358,9 +376,14 @@ def test_hide_pytest_internal_warnings(testdir, ignore_pytest_warnings):
         result.stdout.fnmatch_lines(
             [
                 "*== %s [[]collect[]] ==*" % WARNINGS_SUMMARY_HEADER,
-                "*test_hide_pytest_internal_warnings.py:4: PytestWarning: some internal warning",
+                "test_hide_pytest_internal_warnings.py:4",
+                '    warnings.warn(pytest.PytestWarning("some internal warning"))',
+                "  PytestWarning: some internal warning",
+                "",
+                "-- Docs: *",
                 "* 1 passed, 1 warning *",
-            ]
+            ],
+            consecutive=True,
         )
 
 
@@ -446,17 +469,17 @@ class TestDeprecationWarningsByDefault:
             [
                 "*== %s [[]collect[]] ==*" % WARNINGS_SUMMARY_HEADER,
                 "test_shown_by_default.py:3",
-                "*test_shown_by_default.py:3: DeprecationWarning: collection",
                 '    warnings.warn(DeprecationWarning("collection"))',
+                "  DeprecationWarning: collection",
                 "",
                 "*== %s [[]runtest[]] ==*" % WARNINGS_SUMMARY_HEADER,
-                "test_shown_by_default.py::test_foo",
-                "*test_shown_by_default.py:7: PendingDeprecationWarning: test run",
+                "test_shown_by_default.py:7::test_foo",
                 '    warnings.warn(PendingDeprecationWarning("test run"))',
+                "  PendingDeprecationWarning: test run",
                 "",
                 # Docs link is displayed only once.
                 "-- Docs: https://docs*",
-                "* 1 passed, 2 warnings*",
+                "*= 1 passed, 2 warnings in *",
             ],
             consecutive=True,
         )
@@ -486,7 +509,9 @@ class TestDeprecationWarningsByDefault:
         result.stdout.fnmatch_lines(
             [
                 "*== %s [[]collect[]] ==*" % WARNINGS_SUMMARY_HEADER,
-                "*test_hidden_by_mark.py:3: DeprecationWarning: collection",
+                "test_hidden_by_mark.py:3",
+                '    warnings.warn(DeprecationWarning("collection"))',
+                "  DeprecationWarning: collection",
                 "* 1 passed, 1 warning*",
             ]
         )
@@ -581,13 +606,20 @@ def test_group_warnings_by_message(testdir):
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         [
-            "test_group_warnings_by_message.py::test_foo[0]",
-            "test_group_warnings_by_message.py::test_foo[1]",
-            "test_group_warnings_by_message.py::test_foo[2]",
-            "test_group_warnings_by_message.py::test_foo[3]",
-            "test_group_warnings_by_message.py::test_foo[4]",
-            "test_group_warnings_by_message.py::test_bar",
-        ]
+            "*= warnings summary [[]runtest[]] =*",
+            "test_group_warnings_by_message.py:7::test_foo[[]0[]]",
+            '    warnings.warn(UserWarning("foo"))',
+            "test_group_warnings_by_message.py:7::test_foo[[]1[]]",
+            "test_group_warnings_by_message.py:7::test_foo[[]2[]]",
+            "test_group_warnings_by_message.py:7::test_foo[[]3[]]",
+            "test_group_warnings_by_message.py:7::test_foo[[]4[]]",
+            "test_group_warnings_by_message.py:7::test_bar",
+            "  UserWarning: foo",
+            "",
+            "-- Docs: *",
+            "*= 6 passed, 6 warnings in *",
+        ],
+        consecutive=True,
     )
     warning_code = 'warnings.warn(UserWarning("foo"))'
     assert warning_code in result.stdout.str()
@@ -726,7 +758,7 @@ class TestStackLevel:
         """#4445 and #5928: Make sure the warning from an unknown mark points to
         the test file where this mark is used.
         """
-        testfile = testdir.makepyfile(
+        testdir.makepyfile(
             """
             import pytest
 
@@ -737,9 +769,15 @@ class TestStackLevel:
         )
         result = testdir.runpytest_subprocess()
         # with stacklevel=2 the warning should originate from the above created test file
-        result.stdout.fnmatch_lines_random(
+        result.stdout.fnmatch_lines(
             [
-                "*{testfile}:3*".format(testfile=str(testfile)),
-                "*Unknown pytest.mark.unknown*",
-            ]
+                "*= warnings summary [[]collect[]] =*",
+                "test_issue4445_issue5928_mark_generator.py:3",
+                "    @pytest.mark.unknown",
+                "  PytestUnknownMarkWarning: Unknown pytest.mark.unknown - *",
+                "",
+                "-- Docs: https://docs*",
+                "*= 1 passed, 1 warning in *",
+            ],
+            consecutive=True,
         )

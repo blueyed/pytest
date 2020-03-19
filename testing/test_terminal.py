@@ -1619,7 +1619,9 @@ def test_terminal_summary_warnings_are_displayed(testdir):
             "-- Docs: https://docs*",
             "*= short test summary info =*",
             "*= warnings summary (final) [[]config[]] =*",
-            "*conftest.py:3:*internal warning",
+            "conftest.py:3",
+            "    warnings.warn(UserWarning('internal warning'))",
+            "  UserWarning: internal warning",
             "-- Docs: https://docs*",
             "*== 1 failed, 2 warnings in *",
         ]
