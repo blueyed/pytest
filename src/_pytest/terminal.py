@@ -377,11 +377,13 @@ class WarningReport:
                 relpath = py.path.local(filename).relto(config.invocation_dir)
                 if not relpath:
                     relpath = str(filename)
-                if self.nodeid and self.nodeid.startswith(relpath):
+                if not self.nodeid:
+                    return "{}:{}".format(relpath, linenum)
+                if self.nodeid.startswith(relpath):
                     names = self.nodeid[len(relpath) :]
-                    assert names.startswith("::")
-                    return "{}:{}{}".format(relpath, linenum, names)
-                return "{}:{}".format(relpath, linenum)
+                    if names.startswith("::"):
+                        return "{}:{}{}".format(relpath, linenum, names)
+                return "{} ({}:{})".format(self.nodeid, relpath, linenum)
             elif self.nodeid:
                 return "{} ({})".format(self.nodeid, self.fslocation)
             else:
