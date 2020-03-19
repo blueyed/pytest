@@ -365,6 +365,7 @@ class WarningReport:
             wm.message, wm.category, wm.filename, wm.lineno, wm.line,
         ).rstrip()
 
+    @property
     def source_line(self) -> Optional[str]:
         line = self.warning.line
         if line is None:
