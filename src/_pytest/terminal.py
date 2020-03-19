@@ -370,7 +370,7 @@ class WarningReport:
         of a warning, or None.
         """
         filename, linenum = self.fslocation[:2]
-        relpath = config.invocation_dir.bestrelpath(filename)
+        relpath = config.invocation_dir.bestrelpath(py.path.local(filename))
         if not self.nodeid:
             return "{}:{}".format(relpath, linenum)
         if self.nodeid.startswith(relpath):
