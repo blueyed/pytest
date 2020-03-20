@@ -33,6 +33,7 @@ from _pytest.outcomes import Failed
 if TYPE_CHECKING:
     # Imported here due to circular import.
     from _pytest.main import Session  # noqa: F401
+    from _pytest.runner import CallInfo  # noqa: F401
 
     from _pytest._code.code import _TracebackStyle  # noqa: F401
 
@@ -147,6 +148,8 @@ class Node(metaclass=NodeMeta):
             self._nodeid = self.parent.nodeid
             if self.name != "()":
                 self._nodeid += "::" + self.name
+
+        self._current_callinfo = None  # type: Optional[CallInfo]
 
     @classmethod
     def from_parent(cls, parent: "Node", **kw):

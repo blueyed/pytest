@@ -9,6 +9,7 @@ from _pytest.compat import getimfunc
 from _pytest.config import hookimpl
 from _pytest.outcomes import exit
 from _pytest.outcomes import fail
+from _pytest.outcomes import OutcomeException
 from _pytest.outcomes import skip
 from _pytest.outcomes import xfail
 from _pytest.python import Class
@@ -207,31 +208,25 @@ class TestCaseFunction(Function):
 
         testMethod = getattr(self._testcase, self._testcase._testMethodName)
 
-        class _GetOutOf_testPartExecutor(KeyboardInterrupt):
-            """Helper exception to get out of unittests's testPartExecutor (see TestCase.run)."""
-
         @functools.wraps(testMethod)
         def wrapped_testMethod(*args, **kwargs):
             """Wrap the original method to call into pytest's machinery, so other pytest
             features can have a chance to kick in (notably --pdb)"""
             try:
                 self.ihook.pytest_pyfunc_call(pyfuncitem=self)
-            except unittest.SkipTest:
+            except (unittest.SkipTest, OutcomeException, exit.Exception):
                 raise
-            except Exception as exc:
-                expecting_failure = self._expecting_failure(testMethod)
-                if expecting_failure:
-                    raise
-                self._needs_explicit_tearDown = True
-                raise _GetOutOf_testPartExecutor(exc)
+            except Exception:
+                from _pytest.runner import _report_for_call
 
-        setattr(self._testcase, self._testcase._testMethodName, wrapped_testMethod)
-        try:
-            self._testcase(result=self)
-        except _GetOutOf_testPartExecutor as exc:
-            raise exc.args[0] from exc.args[0]
-        finally:
-            delattr(self._testcase, self._testcase._testMethodName)
+                self._addexcinfo(sys.exc_info())
+
+                assert self._current_callinfo
+                _report_for_call(self)
+
+        self._testcase._wrapped_testMethod = wrapped_testMethod
+        self._testcase._testMethodName = "_wrapped_testMethod"
+        self._testcase(result=self)
 
     def _prunetraceback(self, excinfo):
         Function._prunetraceback(self, excinfo)

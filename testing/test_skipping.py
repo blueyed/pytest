@@ -261,7 +261,7 @@ class TestXFail:
 
         from_call_code = CallInfo.from_call.__func__.__code__
         loc = "{}:{}".format(
-            from_call_code.co_filename, from_call_code.co_firstlineno + 7
+            from_call_code.co_filename, from_call_code.co_firstlineno + 10
         )
 
         result = testdir.runpytest(p, "-rx")
