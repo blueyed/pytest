@@ -115,12 +115,13 @@ jobs:
         path: ~/.cache/pre-commit
         key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
-    - name: Install tox
+    - name: Setup tox / version information
       env:
         PIP_DISABLE_PIP_VERSION_CHECK: "1"
       run: |
         python -m pip --version
         python -m pip install git+https://github.com/blueyed/tox@master
+        python -m pip list
 
     - name: Setup tox environment
       run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}
