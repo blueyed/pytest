@@ -159,8 +159,8 @@ def make_holder():
     def pytest_xyz_noarg():
         "x"
 
-    apimod.pytest_xyz = pytest_xyz  # type: ignore
-    apimod.pytest_xyz_noarg = pytest_xyz_noarg  # type: ignore
+    apimod.pytest_xyz = pytest_xyz
+    apimod.pytest_xyz_noarg = pytest_xyz_noarg
     return apiclass, apimod
 
 

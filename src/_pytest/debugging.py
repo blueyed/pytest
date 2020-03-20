@@ -267,7 +267,7 @@ class pytestPDB(PdbBase):
 
     def pytest_unconfigure(self, config):
         pdb, set_trace = self._saved_pdb_set_trace
-        pdb.set_trace = set_trace  # type: ignore
+        pdb.set_trace = set_trace
 
     def set_trace(self, *args, **kwargs):
         """Invoke debugging via ``Pdb.set_trace``, dropping any IO capturing."""
@@ -283,7 +283,7 @@ def set_trace(*, header=None):
 
     pdb_ = pdb.Pdb()
     if header is not None:
-        pdb_.message(header)  # type: ignore
+        pdb_.message(header)
     pdb_.set_trace(sys._getframe().f_back)
 
 
