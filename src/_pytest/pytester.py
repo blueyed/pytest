@@ -33,7 +33,7 @@ import py
 import pytest
 from _pytest._code import Source
 from _pytest.capture import CLOSE_STDIN
-from _pytest.capture import CaptureMananger
+from _pytest.capture import CaptureManager
 from _pytest.capture import CloseStdinType
 from _pytest.capture import MultiCapture
 from _pytest.capture import SysCapture
@@ -1096,7 +1096,7 @@ class Testdir(Generic[AnyStr]):
         elif stdin is None:
             stdin = sys.stdin
 
-        def get_capture(fd, capman: CaptureMananger = None):
+        def get_capture(fd, capman: CaptureManager = None):
             from _pytest.compat import CaptureIO
 
             if fd == 0:
