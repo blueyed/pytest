@@ -359,7 +359,7 @@ class WarningReport:
         """Formatted warning (the standard way)."""
         wm = self.warning
         return warnings.formatwarning(
-            wm.message, wm.category, wm.filename, wm.lineno, wm.line,
+            str(wm.message), wm.category, wm.filename, wm.lineno, wm.line,
         ).rstrip()
 
     @property
