@@ -115,7 +115,7 @@ jobs:
         path: ~/.cache/pre-commit
         key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
-    - name: Setup tox / version information
+    - name: Install tox / version information
       env:
         PIP_DISABLE_PIP_VERSION_CHECK: "1"
       run: |

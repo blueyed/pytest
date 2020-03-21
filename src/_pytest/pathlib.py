@@ -35,7 +35,7 @@ _AnyPurePath = TypeVar("_AnyPurePath", bound=PurePath)
 
 
 def get_lock_path(path: _AnyPurePath) -> _AnyPurePath:
-    return path.joinpath(".lock")
+    return path.joinpath(".lock")  # type: ignore[no-any-return]  # for py35
 
 
 def ensure_reset_dir(path: Path) -> None:
