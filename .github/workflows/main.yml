@@ -102,7 +102,7 @@ jobs:
 
     # Caching.
     - name: set PY_CACHE_KEY
-      run: echo "::set-env name=PY_CACHE_KEY::$(python --version --version | sha256sum | cut -d' ' -f1)"
+      run: echo "::set-env name=PY_CACHE_KEY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
     - name: Cache .tox
       uses: actions/cache@v1
       with:
