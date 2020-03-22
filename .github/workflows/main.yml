@@ -102,11 +102,11 @@ jobs:
 
     # Caching.
     - name: set PY_CACHE_KEY
-      run: echo "::set-env name=PY_CACHE_KEY::$(python --version --version | sha256sum | cut -d' ' -f1)"
+      run: echo "::set-env name=PY_CACHE_KEY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
     - name: Cache .tox
       uses: actions/cache@v1
       with:
-        path: ${{ env.GITHUB_WORKSPACE }}/pytest/pytest/.tox/${{ matrix.tox_env }}
+        path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
         key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting_ci')
