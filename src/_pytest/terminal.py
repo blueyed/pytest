@@ -1173,6 +1173,7 @@ class TerminalReporter:
             fullwidth += len(markup_for_end_sep)
             msg += markup_for_end_sep
 
+        assert self._session
         if self._session.shouldfail:
             msg += " ({})".format(self._session.shouldfail)
 
