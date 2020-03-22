@@ -795,7 +795,12 @@ def test_runpytest_subprocess_stdin(testdir) -> None:
         ["E   EOFError: EOF when reading a line", "=* 1 failed in *"]
     )
 
+    # bytes input
     result = testdir.runpytest_subprocess(str(p1), "-s", stdin=b"input\n2ndline")
+    result.stdout.fnmatch_lines(["input='input'", "=* 1 passed in *"])
+
+    # str input
+    result = testdir.runpytest_subprocess(str(p1), "-s", stdin="input\n2ndline")
     result.stdout.fnmatch_lines(["input='input'", "=* 1 passed in *"])
 
 
@@ -826,7 +831,7 @@ def test_runtest_inprocess_stdin(testdir: Testdir, monkeypatch: MonkeyPatch) -> 
                 input()
     """
     )
-    result = testdir.runpytest(str(p1), "-s", stdin="42\n")
+    result = testdir.runpytest(str(p1), "-s", stdin=b"42\n")
     result.stdout.fnmatch_lines(["test_input: 42", "* 1 passed in *"])
     assert result.ret == 0
 

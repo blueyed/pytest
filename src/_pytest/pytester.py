@@ -1082,7 +1082,7 @@ class Testdir(Generic[AnyStr]):
             else:
                 stdin = CLOSE_STDIN
 
-        if isinstance(stdin, str):
+        if isinstance(stdin, (bytes, str)):
 
             class EchoingInput(StringIO):
                 def readline(self, *args, **kwargs):
@@ -1090,6 +1090,9 @@ class Testdir(Generic[AnyStr]):
                     if ret:
                         sys.stdout.write(ret)
                     return ret
+
+            if isinstance(stdin, bytes):
+                stdin = stdin.decode("utf8")
 
             stdin = EchoingInput(stdin)
         elif stdin is None:
@@ -1284,7 +1287,7 @@ class Testdir(Generic[AnyStr]):
         cmdargs,
         stdout: Optional[Union[int, IO]] = subprocess.PIPE,
         stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
         *,
         encoding: None = ...,
         **kw
@@ -1297,7 +1300,7 @@ class Testdir(Generic[AnyStr]):
         cmdargs,
         stdout: Optional[Union[int, IO]] = subprocess.PIPE,
         stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
         *,
         encoding: str,
         **kw
@@ -1309,7 +1312,7 @@ class Testdir(Generic[AnyStr]):
         cmdargs,
         stdout: Optional[Union[int, IO]] = subprocess.PIPE,
         stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
         *,
         encoding: Optional[str] = None,
         **kw
@@ -1331,7 +1334,7 @@ class Testdir(Generic[AnyStr]):
 
         if stdin is CLOSE_STDIN:
             kw["stdin"] = subprocess.PIPE
-        elif isinstance(stdin, bytes):
+        elif isinstance(stdin, (bytes, str)):
             kw["stdin"] = subprocess.PIPE
         else:
             kw["stdin"] = stdin
@@ -1345,6 +1348,9 @@ class Testdir(Generic[AnyStr]):
         elif isinstance(stdin, bytes):
             assert popen.stdin
             popen.stdin.write(stdin)
+        elif isinstance(stdin, str):
+            assert popen.stdin
+            popen.stdin.write(stdin.encode("utf8"))
 
         return popen
 
@@ -1352,7 +1358,7 @@ class Testdir(Generic[AnyStr]):
         self,
         *cmdargs,
         timeout=None,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN
     ) -> RunResult:
         """Run a command with arguments.
 
@@ -1361,8 +1367,8 @@ class Testdir(Generic[AnyStr]):
         :param args: the sequence of arguments to pass to `subprocess.Popen()`
         :kwarg timeout: the period in seconds after which to timeout and raise
             :py:class:`Testdir.TimeoutExpired`
-        :kwarg stdin: optional standard input.  Bytes are being send, closing
-            the pipe, otherwise it is passed through to ``popen``.
+        :kwarg stdin: optional standard input.  Bytes/strings are being send,
+            closing the pipe, otherwise it is passed through to ``popen``.
 
             Defaults to :attr:`CLOSE_STDIN`, which translates to using a pipe
             (:data:`python:subprocess.PIPE`) that gets closed.
@@ -1388,7 +1394,7 @@ class Testdir(Generic[AnyStr]):
                 stderr=f2,
                 close_fds=(sys.platform != "win32"),
             )
-            if isinstance(stdin, bytes):
+            if isinstance(stdin, (bytes, str)):
                 assert popen.stdin
                 popen.stdin.close()
 
