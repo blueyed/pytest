@@ -215,14 +215,14 @@ class LFPluginCollWrapper:
                     # Keep any new (unknown) node ids.
                     or x.nodeid not in known_nodeids
                 ]
+                assert filtered_result, (res.result,)
                 res.result = filtered_result
 
-                if filtered_result:
-                    if not self._collected_at_least_one_failure:
-                        self.lfplugin.config.pluginmanager.register(
-                            LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
-                        )
-                        self._collected_at_least_one_failure = True
+                if not self._collected_at_least_one_failure:
+                    self.lfplugin.config.pluginmanager.register(
+                        LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
+                    )
+                    self._collected_at_least_one_failure = True
                 return
         yield
 
