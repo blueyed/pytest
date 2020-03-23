@@ -8,10 +8,12 @@ from typing import Tuple
 from typing import TypeVar
 
 from _pytest import outcomes
+from _pytest._code.code import ExceptionInfo
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import hookimpl
 from _pytest.config.exceptions import UsageError
+from _pytest.main import Interrupted
 
 if TYPE_CHECKING:
     from typing import Type
@@ -324,6 +326,14 @@ class PdbInvoke(PdbBase):
         return report
 
     def pytest_internalerror(self, excrepr, excinfo):
+        tb = _postmortem_traceback(excinfo)
+        self.post_mortem(tb)
+
+    def pytest_keyboard_interrupt(self, excinfo: ExceptionInfo) -> None:
+        if isinstance(excinfo.value, outcomes.exit.Exception):
+            return
+        if isinstance(excinfo.value, Interrupted):
+            return
         tb = _postmortem_traceback(excinfo)
         self.post_mortem(tb)
 

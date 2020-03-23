@@ -591,8 +591,18 @@ class TestCaptureFixture:
             """
         )
         result = testdir.runpytest_subprocess(p)
-        result.stdout.fnmatch_lines(["*KeyboardInterrupt*"])
-        assert result.ret == 2
+        result.stdout.fnmatch_lines(
+            [
+                "test_keyboardinterrupt_disables_capturing.py * [[]  0%[]]",
+                "",
+                "*! KeyboardInterrupt !*",
+                "*test_keyboardinterrupt_disables_capturing.py:4: KeyboardInterrupt",
+                "(to show a full traceback on KeyboardInterrupt use --full-trace)",
+                "*= no tests ran in *",
+            ],
+            consecutive=True,
+        )
+        assert result.ret == ExitCode.INTERRUPTED
 
     def test_capture_and_logging(self, testdir):
         """#14"""
