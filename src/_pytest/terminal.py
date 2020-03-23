@@ -862,15 +862,15 @@ class TerminalReporter:
         self._write_report_lines_from_hooks(lines)
 
         if self.config.getoption("collectonly"):
-            if self.config.option.verbose > -1:
-                self._tw.line("")
-            self._printcollecteditems(session.items)
+            if session.items:
+                if self.config.option.verbose > -1:
+                    self._tw.line("")
+                self._printcollecteditems(session.items)
 
-        if self.config.getoption("collectonly"):
             failed = self.stats.get("failed")
             if failed:
                 self.section("collection failures", "!")
-                for rep in self.stats.get("failed"):
+                for rep in failed:
                     rep.toterminal(self._tw)
 
     def _printcollecteditems(self, items):
