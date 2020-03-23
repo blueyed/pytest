@@ -880,12 +880,11 @@ class TestLastFailed:
         result = testdir.runpytest("--lf", "-rf")
         result.stdout.fnmatch_lines(
             [
-                "collected 2 items",
-                "run-last-failure: 1 known failures not in selected tests",
+                "collected 1 item",
+                "run-last-failure: 1 known failures not in selected tests (skipped 1 file)",
                 "pkg1/test_1.py F *",
-                "pkg1/test_2.py . *",
                 "FAILED pkg1/test_1.py:1::test_renamed - assert 0",
-                "* 1 failed, 1 passed in *",
+                "* 1 failed in *",
             ]
         )
 

@@ -179,6 +179,7 @@ class LFPluginCollWrapper:
     def __init__(self, lfplugin: "LFPlugin"):
         self.lfplugin = lfplugin
         self._collected_at_least_one_failure = False
+        self.known_nodeids = self.lfplugin.config.cache.get("cache/nodeids", [])
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_make_collect_report(self, collector) -> Generator:
@@ -212,11 +213,13 @@ class LFPluginCollWrapper:
                     or session.isinitpath(x.fspath)
                     # Keep all sub-collectors.
                     or isinstance(x, nodes.Collector)
+                    or x.nodeid not in self.known_nodeids
                 ]
-                if filtered_result:
+                if filtered_result != res.result:
                     res.result = filtered_result
                     out.force_result(res)
 
+                if filtered_result:
                     if not self._collected_at_least_one_failure:
                         self.lfplugin.config.pluginmanager.register(
                             LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
