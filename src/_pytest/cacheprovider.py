@@ -212,6 +212,7 @@ class LFPluginCollWrapper:
                     or session.isinitpath(x.fspath)
                     # Keep all sub-collectors.
                     or isinstance(x, nodes.Collector)
+                    # Keep any new (unknown) node ids.
                     or x.nodeid not in known_nodeids
                 ]
                 res.result = filtered_result
