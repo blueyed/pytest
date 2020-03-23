@@ -32,6 +32,7 @@ from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprFileLocation
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import ExitCode
 from _pytest.main import Session
@@ -39,6 +40,9 @@ from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import Path
 from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
+
+if TYPE_CHECKING:
+    from _pytest._code.code import _TracebackStyle
 
 REPORT_COLLECTING_RESOLUTION = 0.5
 
