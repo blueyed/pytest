@@ -935,6 +935,40 @@ class TestLastFailed:
             ],
         )
 
+    def test_lastfailed_with_class_items(self, testdir: Testdir) -> None:
+        """Test regression with --lf deselecting whole classes."""
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    class TestFoo:
+                        def test_pass(self): pass
+                        def test_fail(self): assert 0
+
+                    def test_other(): assert 0
+                """,
+            }
+        )
+        result = testdir.runpytest()
+        result.stdout.fnmatch_lines(["collected 3 items", "* 2 failed, 1 passed in *"])
+        assert result.ret == 1
+
+        result = testdir.runpytest("--lf", "--co")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                "collected 3 items / 1 deselected / 2 selected",
+                "run-last-failure: rerun previous 2 failures",
+                "",
+                "<Module pkg1/test_1.py>",
+                "  <Class TestFoo>",
+                "      <Function test_fail>",
+                "  <Function test_other>",
+                "",
+                "*= 1 deselected in *",
+            ],
+            consecutive=True,
+        )
+
 
 class TestNewFirst:
     def test_newfirst_usecase(self, testdir):

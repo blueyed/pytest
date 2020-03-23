@@ -210,6 +210,8 @@ class LFPluginCollWrapper:
                     # later), because it is not trivial / error-prone to match
                     # initial args to nodeids again.
                     or session.isinitpath(x.fspath)
+                    # Keep all sub-collectors.
+                    or isinstance(x, nodes.Collector)
                 ]
                 if filtered_result:
                     res.result = filtered_result
