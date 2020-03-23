@@ -968,6 +968,39 @@ class TestLastFailed:
             consecutive=True,
         )
 
+    def test_lastfailed_with_all_filtered(self, testdir: Testdir) -> None:
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    def test_fail(): assert 0
+                    def test_pass(): pass
+                """,
+            }
+        )
+        result = testdir.runpytest()
+        result.stdout.fnmatch_lines(["collected 2 items", "* 1 failed, 1 passed in *"])
+        assert result.ret == 1
+
+        # Remove known failure.
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    def test_pass(): pass
+                """,
+            }
+        )
+        result = testdir.runpytest("--lf", "--co")
+        assert result.ret == ExitCode.NO_TESTS_COLLECTED
+        result.stdout.fnmatch_lines(
+            [
+                "collected 0 items",
+                "run-last-failure: 1 known failures not in selected tests",
+                "",
+                "*= no tests ran in*",
+            ],
+            consecutive=True,
+        )
+
 
 class TestNewFirst:
     def test_newfirst_usecase(self, testdir):

@@ -215,7 +215,6 @@ class LFPluginCollWrapper:
                     # Keep any new (unknown) node ids.
                     or x.nodeid not in known_nodeids
                 ]
-                assert filtered_result, (res.result,)
                 res.result = filtered_result
 
                 if not self._collected_at_least_one_failure:
