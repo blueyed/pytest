@@ -85,7 +85,7 @@ def test_tbstyle_with_non_python(testdir: Testdir) -> None:
         ]
     )
 
-    # Honors to "--tb=short".
+    # Honors "--tb=short".
     result = testdir.runpytest("--tb=short")
     result.stdout.fnmatch_lines(
         [

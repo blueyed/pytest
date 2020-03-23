@@ -28,9 +28,11 @@ from wcwidth import wcswidth
 
 import pytest
 from _pytest import nodes
+from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprFileLocation
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import ExitCode
 from _pytest.main import Session
@@ -38,6 +40,9 @@ from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import Path
 from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
+
+if TYPE_CHECKING:
+    from _pytest._code.code import _TracebackStyle
 
 REPORT_COLLECTING_RESOLUTION = 0.5
 
@@ -946,8 +951,10 @@ class TerminalReporter:
         # Display any extra warnings from teardown here (if any).
         self.summary_warnings()
 
-    def pytest_keyboard_interrupt(self, excinfo):
-        self._keyboardinterrupt_memo = excinfo.getrepr(funcargs=True)
+    def pytest_keyboard_interrupt(self, excinfo: ExceptionInfo) -> None:
+        tbstyle = self.config.getoption("tbstyle", "auto")
+        style = "long" if tbstyle == "auto" else tbstyle  # type: _TracebackStyle
+        self._keyboardinterrupt_memo = excinfo.getrepr(funcargs=True, style=style)
 
     def pytest_unconfigure(self):
         if hasattr(self, "_keyboardinterrupt_memo"):

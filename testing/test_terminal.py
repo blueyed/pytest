@@ -244,37 +244,82 @@ class TestTerminal:
         result.stdout.fnmatch_lines(["*a123/test_hello123.py*PASS*"])
         result.stdout.no_fnmatch_line("* <- *")
 
-    @pytest.mark.parametrize("fulltrace", ("", "--fulltrace"))
-    def test_keyboard_interrupt(self, testdir, fulltrace):
+    @pytest.mark.parametrize(
+        "args", ((), ("--fulltrace",), ("--fulltrace", "--tb=short"))
+    )
+    def test_keyboard_interrupt(self, args: Tuple[str, ...], testdir: Testdir) -> None:
         testdir.makepyfile(
             """
             def test_foobar():
                 assert 0
-            def test_spamegg():
-                import py; pytest.skip('skip me please!')
             def test_interrupt_me():
                 raise KeyboardInterrupt   # simulating the user
         """
         )
 
-        result = testdir.runpytest(fulltrace, no_reraise_ctrlc=True)
-        result.stdout.fnmatch_lines(
-            [
-                "    def test_foobar():",
-                ">       assert 0",
-                "E       assert 0",
-                "*_keyboard_interrupt.py:6: KeyboardInterrupt*",
-            ]
+        fulltrace_note = (
+            "(to show a full traceback on KeyboardInterrupt use --full-trace)"
         )
-        if fulltrace:
+        result = testdir.runpytest(*args, no_reraise_ctrlc=True)
+        if args == ():
             result.stdout.fnmatch_lines(
-                ["*raise KeyboardInterrupt   # simulating the user*"]
+                [
+                    "    def test_foobar():",
+                    ">       assert 0",
+                    "E       assert 0",
+                    "*= short test summary info =*",
+                    "*! KeyboardInterrupt !*",
+                    "*_keyboard_interrupt.py:4: KeyboardInterrupt",
+                    fulltrace_note,
+                ]
+            )
+            return
+
+        assert fulltrace_note not in result.stdout.str()
+        if args == ("--fulltrace",):
+            result.stdout.fnmatch_lines(
+                [
+                    "test_keyboard_interrupt.py F *",
+                    "",
+                    "*= FAILURES =*",
+                    "*_ test_foobar _*",
+                    "    def test_foobar():",
+                    ">       assert 0",
+                    "E       assert 0",
+                    "",
+                    "test_keyboard_interrupt.py:2: assert 0",
+                    "*= short test summary info =*",
+                    "FAILED test_keyboard_interrupt.py:2::test_foobar - assert 0",
+                    "*! KeyboardInterrupt !*",
+                    "    def test_interrupt_me():",
+                    ">       raise KeyboardInterrupt   # simulating the user",
+                    "E       KeyboardInterrupt",
+                    "",
+                    "test_keyboard_interrupt.py:4: KeyboardInterrupt",
+                    "*= 1 failed in *",
+                ]
+            )
+        elif args == ("--fulltrace", "--tb=short"):
+            result.stdout.fnmatch_lines(
+                [
+                    "test_keyboard_interrupt.py F *",
+                    "",
+                    "*= FAILURES =*",
+                    "*_ test_foobar _*",
+                    "test_keyboard_interrupt.py:2: in test_foobar",
+                    "    assert 0",
+                    "E   assert 0",
+                    "*= short test summary info =*",
+                    "FAILED test_keyboard_interrupt.py:2::test_foobar - assert 0",
+                    "*! KeyboardInterrupt !*",
+                    "test_keyboard_interrupt.py:4: in test_interrupt_me",
+                    "    raise KeyboardInterrupt   # simulating the user",
+                    "E   KeyboardInterrupt",
+                    "*= 1 failed in *",
+                ]
             )
         else:
-            result.stdout.fnmatch_lines(
-                ["(to show a full traceback on KeyboardInterrupt use --full-trace)"]
-            )
-        result.stdout.fnmatch_lines(["*KeyboardInterrupt*"])
+            assert False, args
 
     def test_keyboard_in_sessionstart(self, testdir):
         testdir.makeconftest(
