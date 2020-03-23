@@ -192,7 +192,6 @@ class LFPluginCollWrapper:
             res.result = sorted(
                 res.result, key=lambda x: 0 if Path(str(x.fspath)) in lf_paths else 1,
             )
-            out.force_result(res)
             return
 
         elif isinstance(collector, Module):
@@ -215,9 +214,7 @@ class LFPluginCollWrapper:
                     or isinstance(x, nodes.Collector)
                     or x.nodeid not in self.known_nodeids
                 ]
-                if filtered_result != res.result:
-                    res.result = filtered_result
-                    out.force_result(res)
+                res.result = filtered_result
 
                 if filtered_result:
                     if not self._collected_at_least_one_failure:
@@ -225,7 +222,7 @@ class LFPluginCollWrapper:
                             LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
                         )
                         self._collected_at_least_one_failure = True
-                return res
+                return
         yield
 
 
