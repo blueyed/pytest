@@ -933,7 +933,7 @@ class TerminalReporter:
             if session.shouldfail:
                 self.write_line("!! {} !!".format(session.shouldfail), red=True)
         else:
-            self.summary_stats(session)
+            self.summary_stats()
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_terminal_summary(self):
@@ -1144,7 +1144,7 @@ class TerminalReporter:
                 content = content[:-1]
             self._tw.line(content)
 
-    def summary_stats(self, session: Session) -> None:
+    def summary_stats(self) -> None:
         session_duration = time.time() - self._sessionstarttime
         (parts, main_color) = self.build_summary_stats_line()
         line_parts = []
@@ -1173,8 +1173,9 @@ class TerminalReporter:
             fullwidth += len(markup_for_end_sep)
             msg += markup_for_end_sep
 
-        if session.shouldfail:
-            msg += " ({})".format(session.shouldfail)
+        assert self._session
+        if self._session.shouldfail:
+            msg += " ({})".format(self._session.shouldfail)
 
         if display_sep:
             self.write_sep("=", msg, fullwidth=fullwidth, **main_markup)
