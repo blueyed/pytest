@@ -978,9 +978,10 @@ class TestLastFailed:
             }
         )
         result = testdir.runpytest()
-        # result.stdout.fnmatch_lines(["collected 2 items", "* 1 failed, 1 passed in *"])
+        result.stdout.fnmatch_lines(["collected 2 items", "* 1 failed, 1 passed in *"])
         assert result.ret == 1
 
+        # Remove known failure.
         testdir.makepyfile(
             **{
                 "pkg1/test_1.py": """
