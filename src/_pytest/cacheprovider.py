@@ -191,7 +191,6 @@ class LFPluginCollWrapper:
             res.result = sorted(
                 res.result, key=lambda x: 0 if Path(str(x.fspath)) in lf_paths else 1,
             )
-            out.force_result(res)
             return
 
         elif isinstance(collector, Module):
@@ -201,6 +200,7 @@ class LFPluginCollWrapper:
 
                 session = collector.session
                 lastfailed = self.lfplugin.lastfailed
+                known_nodeids = self.lfplugin.known_nodeids
                 filtered_result = [
                     x
                     for x in res.result
@@ -212,17 +212,18 @@ class LFPluginCollWrapper:
                     or session.isinitpath(x.fspath)
                     # Keep all sub-collectors.
                     or isinstance(x, nodes.Collector)
+                    # Keep any new (unknown) node ids.
+                    or x.nodeid not in known_nodeids
                 ]
-                if filtered_result:
-                    res.result = filtered_result
-                    out.force_result(res)
+                assert filtered_result, (res.result,)
+                res.result = filtered_result
 
-                    if not self._collected_at_least_one_failure:
-                        self.lfplugin.config.pluginmanager.register(
-                            LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
-                        )
-                        self._collected_at_least_one_failure = True
-                return res
+                if not self._collected_at_least_one_failure:
+                    self.lfplugin.config.pluginmanager.register(
+                        LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
+                    )
+                    self._collected_at_least_one_failure = True
+                return
         yield
 
 
@@ -259,6 +260,7 @@ class LFPlugin:
 
         if config.getoption("lf"):
             self._last_failed_paths = self.get_last_failed_paths()
+            self.known_nodeids = config.cache.get("cache/nodeids", [])
             config.pluginmanager.register(
                 LFPluginCollWrapper(self), "lfplugin-collwrapper"
             )
