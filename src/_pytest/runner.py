@@ -7,7 +7,6 @@ from typing import Callable
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
 
 import attr
 
@@ -24,7 +23,6 @@ from _pytest.outcomes import Skipped
 from _pytest.outcomes import TEST_OUTCOME
 
 if TYPE_CHECKING:
-    from typing import Type
     from typing_extensions import Literal
 
 #
@@ -212,12 +210,7 @@ def call_runtest_hook(item, when: "Literal['setup', 'call', 'teardown']", **kwds
         ihook = item.ihook.pytest_runtest_teardown
     else:
         assert False, "Unhandled runtest hook case: {}".format(when)
-    reraise = (Exit,)  # type: Tuple[Type[BaseException], ...]
-    if not item.config.getoption("usepdb", False):
-        reraise += (KeyboardInterrupt,)
-    return CallInfo.from_call(
-        lambda: ihook(item=item, **kwds), when=when, reraise=reraise
-    )
+    return CallInfo.from_call(lambda: ihook(item=item, **kwds), when=when)
 
 
 @attr.s(repr=False)
@@ -228,7 +221,8 @@ class CallInfo:
     excinfo = attr.ib(type=Optional[ExceptionInfo])
     start = attr.ib()
     stop = attr.ib()
-    when = attr.ib()
+    when = attr.ib('Literal["setup", "call", "teardown"]')
+    """context of invocation"""
 
     @property
     def result(self):
@@ -237,17 +231,17 @@ class CallInfo:
         return self._result
 
     @classmethod
-    def from_call(cls, func, when, reraise=None) -> "CallInfo":
-        #: context of invocation: one of "setup", "call",
-        #: "teardown", "memocollect"
+    def from_call(cls, func, when) -> "CallInfo":
         start = time()
         excinfo = None
         try:
             result = func()
-        except:  # noqa
+        except Exit:
+            raise
+        except KeyboardInterrupt:
+            raise
+        except BaseException:
             excinfo = ExceptionInfo.from_current()
-            if reraise is not None and excinfo.errisinstance(reraise):
-                raise
             result = None
         stop = time()
         return cls(start=start, stop=stop, when=when, result=result, excinfo=excinfo)
@@ -263,9 +257,7 @@ def pytest_runtest_makereport(item, call):
 
 
 def pytest_make_collect_report(collector: Collector) -> CollectReport:
-    call = CallInfo.from_call(
-        lambda: list(collector.collect()), "collect", reraise=(Exit, KeyboardInterrupt,)
-    )
+    call = CallInfo.from_call(lambda: list(collector.collect()), "collect")
     longrepr = None
     if not call.excinfo:
         outcome = "passed"

@@ -160,15 +160,24 @@ class TestPDB:
         assert len(pdblist) == 0
 
     def test_pdb_on_KeyboardInterrupt(self, testdir, pdblist):
-        rep = runpdb_and_get_report(
-            testdir,
-            """
-            def test_func():
-                raise KeyboardInterrupt
-        """,
+        p1 = testdir.makepyfile("def test_func(): raise KeyboardInterrupt")
+        result = testdir.runpytest_inprocess("--pdb", str(p1), no_reraise_ctrlc=True)
+        result.stdout.fnmatch_lines(
+            [
+                "test_pdb_on_KeyboardInterrupt.py * [[]  0%[]]",
+                "",
+                # NOTE: terminal displays the KeyboardInterrupt also, via
+                #       _keyboardinterrupt_memo.  This is ok for now.
+                "*! KeyboardInterrupt !*",
+                "*test_pdb_on_KeyboardInterrupt.py:1: KeyboardInterrupt",
+                "(to show a full traceback on KeyboardInterrupt use --full-trace)",
+                "*= no tests ran in *",
+            ],
+            consecutive=True,
         )
-        assert rep.failed
-        assert len(pdblist) == 1
+        reports = result.reprec.getreports("pytest_runtest_logreport")
+        assert len(reports) == 1, reports  # only setup.
+        assert len(pdblist) == 1  # post_mortem was called.
 
     @staticmethod
     def flush(child):
@@ -356,7 +365,6 @@ class TestPDB:
         """
         )
         child = testdir.spawn_pytest("--pdb %s" % p1)
-        # child.expect(".*import pytest.*")
         child.expect("Pdb")
         child.sendline("c")
         child.expect("1 error")
