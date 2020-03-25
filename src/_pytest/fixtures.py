@@ -7,6 +7,7 @@ from collections import deque
 from collections import OrderedDict
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 
 import attr
@@ -36,9 +37,13 @@ from _pytest.outcomes import TEST_OUTCOME
 
 if TYPE_CHECKING:
     from typing import Type
+    from typing_extensions import Literal
 
     from _pytest import nodes
     from _pytest.main import Session
+    from _pytest.runner import _RuntestPhase
+
+    _Scope = Literal["session", "package", "module", "class", "function"]
 
 
 @attr.s(frozen=True)
@@ -358,6 +363,7 @@ class FixtureRequest:
         self._arg2fixturedefs = fixtureinfo.name2fixturedefs.copy()
         self._arg2index = {}
         self._fixturemanager = pyfuncitem.session._fixturemanager
+        self._phase = None  # type: Optional[_RuntestPhase]
 
     @property
     def fixturenames(self):
@@ -631,14 +637,21 @@ class FixtureRequest:
         return node
 
     def __repr__(self):
-        return "<FixtureRequest for %r>" % (self.node)
+        return "<FixtureRequest for {!r} _phase={}>".format(self.node, self._phase)
 
 
 class SubRequest(FixtureRequest):
     """ a sub request for handling getting a fixture from a
     test function/fixture. """
 
-    def __init__(self, request, scope, param, param_index, fixturedef):
+    def __init__(
+        self,
+        request: "FixtureRequest",
+        scope: "_Scope",
+        param,
+        param_index: int,
+        fixturedef: "FixtureDef",
+    ) -> None:
         self._parent_request = request
         self.fixturename = fixturedef.argname
         if param is not NOTSET:
@@ -653,7 +666,13 @@ class SubRequest(FixtureRequest):
         self._fixturemanager = request._fixturemanager
 
     def __repr__(self):
-        return "<SubRequest {!r} for {!r}>".format(self.fixturename, self._pyfuncitem)
+        return "<SubRequest {!r} for {!r} _phase={}>".format(
+            self.fixturename, self._pyfuncitem, self._phase
+        )
+
+    @property
+    def _phase(self) -> "Optional[_RuntestPhase]":  # type: ignore[override]
+        return self._parent_request._phase
 
     def addfinalizer(self, finalizer):
         self._fixturedef.addfinalizer(finalizer)

@@ -25,6 +25,8 @@ from _pytest.outcomes import TEST_OUTCOME
 if TYPE_CHECKING:
     from typing_extensions import Literal
 
+    _RuntestPhase = Literal["setup", "call", "teardown"]
+
 #
 # pytest plugin hooks
 
@@ -201,7 +203,7 @@ def check_interactive_exception(call, report):
     )
 
 
-def call_runtest_hook(item, when: "Literal['setup', 'call', 'teardown']", **kwds):
+def call_runtest_hook(item, when: "_RuntestPhase", **kwds):
     if when == "setup":
         ihook = item.ihook.pytest_runtest_setup
     elif when == "call":
@@ -210,6 +212,10 @@ def call_runtest_hook(item, when: "Literal['setup', 'call', 'teardown']", **kwds
         ihook = item.ihook.pytest_runtest_teardown
     else:
         assert False, "Unhandled runtest hook case: {}".format(when)
+    try:
+        item._request._phase = when
+    except AttributeError:
+        pass
     return CallInfo.from_call(lambda: ihook(item=item, **kwds), when=when)
 
 
