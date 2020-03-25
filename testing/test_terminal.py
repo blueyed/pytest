@@ -401,15 +401,23 @@ class TestCollectonly:
         result = testdir.runpytest("--collect-only")
         result.stdout.fnmatch_lines(["*raise ValueError*", "*1 error*"])
 
-    def test_collectonly_fatal(self, testdir):
+    def test_collectonly_fatal(self, testdir: Testdir, color_mapping) -> None:
         testdir.makeconftest(
             """
             def pytest_collectstart(collector):
                 assert 0, "urgs"
         """
         )
+        testdir.monkeypatch.setenv("PY_COLORS", "1")
         result = testdir.runpytest("--collect-only")
-        result.stdout.fnmatch_lines(["*INTERNAL*args*"])
+        result.stdout.fnmatch_lines(
+            color_mapping.format_for_fnmatch(
+                [
+                    "*INTERNAL*args*",
+                    "{red}=*= {yellow}no tests ran{reset}{red} in *{reset}{red} =*={reset}",
+                ]
+            )
+        )
         assert result.ret == 3
 
     def test_collectonly_simple(self, testdir):

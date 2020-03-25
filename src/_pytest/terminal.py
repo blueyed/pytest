@@ -381,7 +381,7 @@ class TerminalReporter:
 
         self.config = config
         self._numcollected = 0
-        self._session = None  # type: Optional[Session]
+        self._session = None  # type: Session  # type: ignore[assignment]
         self._showfspath = None
 
         self.stats = {}  # type: Dict[str, List[Any]]
@@ -604,7 +604,7 @@ class TerminalReporter:
                 self.currentfspath = -2
 
     @property
-    def _is_last_item(self):
+    def _is_last_item(self) -> bool:
         return self._progress_items_reported == self._session.testscollected
 
     def pytest_runtest_logfinish(self) -> None:
@@ -613,7 +613,6 @@ class TerminalReporter:
             return
 
         if self._show_progress_info == "count":
-            assert self._session
             num_tests = self._session.testscollected
             progress_length = len(" [{0}/{0}]".format(num_tests))
         else:
@@ -639,7 +638,6 @@ class TerminalReporter:
             self._write_progress_information_filling_space()
 
     def _get_progress_information_message(self) -> str:
-        assert self._session
         collected = self._session.testscollected
         if self._show_progress_info == "count":
             if collected:
@@ -1155,6 +1153,8 @@ class TerminalReporter:
     def summary_stats(self) -> None:
         session_duration = time.time() - self._sessionstarttime
         (parts, main_color) = self.build_summary_stats_line()
+        if self._session.exitstatus == ExitCode.INTERNAL_ERROR:
+            main_color = "red"
         line_parts = []
 
         display_sep = self.verbosity >= 0
@@ -1181,7 +1181,6 @@ class TerminalReporter:
             fullwidth += len(markup_for_end_sep)
             msg += markup_for_end_sep
 
-        assert self._session
         if self._session.shouldfail:
             msg += " ({})".format(self._session.shouldfail)
 
