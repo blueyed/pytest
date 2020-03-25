@@ -56,6 +56,8 @@ pytest.param
 
 .. autofunction:: pytest.param(*values, [id], [marks])
 
+.. _`pytest.raises ref`:
+
 pytest.raises
 ~~~~~~~~~~~~~
 
@@ -79,6 +81,8 @@ pytest.register_assert_rewrite
 
 .. autofunction:: pytest.register_assert_rewrite
 
+.. _`pytest.warns ref`:
+
 pytest.warns
 ~~~~~~~~~~~~
 
@@ -101,9 +105,6 @@ Marks
 
 Marks can be used apply meta data to *test functions* (but not fixtures), which can then be accessed by
 fixtures or plugins.
-
-
-
 
 .. _`pytest.mark.filterwarnings ref`:
 
@@ -1149,8 +1150,6 @@ passed multiple times. The expected format is ``name=value``. For example::
 
 
 .. confval:: filterwarnings
-
-
 
    Sets a list of filters and actions that should be taken for matched
    warnings. By default all warnings emitted during the test session

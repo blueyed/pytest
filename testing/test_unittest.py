@@ -533,7 +533,10 @@ class TestTrialUnittest:
         # Ignore DeprecationWarning (for `cmp`) from attrs through twisted,
         # for stable test results.
         result = testdir.runpytest(
-            "-vv", "-oconsole_output_style=classic", "-W", "ignore::DeprecationWarning"
+            "-vv",
+            "-oconsole_output_style=classic",
+            "-Wignore::DeprecationWarning",
+            "-Wignore::pytest.PytestUnhandledCoroutineWarning",
         )
         result.stdout.fnmatch_lines(
             [

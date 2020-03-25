@@ -11,6 +11,7 @@ import sys
 import textwrap
 import time
 import traceback
+import warnings
 from fnmatch import fnmatch
 from io import StringIO
 from typing import AnyStr
@@ -52,6 +53,7 @@ from _pytest.python import Function
 from _pytest.python import Module
 from _pytest.reports import TestReport
 from _pytest.tmpdir import TempdirFactory
+from _pytest.warnings import original_warning_filters
 
 if TYPE_CHECKING:
     from typing import Type
@@ -529,6 +531,14 @@ class SysPathsSnapshot:
         sys.path[:], sys.meta_path[:] = self.__saved
 
 
+class WarningsSnapshot:
+    def __init__(self) -> None:
+        self.__saved = list(sys.warnoptions), list(warnings.filters)
+
+    def restore(self) -> None:
+        sys.warnoptions[:], warnings.filters[:] = self.__saved
+
+
 def _display_running(header, *args):
     from _pytest.pathlib import _shorten_path
 
@@ -858,7 +868,6 @@ class Testdir(Generic[AnyStr]):
         :return: path to the copied directory (inside ``self.tmpdir``).
 
         """
-        import warnings
         from _pytest.warning_types import PYTESTER_COPY_EXAMPLE
 
         warnings.warn(PYTESTER_COPY_EXAMPLE, stacklevel=2)
@@ -1030,6 +1039,10 @@ class Testdir(Generic[AnyStr]):
             finalizers.append(self.__take_sys_modules_snapshot().restore)
             finalizers.append(SysPathsSnapshot().restore)
 
+            if sys.warnoptions == ['ignore:__set_by_filterwarnings__']:
+                finalizers.append(WarningsSnapshot().restore)
+                warnings.simplefilter("default")
+
             # Important note:
             # - our tests should not leave any other references/registrations
             #   laying around other than possibly loaded test modules
@@ -1072,6 +1085,7 @@ class Testdir(Generic[AnyStr]):
 
         if syspathinsert:
             self.syspathinsert()
+
         now = time.time()
 
         if "stdin" in kwargs:

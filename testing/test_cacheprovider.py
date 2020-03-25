@@ -10,6 +10,7 @@ import py
 import pytest
 from _pytest.config import ExitCode
 from _pytest.pytester import Testdir
+from _pytest.recwarn import WarningsRecorder
 
 
 class TestNewAPI:
@@ -48,10 +49,7 @@ class TestNewAPI:
         )
 
     @pytest.mark.skipif(sys.platform.startswith("win"), reason="no chmod on windows")
-    @pytest.mark.filterwarnings(
-        "ignore:could not create cache path:pytest.PytestWarning"
-    )
-    def test_cache_writefail_permissions(self, testdir):
+    def test_cache_writefail_permissions(self, testdir: Testdir, recwarn: WarningsRecorder):
         testdir.makeini("[pytest]")
         cache_dir = str(testdir.tmpdir.ensure_dir(".pytest_cache"))
         mode = os.stat(cache_dir)[stat.ST_MODE]
@@ -62,6 +60,12 @@ class TestNewAPI:
             cache.set("test/broken", [])
         finally:
             testdir.tmpdir.ensure_dir(".pytest_cache").chmod(mode)
+        assert len(recwarn) == 1
+        assert re.match(
+            r"could not create cache path .*broken"
+            r" \(.*Permission denied: .*/.pytest_cache/v/test'\), setting readonly.",
+            str(recwarn[0].message),
+        )
 
     @pytest.mark.skipif(sys.platform.startswith("win"), reason="no chmod on windows")
     @pytest.mark.filterwarnings("default")

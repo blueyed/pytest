@@ -1,6 +1,8 @@
 import sys
 
 import pytest
+from _pytest.pytester import Testdir
+from _pytest.recwarn import WarningsRecorder
 from _pytest.runner import runtestprotocol
 from _pytest.skipping import MarkEvaluator
 from _pytest.skipping import pytest_runtest_setup
@@ -13,7 +15,7 @@ class TestEvaluator:
         assert not evalskipif
         assert not evalskipif.istrue()
 
-    def test_marked_no_args(self, testdir):
+    def test_marked_no_args(self, testdir: Testdir, recwarn: WarningsRecorder):
         item = testdir.getitem(
             """
             import pytest
@@ -29,16 +31,20 @@ class TestEvaluator:
         assert expl == ""
         assert not ev.get("run", False)
 
+        # `Testdir.getitem` sees default warnings (unlike runpytest).
+        assert len(recwarn) == 1
+        assert str(recwarn[0].message).startswith("Unknown pytest.mark.xyz")
+
     def test_marked_one_arg(self, testdir):
         item = testdir.getitem(
             """
             import pytest
-            @pytest.mark.xyz("hasattr(os, 'sep')")
+            @pytest.mark.foo("hasattr(os, 'sep')")
             def test_func():
                 pass
         """
         )
-        ev = MarkEvaluator(item, "xyz")
+        ev = MarkEvaluator(item, "foo")
         assert ev
         assert ev.istrue()
         expl = ev.getexplanation()
@@ -48,12 +54,12 @@ class TestEvaluator:
         item = testdir.getitem(
             """
             import pytest
-            @pytest.mark.xyz("hasattr(os, 'sep')", attr=2, reason="hello world")
+            @pytest.mark.foo("hasattr(os, 'sep')", attr=2, reason="hello world")
             def test_func():
                 pass
         """
         )
-        ev = MarkEvaluator(item, "xyz")
+        ev = MarkEvaluator(item, "foo")
         assert ev
         assert ev.istrue()
         expl = ev.getexplanation()
@@ -1073,7 +1079,7 @@ def test_xfail_item(testdir):
                 pytest.xfail("Expected Failure")
 
         def pytest_collect_file(path, parent):
-            return MyItem("foo", parent)
+            return MyItem.from_parent(parent=parent, name="foo")
     """
     )
     result = testdir.inline_run()
@@ -1162,7 +1168,7 @@ def test_mark_xfail_item(testdir):
                 assert False
 
         def pytest_collect_file(path, parent):
-            return MyItem("foo", parent)
+            return MyItem.from_parent(parent=parent, name="foo")
     """
     )
     result = testdir.inline_run()

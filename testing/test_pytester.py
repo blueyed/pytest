@@ -2,6 +2,7 @@ import os
 import subprocess
 import sys
 import time
+import warnings
 from collections import OrderedDict
 from typing import List
 
@@ -239,6 +240,19 @@ class TestInlineRunModulesCleanup:
         assert spy._spy_restore_count == 1
         assert sys.modules == original
         assert all(sys.modules[x] is original[x] for x in sys.modules)
+
+    def test_inline_run_taking_and_restoring_a_warnings_snapshot(
+        self, testdir
+    ) -> None:
+        test_mod = testdir.makepyfile(
+            """
+            import warnings
+            warnings.filters = ["default:changed"]
+            """
+        )
+        orig_warnings = warnings.filters[:]
+        testdir.inline_run(str(test_mod))
+        assert warnings.filters == orig_warnings
 
     def test_inline_run_sys_modules_snapshot_restore_preserving_modules(
         self, testdir, monkeypatch
@@ -1383,3 +1397,50 @@ class TestTestdirMakefiles:
         assert str(
             excinfo.value
         ) == "path is not a file/symlink, not clobbering: {!r}".format(str(directory))
+
+
+@pytest.mark.filterwarnings("error")
+def test_filterwarnings_does_not_affect_pytester_runs(testdir: Testdir) -> None:
+    assert warnings.filters[0][0] == "error"  # type: ignore[attr-defined]
+
+    testdir.makepyfile(
+        """
+        import warnings
+
+        def test():
+            warnings.warn("ww")
+    """
+    )
+
+    # Ignore any outer "python -Werror".
+    testdir.monkeypatch.setattr("sys.warnoptions", [])
+
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines(
+        [
+            "*= warnings summary [[]runtest[]] =*",
+            "*::test",
+            "  *:4: UserWarning: ww",
+            '    warnings.warn("ww")',
+            "*= 1 passed, 1 warning in *",
+        ]
+    )
+    # Gets restored to filterwarnings setting.
+    assert warnings.filters[0][0] == "error"  # type: ignore[attr-defined]
+
+    hookrecorder = testdir.inline_run()
+    assert hookrecorder.countoutcomes() == [1, 0, 0]
+
+    # Fails with "error" in sys.warnoptions.
+    testdir.monkeypatch.setattr("sys.warnoptions", ["error"])
+    result = testdir.runpytest()
+    result.stdout.fnmatch_lines(
+        [
+            "E       UserWarning: ww",
+            "FAILED test_filterwarnings_does_not_affect_pytester_runs.py:4::test"
+            " - UserWarning: ww",
+            "*= 1 failed in *",
+        ]
+    )
+    hookrecorder = testdir.inline_run()
+    assert hookrecorder.countoutcomes() == [0, 0, 1]

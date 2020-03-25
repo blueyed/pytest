@@ -4,7 +4,11 @@ from contextlib import contextmanager
 from typing import Generator
 
 import pytest
+from _pytest.config import Config
 from _pytest.main import Session
+
+
+original_warning_filters = warnings.filters[:]
 
 
 def _setoption(wmod, arg):
@@ -48,12 +52,21 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure(config):
+def pytest_configure(config: Config) -> None:
     config.addinivalue_line(
         "markers",
         "filterwarnings(warning): add a warning filter to the given test. "
         "see https://docs.pytest.org/en/latest/warnings.html#pytest-mark-filterwarnings ",
     )
+
+    config.pluginmanager.register(WarningsHooks(config), "warnings-hooks")
+
+
+class WarningsHooks:
+    initial_warning_filters = None
+
+    def __init__(self, config: Config) -> None:
+        self.config = config
 
 
 @contextmanager
@@ -71,10 +84,14 @@ def catch_warnings_for_item(config, ihook, when, item):
         # mypy can't infer that record=True means log is not None; help it.
         assert log is not None
 
-        if not sys.warnoptions:
-            # if user is not explicitly configuring warning filters, show deprecation warnings by default (#2908)
-            warnings.filterwarnings("always", category=DeprecationWarning)
-            warnings.filterwarnings("always", category=PendingDeprecationWarning)
+        # TODO: pending refactor of other hooks into plugin(s).
+        plugin = config.pluginmanager.getplugin("warnings-hooks")
+        if plugin.initial_warning_filters is None:
+            if not sys.warnoptions:
+                warnings.simplefilter("default")
+            plugin.initial_warning_filters = warnings.filters
+        else:
+            warnings.filters[:] = plugin.initial_warning_filters
 
         # filters should have this precedence: mark, cmdline options, ini
         # filters should be applied in the inverse order of precedence
