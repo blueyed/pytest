@@ -629,11 +629,12 @@ class TerminalReporter:
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtestloop(self) -> Generator[None, None, None]:
         """Write final progress indicator."""
-        yield
+        outcome = yield  # type: pluggy.callers._Result
         if (
             getattr(self, "_tests_ran", False)
             and self.verbosity <= 0
             and self._show_progress_info
+            and not outcome.excinfo
         ):
             self._write_progress_information_filling_space()
 

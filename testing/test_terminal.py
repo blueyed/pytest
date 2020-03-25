@@ -279,7 +279,7 @@ class TestTerminal:
         if args == ("--fulltrace",):
             result.stdout.fnmatch_lines(
                 [
-                    "test_keyboard_interrupt.py F *",
+                    "test_keyboard_interrupt.py F",
                     "",
                     "*= FAILURES =*",
                     "*_ test_foobar _*",
@@ -302,7 +302,7 @@ class TestTerminal:
         elif args == ("--fulltrace", "--tb=short"):
             result.stdout.fnmatch_lines(
                 [
-                    "test_keyboard_interrupt.py F *",
+                    "test_keyboard_interrupt.py F",
                     "",
                     "*= FAILURES =*",
                     "*_ test_foobar _*",

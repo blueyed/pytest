@@ -164,7 +164,7 @@ class TestPDB:
         result = testdir.runpytest_inprocess("--pdb", str(p1), no_reraise_ctrlc=True)
         result.stdout.fnmatch_lines(
             [
-                "test_pdb_on_KeyboardInterrupt.py * [[]  0%[]]",
+                "test_pdb_on_KeyboardInterrupt.py ",
                 "",
                 # NOTE: terminal displays the KeyboardInterrupt also, via
                 #       _keyboardinterrupt_memo.  This is ok for now.
