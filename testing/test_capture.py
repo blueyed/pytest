@@ -593,7 +593,7 @@ class TestCaptureFixture:
         result = testdir.runpytest_subprocess(p)
         result.stdout.fnmatch_lines(
             [
-                "test_keyboardinterrupt_disables_capturing.py * [[]  0%[]]",
+                "test_keyboardinterrupt_disables_capturing.py ",
                 "",
                 "*! KeyboardInterrupt !*",
                 "*test_keyboardinterrupt_disables_capturing.py:4: KeyboardInterrupt",
