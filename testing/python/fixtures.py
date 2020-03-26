@@ -484,7 +484,7 @@ class TestFillFixtures:
 
 
 class TestRequestBasic:
-    def test_request_attributes(self, testdir):
+    def test_request_attributes(self, testdir: Testdir) -> None:
         item = testdir.getitem(
             """
             import pytest
@@ -501,7 +501,55 @@ class TestRequestBasic:
         assert req.cls is None
         assert req.function.__name__ == "test_func"
         assert req.config == item.config
-        assert repr(req).find(req.function.__name__) != -1
+        assert repr(req) == (
+            "<FixtureRequest for <Function nodeid='test_request_attributes.py::test_func'> _phase=None>"
+        )
+        req._phase = "setup"
+        assert repr(req) == (
+            "<FixtureRequest for <Function nodeid='test_request_attributes.py::test_func'> _phase=setup>"
+        )
+
+    def test_subreq(self, testdir):
+        p1 = testdir.makepyfile(
+            r"""
+            import pytest
+
+            @pytest.fixture
+            def fix_request(request):
+                print("\nfix_request:", request)
+                return request
+
+            def test_fix(fix_request, request):
+                print("test_fix:", fix_request)
+                assert fix_request != request
+
+            def test_getfixturevalue(request):
+                fix = request.getfixturevalue("fix_request")
+                print("fix_getfixturevalue:", fix)
+                assert fix != request
+            """
+        )
+        result = testdir.runpytest("-sv", str(p1))
+        result.stdout.fnmatch_lines(
+            [
+                "test_subreq.py::test_fix ",
+                "fix_request:"
+                " <SubRequest 'fix_request' for"
+                " <Function nodeid='test_subreq.py::test_fix'> _phase=setup>",
+                "test_fix: <SubRequest 'fix_request' for"
+                " <Function nodeid='test_subreq.py::test_fix'> _phase=call>",
+                "PASSED",
+                "test_subreq.py::test_getfixturevalue ",
+                "fix_request: <SubRequest 'fix_request' for"
+                " <Function nodeid='test_subreq.py::test_getfixturevalue'> _phase=call>",
+                "fix_getfixturevalue:"
+                " <SubRequest 'fix_request' for"
+                " <Function nodeid='test_subreq.py::test_getfixturevalue'> _phase=call>",
+                "PASSED",
+            ],
+            consecutive=True,
+        )
+        assert result.ret == 0
 
     def test_request_attributes_method(self, testdir):
         (item,) = testdir.getitems(
