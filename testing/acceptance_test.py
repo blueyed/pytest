@@ -504,8 +504,7 @@ class TestGeneralUsage:
             pytest.main([str(tmpdir)], plugins=["invalid.module"])
         assert "invalid" in str(excinfo.value)
 
-        p = tmpdir.join("test_test_plugins_given_as_strings.py")
-        p.write("def test_foo(): pass")
+        testdir.makepyfile("def test_foo(): pass")
         mod = types.ModuleType("myplugin")
         monkeypatch.setitem(sys.modules, "myplugin", mod)
         assert pytest.main(args=[str(tmpdir)], plugins=["myplugin"]) == 0
