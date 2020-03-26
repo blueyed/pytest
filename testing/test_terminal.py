@@ -688,6 +688,7 @@ class TestTerminalFunctional:
         result.stdout.fnmatch_lines(["test_passes.py ..*", "* 2 pass*"])
         assert result.ret == 0
 
+    @pytest.mark.xdist_specific  # to have some entrypoint plugin.
     def test_header_trailer_info(self, testdir, request):
         testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
         testdir.makepyfile(
@@ -843,6 +844,7 @@ class TestTerminalFunctional:
         )
         assert result.ret == 1
 
+    @pytest.mark.xdist_specific
     def test_verbose_reporting_xdist(self, verbose_testfile, testdir, pytestconfig):
         if not pytestconfig.pluginmanager.get_plugin("xdist"):
             pytest.skip("xdist plugin not installed")
@@ -2087,12 +2089,14 @@ class TestProgressOutputStyle:
             ]
         )
 
+    @pytest.mark.xdist_specific
     def test_xdist_normal(self, many_tests_files, testdir, monkeypatch):
         pytest.importorskip("xdist")
         monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
         output = testdir.runpytest("-n2")
         output.stdout.re_match_lines([r"\.{20} \s+ \[100%\]"])
 
+    @pytest.mark.xdist_specific
     def test_xdist_normal_count(self, many_tests_files, testdir, monkeypatch):
         pytest.importorskip("xdist")
         monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
@@ -2105,6 +2109,7 @@ class TestProgressOutputStyle:
         output = testdir.runpytest("-n2")
         output.stdout.re_match_lines([r"\.{20} \s+ \[20/20\]"])
 
+    @pytest.mark.xdist_specific
     def test_xdist_verbose(self, many_tests_files, testdir, monkeypatch):
         pytest.importorskip("xdist")
         monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
@@ -2227,6 +2232,7 @@ class TestProgressWithTeardown:
             )
         )
 
+    @pytest.mark.xdist_specific
     def test_xdist_normal(self, many_files, testdir, monkeypatch):
         pytest.importorskip("xdist")
         monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)

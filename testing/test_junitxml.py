@@ -1244,6 +1244,7 @@ def test_record_fixtures_xunit2(testdir, fixture_name, run_and_parse):
     result.stdout.fnmatch_lines(expected_lines)
 
 
+@pytest.mark.xdist_specific
 def test_random_report_log_xdist(testdir, monkeypatch, run_and_parse):
     """xdist calls pytest_runtest_logreport as they are executed by the slaves,
     with nodes from several nodes overlapping, so junitxml must cope with that
@@ -1298,6 +1299,7 @@ def test_runs_twice(testdir, run_and_parse):
     assert first == second
 
 
+@pytest.mark.xdist_specific
 def test_runs_twice_xdist(testdir, run_and_parse):
     pytest.importorskip("xdist")
     testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
