@@ -31,6 +31,8 @@ jobs:
           "windows-py37 (1)",
           "windows-py37 (2)",
 
+          "xdist",
+
           "linting",
           "docs",
           "doctesting",
@@ -41,8 +43,7 @@ jobs:
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "py38-numpy-oldattrs-twisted-xdist-coverage"
-            pytest_addopts: "-n4"
+            tox_env: "py38-numpy-oldattrs-twisted-coverage"
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
@@ -85,6 +86,12 @@ jobs:
             # Coverage for:
             # - verbosity=2
             pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
+
+          - name: "xdist"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "py38-xdist-coverage"
+            pytest_addopts: "-m xdist_specific -n 0"
 
           - name: "linting"
             python: "3.8"

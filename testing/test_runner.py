@@ -381,7 +381,7 @@ class BaseFunctionalTests:
                     raise SystemExit(42)
             """
             )
-        except SystemExit:
+        except SystemExit:  # pragma: no cover
             assert False, "runner did not catch SystemExit"
         rep = reports[1]
         assert rep.failed
@@ -423,6 +423,7 @@ class TestExecutionNonForked(BaseFunctionalTests):
             assert False, "did not raise"
 
 
+@pytest.mark.xdist_specific
 class TestExecutionForked(BaseFunctionalTests):
     pytestmark = pytest.mark.skipif("not hasattr(os, 'fork')")
 

@@ -1348,6 +1348,7 @@ def test_invocation_args(testdir):
         Config.InvocationParams(args=None, plugins=None, dir=Path())
 
 
+@pytest.mark.xdist_specific
 @pytest.mark.parametrize(
     "plugin",
     [
