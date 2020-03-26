@@ -68,19 +68,12 @@ class TestNewAPI:
         monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
         cache_dir = str(testdir.tmpdir.ensure_dir(".pytest_cache"))
 
-        testdir.makepyfile(
-            """
-            import pathlib
+        def raising_mkdir(*args, **kwargs):
+            raise OSError("my OSError")
 
-            def raising_mkdir(*args, **kwargs):
-                raise OSError("my OSError")
+        monkeypatch.setattr("pathlib.Path.mkdir", raising_mkdir)
 
-            pathlib.Path.mkdir = raising_mkdir
-
-            def test_error():
-                raise Exception
-            """
-        )
+        testdir.makepyfile("def test_error(): raise Exception")
         result = testdir.runpytest("-s")
         assert result.ret == 1
         result.stdout.fnmatch_lines(
