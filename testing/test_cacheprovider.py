@@ -63,30 +63,30 @@ class TestNewAPI:
         finally:
             testdir.tmpdir.ensure_dir(".pytest_cache").chmod(mode)
 
-    @pytest.mark.skipif(sys.platform.startswith("win"), reason="no chmod on windows")
     @pytest.mark.filterwarnings("default")
     def test_cache_failure_warns(self, testdir, monkeypatch):
         monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
         cache_dir = str(testdir.tmpdir.ensure_dir(".pytest_cache"))
-        mode = os.stat(cache_dir)[stat.ST_MODE]
-        testdir.tmpdir.ensure_dir(".pytest_cache").chmod(0)
-        try:
-            testdir.makepyfile("def test_error(): raise Exception")
-            result = testdir.runpytest()
-            assert result.ret == 1
-            result.stdout.fnmatch_lines(
-                [
-                    # Validate location/stacklevel of warning from cacheprovider.
-                    "*= warnings summary [[]config[]] =*",
-                    "*/cacheprovider.py:*",
-                    "  */cacheprovider.py:*: PytestCacheWarning: could not create cache path "
-                    "{}/v/cache/nodeids (*), setting readonly.".format(cache_dir),
-                    '    config.cache.set("cache/nodeids", self.cached_nodeids)',
-                    "*1 failed, 1 warning in*",
-                ]
-            )
-        finally:
-            testdir.tmpdir.ensure_dir(".pytest_cache").chmod(mode)
+
+        def raising_mkdir(*args, **kwargs):
+            raise OSError("my OSError")
+
+        monkeypatch.setattr("pathlib.Path.mkdir", raising_mkdir)
+
+        testdir.makepyfile("def test_error(): raise Exception")
+        result = testdir.runpytest("-s")
+        assert result.ret == 1
+        result.stdout.fnmatch_lines(
+            [
+                # Validate location/stacklevel of warning from cacheprovider.
+                "*= warnings summary [[]config[]] =*",
+                "*/cacheprovider.py:*",
+                "  */cacheprovider.py:*: PytestCacheWarning: could not create cache path "
+                "{}/v/cache/nodeids (my OSError), setting readonly.".format(cache_dir),
+                '    config.cache.set("cache/nodeids", self.cached_nodeids)',
+                "*1 failed, 1 warning in*",
+            ]
+        )
 
     def test_config_cache(self, testdir):
         testdir.makeconftest(
