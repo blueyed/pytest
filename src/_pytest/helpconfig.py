@@ -1,10 +1,12 @@
 """ version info, help messages, tracing configuration.  """
 import os
 import sys
+import types
 from argparse import Action
 from typing import Generator
 from typing import List
 from typing import Optional
+from typing import Tuple
 
 import py.path
 
@@ -12,6 +14,7 @@ import pytest
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import PrintHelp
+from _pytest.pathlib import _shorten_path
 
 if TYPE_CHECKING:
     from typing_extensions import Literal  # noqa: F401
@@ -137,13 +140,16 @@ def showversion(config: Config) -> None:
 
 def pytest_cmdline_main(config: Config) -> Optional["Literal[0]"]:
     if config.option.version:
+        config._do_configure()
         showversion(config)
-        return 0
     elif config.option.help:
         config._do_configure()
         showhelp(config)
-        return 0
-    return None
+    else:
+        return None
+
+    _show_warnings(config)
+    return 0
 
 
 def showhelp(config: Config) -> None:
@@ -209,6 +215,10 @@ def showhelp(config: Config) -> None:
         "with the '-v' option"
     )
 
+    _show_warnings(config)
+
+
+def _show_warnings(config: Config) -> None:
     reporter = config.pluginmanager.get_plugin("terminalreporter")
     if reporter:
         tw = reporter._tw
@@ -220,15 +230,78 @@ def showhelp(config: Config) -> None:
 conftest_options = [("pytest_plugins", "list of plugin names to load")]
 
 
+def get_plugin_info(
+    config: Config, include_non_eps: bool = False, verbose: bool = False
+) -> Tuple[List[str], List[str]]:
+    distnames = []  # type: List[str]
+    othernames = []  # type: List[str]
+
+    pm = config.pluginmanager
+    distplugins = {plugin: dist for plugin, dist in pm.list_plugin_distinfo()}
+    prev_dist = None
+    for name, plugin in pm.list_name_plugin():
+        if plugin in distplugins:
+            dist = distplugins[plugin]
+            if verbose:
+                dist_name = "{}-{}".format(dist.project_name, dist.version)
+                if dist_name != prev_dist:
+                    distnames.append("{}:".format(dist_name))
+                    prev_dist = dist_name
+
+                if isinstance(plugin, types.ModuleType):
+                    loc = getattr(plugin, "__file__", repr(plugin))
+                    distnames.append("  {} at {}".format(name, loc))
+                else:
+                    mod = plugin.__module__
+                    loc = getattr(sys.modules[mod], "__file__", repr(plugin))
+                    distnames.append("  {} at {}:{}".format(name, loc, plugin.__name__))
+                continue
+
+            # gets us name and version!
+            name = "{dist.project_name}-{dist.version}".format(dist=dist)
+            # questionable convenience, but it keeps things short
+            if name.startswith("pytest-"):
+                name = name[7:]
+            # we decided to print python package names
+            # they can have more than one plugin
+            if name not in distnames:
+                distnames.append(name)
+        elif include_non_eps:
+            if isinstance(plugin, types.ModuleType):
+                mod, modname = plugin, plugin.__name__
+                if modname.startswith("_pytest."):
+                    continue
+                if verbose:
+                    name = getattr(mod, "__file__", repr(plugin))
+                elif modname == "conftest" and hasattr(mod, "__file__"):
+                    # Use relative path for conftest plugins.
+                    name = _shorten_path(
+                        mod.__file__, relative_to=str(config.invocation_params.dir)
+                    )
+            else:
+                modname = getattr(plugin, "__module__", None)
+                if modname and modname.startswith("_pytest."):
+                    continue
+                if modname is not None and verbose:
+                    loc = getattr(sys.modules[modname], "__file__", repr(plugin))
+                    name += " at {}".format(loc)
+            othernames.append(name)
+    return distnames, othernames
+
+
 def getpluginversioninfo(config: Config) -> List[str]:
     lines = []
-    plugininfo = config.pluginmanager.list_plugin_distinfo()
-    if plugininfo:
+    distplugins, otherplugins = get_plugin_info(
+        config, include_non_eps=True, verbose=True
+    )
+    if distplugins:
         lines.append("setuptools registered plugins:")
-        for plugin, dist in plugininfo:
-            loc = getattr(plugin, "__file__", repr(plugin))
-            content = "{}-{} at {}".format(dist.project_name, dist.version, loc)
-            lines.append("  " + content)
+        for distplugin in distplugins:
+            lines.append("  " + distplugin)
+    if otherplugins:
+        lines.append("other plugins:")
+        for otherplugin in otherplugins:
+            lines.append("  " + otherplugin)
     return lines
 
 

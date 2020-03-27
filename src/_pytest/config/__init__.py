@@ -806,7 +806,12 @@ class Config:
         plugins = attr.ib()
         dir = attr.ib(type=Path)
 
-    def __init__(self, pluginmanager, *, invocation_params=None) -> None:
+    def __init__(
+        self,
+        pluginmanager: PytestPluginManager,
+        *,
+        invocation_params: Optional[InvocationParams] = None
+    ) -> None:
         from .argparsing import Parser, FILE_OR_DIR
 
         if invocation_params is None:

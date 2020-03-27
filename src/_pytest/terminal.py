@@ -40,6 +40,7 @@ from _pytest.compat import shell_quote
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import ExitCode
+from _pytest.helpconfig import get_plugin_info
 from _pytest.main import Session
 from _pytest.pathlib import _shorten_path
 from _pytest.reports import CollectReport
@@ -835,9 +836,16 @@ class TerminalReporter:
             line += ", testpaths: {}".format(", ".join(rel_paths))
         result = [line]
 
-        plugininfo = config.pluginmanager.list_plugin_distinfo()
-        if plugininfo:
-            result.append("plugins: %s" % ", ".join(_plugin_nameversions(plugininfo)))
+        plugins = []
+        distplugins, otherplugins = get_plugin_info(
+            config, include_non_eps=config.option.verbose > 0
+        )
+        if distplugins:
+            plugins.append(", ".join(distplugins))
+        if otherplugins:
+            plugins.append(", ".join(otherplugins))
+        if plugins:
+            result.append("plugins: {}".format("; ".join(plugins)))
 
         if config._implicit_args:
             result.append(
@@ -1483,21 +1491,6 @@ def _make_plural(count, noun):
     noun = noun.replace("warnings", "warning")
 
     return count, noun + "s" if count != 1 else noun
-
-
-def _plugin_nameversions(plugininfo) -> List[str]:
-    values = []  # type: List[str]
-    for plugin, dist in plugininfo:
-        # gets us name and version!
-        name = "{dist.project_name}-{dist.version}".format(dist=dist)
-        # questionable convenience, but it keeps things short
-        if name.startswith("pytest-"):
-            name = name[7:]
-        # we decided to print python package names
-        # they can have more than one plugin
-        if name not in values:
-            values.append(name)
-    return values
 
 
 def format_session_duration(seconds: float) -> str:

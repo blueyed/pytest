@@ -154,9 +154,10 @@ class TestGeneralUsage:
             result.stderr.fnmatch_lines(
                 [
                     "setuptools registered plugins:",
-                    "  mpyproject-None at */mycov_module.py",
-                    "  mpyproject-None at */mytestplugin1_module.py",
-                    "  mpyproject-None at */mytestplugin2_module.py",
+                    "  mpyproject-None:",
+                    "    mycov at */mycov_module.py",
+                    "    myplugin1 at */mytestplugin1_module.py",
+                    "    myplugin2 at */mytestplugin2_module.py",
                 ]
             )
         else:
@@ -164,9 +165,10 @@ class TestGeneralUsage:
             result.stderr.fnmatch_lines(
                 [
                     "setuptools registered plugins:",
-                    "  mpyproject-None at */mytestplugin1_module.py",
-                    "  mpyproject-None at */mytestplugin2_module.py",
-                    "  mpyproject-None at */mycov_module.py",
+                    "  mpyproject-None:",
+                    "    myplugin1 at */mytestplugin1_module.py",
+                    "    myplugin2 at */mytestplugin2_module.py",
+                    "    mycov at */mycov_module.py",
                 ]
             )
         assert result.ret == 0

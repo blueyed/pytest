@@ -1,18 +1,94 @@
+import os
+import re
+
 import pytest
 from _pytest.config import ExitCode
 from _pytest.pytester import Testdir
 
 
-def test_version(testdir, pytestconfig):
+def test_version(testdir: Testdir) -> None:
+    """Test --version output, especially with regard to (entrypoint) plugins."""
     testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
-    result = testdir.runpytest("--version")
-    assert result.ret == 0
-    # p = py.path.local(py.__file__).dirpath()
-    result.stderr.fnmatch_lines(
-        ["*pytest*{}*imported from*".format(pytest.__version__)]
+    testdir.makefiles(
+        {
+            "PKG-INFO": """
+                Name: myproject
+                Version: 1.0.0
+                """,
+            "entry_points.txt": """
+                [pytest11]
+                EP MyPlugin = ep_plugin:MyPlugin
+                EP module = ep_plugin
+                """,
+        },
+        base_path="myproject.egg-info",
     )
-    if pytestconfig.pluginmanager.list_plugin_distinfo():
-        result.stderr.fnmatch_lines(["*setuptools registered plugins:", "*at*"])
+
+    # Only load our entrypoint plugin.
+    def is_blocked_ep(self, ep):
+        return not ep.name.startswith("EP ")
+
+    testdir.monkeypatch.setattr(
+        "_pytest.config.PytestPluginManager.is_blocked_ep", is_blocked_ep
+    )
+
+    ep_plugin = testdir.makepyfile(ep_plugin="class MyPlugin: pass")
+    other_plugin = testdir.makepyfile(
+        other_plugin="""
+        class MyPlugin:
+            pass
+        def pytest_configure(config):
+            config.pluginmanager.register("MyPluginAsString()", "plugin name")
+            config.pluginmanager.register(MyPlugin(), "plugin name 2")
+            config.pluginmanager.register(MyPlugin())
+    """
+    )
+    conftest = testdir.makeconftest("")
+    tests_conftest = testdir.makepyfile(
+        **{
+            "tests/conftest.py": """
+                class MyConftestPlugin():
+                    pass
+                def pytest_configure(config):
+                    config.pluginmanager.register(object(), "conftest-name-object")
+                    config.pluginmanager.register(MyConftestPlugin())
+        """,
+        }
+    )
+
+    testdir.syspathinsert()
+    result = testdir.runpytest("--version", "-p", "other_plugin")
+    expected_stderr = [
+        "*pytest*{}*imported from*".format(pytest.__version__),
+        "setuptools registered plugins:",
+        "  myproject-1.0.0:",
+        "    EP MyPlugin at {}:MyPlugin".format(ep_plugin),
+        "    EP module at {}".format(ep_plugin),
+        "other plugins:",
+        "  {}".format(other_plugin),
+        "  {}".format(conftest),
+        "  {}".format(tests_conftest),
+        "  conftest-name-object",
+        "  [0-9]*[0-9] at {}".format(tests_conftest),
+        "  plugin name",
+        "  plugin name 2 at {}".format(other_plugin),
+        "  [0-9]*[0-9] at {}".format(other_plugin),
+    ]
+    result.stderr.fnmatch_lines(expected_stderr, consecutive=True)
+    assert len(result.stderr.lines) == len(expected_stderr)
+    assert result.ret == 0
+
+    # Cover/test terminal's pytest_report_header.
+    result = testdir.runpytest("-p", "other_plugin", "--co")
+    result.stdout.fnmatch_lines(["plugins: myproject-1.0.0"])
+    result = testdir.runpytest("-p", "other_plugin", "--co", "-v")
+    result.stdout.re_match_lines(
+        [
+            r"plugins: myproject-1.0.0; other_plugin, conftest.py,"
+            r" tests{}conftest.py, conftest-name-object, \d+, plugin name,"
+            r" plugin name 2, \d+".format(re.escape(os.path.sep)),
+        ]
+    )
 
 
 def test_help(testdir: Testdir) -> None:

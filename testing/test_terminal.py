@@ -23,7 +23,7 @@ from _pytest.reports import TestReport
 from _pytest.terminal import _folded_skips
 from _pytest.terminal import _get_line_with_reprcrash_message
 from _pytest.terminal import _get_pos
-from _pytest.terminal import _plugin_nameversions
+from _pytest.terminal import get_plugin_info
 from _pytest.terminal import getreportopt
 from _pytest.terminal import TerminalReporter
 
@@ -73,10 +73,24 @@ def option(request):
     ],
     ids=["normal", "prefix-strip", "deduplicate"],
 )
-def test_plugin_nameversion(input, expected):
-    pluginlist = [(None, x) for x in input]
-    result = _plugin_nameversions(pluginlist)
-    assert result == expected
+def test__plugin_info(input: List[DistInfo], expected: List[str]):
+    class config:
+        invocation_dir = py.path.local()
+
+        class option:
+            verbose = 1
+
+        class pluginmanager:
+            @staticmethod
+            def list_plugin_distinfo():
+                return [(None, x) for x in input]
+
+            @staticmethod
+            def list_name_plugin():
+                return [(None, None) for x in input]
+
+    result = get_plugin_info(config)  # type: ignore[arg-type]
+    assert result == (expected, [])
 
 
 class TestTerminal:
