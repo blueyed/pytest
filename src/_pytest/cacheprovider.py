@@ -120,7 +120,7 @@ class Cache:
         try:
             with path.open("r") as f:
                 return json.load(f)
-        except (ValueError, IOError, OSError):
+        except (ValueError, OSError):
             return default
 
     def set(self, key, value):
@@ -142,7 +142,7 @@ class Cache:
             else:
                 cache_dir_exists_already = self._cachedir.exists()
                 path.parent.mkdir(exist_ok=True, parents=True)
-        except (IOError, OSError) as exc:
+        except OSError as exc:
             self.warn(
                 "could not create cache path {path} ({exc}), setting readonly.",
                 path=path,
@@ -155,7 +155,7 @@ class Cache:
         data = json.dumps(value, indent=2, sort_keys=True)
         try:
             f = path.open("w")
-        except (IOError, OSError):
+        except OSError:
             self.warn("cache could not write path {path}", path=path)
         else:
             with f:
