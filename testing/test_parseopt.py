@@ -8,6 +8,7 @@ import py
 
 import pytest
 from _pytest.config import argparsing as parseopt
+from _pytest.config.argparsing import Parser
 from _pytest.config.exceptions import UsageError
 
 
@@ -298,11 +299,16 @@ class TestParser:
 
     def test_inverse_option_with_store_true_action(self) -> None:
         """`--foo` generates `--no-foo`, but handles existing `--no-foo`."""
-        from _pytest.config.argparsing import Parser
         from _pytest.config.argparsing import MyOptionParser
 
         parser = Parser(usage="usage")
         optparser = MyOptionParser(parser=parser)
+        assert parser._getparser().format_help().splitlines() == [
+            "usage: usage",
+            "",
+            "positional arguments:",
+            "  file_or_dir",
+        ]
 
         parser.addoption("--no-foo", action="store_true", dest="no_foo")
         parser.addoption("--foo", action="store_true", dest="foo")
@@ -325,6 +331,98 @@ class TestParser:
         assert p1.bar is True
         p1 = parser.parse(["--no-bar"])
         assert p1.bar is False
+
+        parser.addoption(
+            "--no-conftest",
+            "--noconftest",
+            action="store_true",
+            dest="noconftest",
+            default=False,
+        )
+        p1 = parser.parse(["--noconftest"])
+        assert p1.noconftest is True
+        p1 = parser.parse(["--conftest"])
+        assert p1.noconftest is False
+
+        assert parser._getparser().format_help().splitlines() == [
+            "usage: usage",
+            "",
+            "positional arguments:",
+            "  file_or_dir",
+            "",
+            "custom options:",
+            "  --no-foo",
+            "  --foo",
+            "  --[no-]bar",
+            "  --[no-]conftest",
+        ]
+
+    def test_inverse_option_with_nodash_prefix_and_other(self) -> None:
+        parser = Parser(usage="usage")
+        parser.addoption(
+            "--nonomnom",
+            "--no-nomnom",
+            "--other",
+            action="store_true",
+            dest="nonomnom",
+            default=False,
+        )
+        optparser = parser._getparser()
+        assert list(optparser._option_string_actions.keys()) == [
+            "--nonomnom",
+            "--no-nomnom",
+            "--other",
+            "--nomnom",
+            "--no-other",
+        ]
+        assert parser._getparser().format_help().splitlines() == [
+            "usage: usage",
+            "",
+            "positional arguments:",
+            "  file_or_dir",
+            "",
+            "custom options:",
+            "  --[no-]nomnom, --[no-]other",
+        ]
+
+    def test_inverse_option_with_existing_negation_help(self) -> None:
+        parser = Parser(usage="usage")
+        parser.addoption(
+            "--nomigrations", "--no-migrations", action="store_true", default=False,
+        )
+        assert parser._getparser().format_help().splitlines() == [
+            "usage: usage",
+            "",
+            "positional arguments:",
+            "  file_or_dir",
+            "",
+            "custom options:",
+            "  --[no-]migrations",
+        ]
+        with pytest.raises(ValueError) as excinfo:
+            parser.addoption(
+                "--migrations", action="store_false", default=False,
+            )
+        assert excinfo.value.args == ("option names {'--migrations'} already added",)
+
+        # Recreate parser.
+        parser = Parser(usage="usage")
+        parser.addoption(
+            "--nomigrations", "--no-migrations", action="store_true", default=False,
+        )
+        parser.addoption(
+            "--migrations", action="store_false", default=False,
+        )
+        assert parser._getparser().format_help().splitlines() == [
+            "usage: usage",
+            "",
+            "positional arguments:",
+            "  file_or_dir",
+            "",
+            "custom options:",
+            "  --no-migrations",
+            "  --migrations",
+        ]
 
 
 def test_argcomplete(testdir, monkeypatch) -> None:

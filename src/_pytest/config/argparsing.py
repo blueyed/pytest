@@ -142,11 +142,17 @@ class Parser:
                 if option_string.startswith("--no-"):
                     new = "--{}".format(option_string[5:])
                 elif option_string.startswith("--"):
+                    if (
+                        option_string.startswith("--no")
+                        and "--no-{}".format(option_string[4:]) in all_names
+                    ):
+                        continue
                     new = "--no-{}".format(option_string[2:])
                 else:
                     continue
                 if new not in all_names:
                     new_option_strings.append(new)
+                    all_names.append(new)
 
             if new_option_strings:
                 option._long_opts.extend(new_option_strings)
@@ -419,6 +425,14 @@ class StoreTrueWithNoPrefixAction(argparse._StoreTrueAction):
     def __call__(self, parser, namespace, values, option_string=None):
         if option_string.startswith("--no-"):
             setattr(namespace, self.dest, False)
+        elif option_string.startswith("--") and not option_string.startswith("--no"):
+            idx = self.option_strings.index(option_string)
+            other_idx = self.option_strings.index("--no-{}".format(option_string[2:]))
+            if idx > other_idx:
+                # Added "--foo" option for original "--no-foo".
+                setattr(namespace, self.dest, self.default)
+            else:
+                setattr(namespace, self.dest, True)
         else:
             setattr(namespace, self.dest, True)
 
@@ -566,11 +580,17 @@ class DropShorterLongHelpFormatter(argparse.HelpFormatter):
                 return_list.append(option.replace(" ", "=", 1))
 
         if isinstance(action, StoreTrueWithNoPrefixAction):
-            # Collapse "--foo, --no-foo" into "--[no-]foo".
             idx = 0
             while idx < len(return_list):
                 option = return_list[idx]
-                if option.startswith("--"):
+                if option.startswith("--no-"):
+                    # Collapse "--no-foo, --foo" into "--[no-]foo".
+                    other_idx = return_list.index("--{}".format(option[5:]))
+                    return_list.pop(other_idx)
+                    option = "--[no-]" + option[5:]
+                    return_list = return_list[:idx] + [option] + return_list[idx + 1 :]
+                elif option.startswith("--"):
+                    # Collapse "--foo, --no-foo" into "--[no-]foo".
                     other_idx = return_list.index("--no-{}".format(option[2:]))
                     return_list.pop(other_idx)
                     option = "--[no-]" + option[2:]
