@@ -3,6 +3,7 @@ import os
 import re
 
 import pytest
+from _pytest.pytester import Testdir
 
 
 def test_nothing_logged(testdir):
@@ -393,6 +394,30 @@ def test_log_cli_default_level_sections(testdir, request):
             "*WARNING* <<<<< END <<<<<<<*",
             "=* 2 passed in *=",
         ]
+    )
+
+
+def test_log_cli_runtestloop(testdir: Testdir) -> None:
+    testdir.makeconftest(
+        """
+        import logging
+
+        def pytest_runtestloop():
+            logging.debug("pytest_runtestloop")
+            return 1
+    """
+    )
+    result = testdir.runpytest("--log-cli-level", "debug")
+    result.stdout.fnmatch_lines(
+        [
+            "collected 0 items",
+            "",
+            "*- live log runtestloop -*",
+            "DEBUG    root:conftest.py:4 pytest_runtestloop",
+            "",
+            "=* no tests ran in *=",
+        ],
+        consecutive=True,
     )
 
 

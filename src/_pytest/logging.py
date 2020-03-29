@@ -733,6 +733,8 @@ class LoggingPlugin:
             self._config.option.verbose = 1
 
         with self.live_logs_context():
+            if self.log_cli_handler:
+                self.log_cli_handler.set_when("runtestloop")
             if self.log_file_handler is not None:
                 with catching_logs(self.log_file_handler, level=self.log_file_level):
                     yield  # run all the tests
