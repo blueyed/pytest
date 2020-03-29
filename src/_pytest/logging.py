@@ -462,13 +462,25 @@ def get_log_level_for_setting(config: Config, *setting_names: str) -> Optional[i
             break
     else:
         return None
+    return validate_log_level(log_level, setting_name)
 
-    if isinstance(log_level, str):
-        log_level = log_level.upper()
+
+def check_level(log_level: str) -> int:
     try:
-        return int(getattr(logging, log_level, log_level))
+        rv = logging._checkLevel(log_level)  # type: int  # type: ignore[attr-defined]
     except ValueError:
-        # Python logging does not recognise this as a logging level
+        log_level_upper = log_level.upper()
+        if log_level_upper != log_level:
+            rv = logging._checkLevel(log_level_upper)  # type: ignore[attr-defined]
+        else:
+            raise
+    return rv
+
+
+def validate_log_level(log_level: str, setting_name: str) -> int:
+    try:
+        return check_level(log_level)
+    except ValueError:
         raise pytest.UsageError(
             "'{}' is not recognized as a logging level name for "
             "'{}'. Please consider passing the "
