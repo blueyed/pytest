@@ -143,6 +143,7 @@ def pytest_addoption(parser):
         help="only load conftest.py's relative to specified dir.",
     )
     group.addoption(
+        "--no-conftest",
         "--noconftest",
         action="store_true",
         dest="noconftest",

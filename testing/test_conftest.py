@@ -317,13 +317,25 @@ def test_conftest_uppercase(testdir):
     assert result.ret == ExitCode.NO_TESTS_COLLECTED
 
 
-def test_no_conftest(testdir):
-    testdir.makeconftest("assert 0")
+def test_no_conftest(testdir: Testdir) -> None:
+    conftest = testdir.makeconftest("assert 0")
     result = testdir.runpytest("--noconftest")
     assert result.ret == ExitCode.NO_TESTS_COLLECTED
 
+    expected_stderr = [
+        "ImportError while loading conftest '{}'.".format(conftest),
+        "conftest.py:1: in <module>",
+        "    assert 0",
+        "E   AssertionError: assert 0",
+    ]
     result = testdir.runpytest()
     assert result.ret == ExitCode.USAGE_ERROR
+    assert result.stderr.lines == expected_stderr
+
+    # --conftest can be used to override --noconftest.
+    result = testdir.runpytest("--noconftest", "--conftest")
+    assert result.ret == ExitCode.USAGE_ERROR
+    assert result.stderr.lines == expected_stderr
 
 
 def test_conftest_existing_resultlog(

@@ -18,9 +18,10 @@ def test_version(testdir, pytestconfig):
 def test_help(testdir: Testdir) -> None:
     result = testdir.runpytest("--help", "-p", "no:[defaults]")
     assert result.ret == 0
+    trans_escape = str.maketrans({"[": "[[]", "]": "[]]"})
     result.stdout.fnmatch_lines(
         """
-        usage: * [[]options[]] [[]file_or_dir[]] [[]file_or_dir[]] [[]...[]]
+        usage: * [options] [file_or_dir] [file_or_dir] [...]
 
         positional arguments:
           file_or_dir
@@ -31,7 +32,8 @@ def test_help(testdir: Testdir) -> None:
           --durations=N *
 
         collection:
-          --[[]no-[]]collect-only, --[[]no-[]]co
+          --[no-]collect-only, --[no-]co
+          --[no-]conftest       Don't load any conftest.py files.
 
         test session debugging and configuration:
           -V, --version         display pytest version and information about plugins.
@@ -41,7 +43,9 @@ def test_help(testdir: Testdir) -> None:
         *minversion*
         *to see*markers*pytest --markers*
         *to see*fixtures*pytest --fixtures*
-    """
+    """.translate(
+            trans_escape
+        )
     )
     result.stdout.no_fnmatch_line("logging:")
 
