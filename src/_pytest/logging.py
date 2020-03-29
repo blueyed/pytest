@@ -609,15 +609,8 @@ class LoggingPlugin:
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_collection(self) -> Generator[None, None, None]:
-        with self.live_logs_context():
-            if self.log_cli_handler:
-                self.log_cli_handler.set_when("collection")
-
-            if self.log_file_handler is not None:
-                with catching_logs(self.log_file_handler, level=self.log_file_level):
-                    yield
-            else:
-                yield
+        with self._wrap_live_logs_context("collection"):
+            yield
 
     @contextmanager
     def _runtest_for(self, item, when):
@@ -693,32 +686,18 @@ class LoggingPlugin:
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_sessionfinish(self):
-        with self.live_logs_context():
-            if self.log_cli_handler:
-                self.log_cli_handler.set_when("sessionfinish")
-            if self.log_file_handler is not None:
-                try:
-                    with catching_logs(
-                        self.log_file_handler, level=self.log_file_level
-                    ):
-                        yield
-                finally:
-                    # Close the FileHandler explicitly.
-                    # (logging.shutdown might have lost the weakref?!)
-                    self.log_file_handler.close()
-            else:
-                yield
+        with self._wrap_live_logs_context("sessionfinish"):
+            yield
+
+        if self.log_file_handler is not None:
+            # Close the FileHandler explicitly.
+            # (logging.shutdown might have lost the weakref?!)
+            self.log_file_handler.close()
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_sessionstart(self):
-        with self.live_logs_context():
-            if self.log_cli_handler:
-                self.log_cli_handler.set_when("sessionstart")
-            if self.log_file_handler is not None:
-                with catching_logs(self.log_file_handler, level=self.log_file_level):
-                    yield
-            else:
-                yield
+        with self._wrap_live_logs_context("sessionstart"):
+            yield
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtestloop(self, session):
@@ -732,14 +711,19 @@ class LoggingPlugin:
             # setting verbose flag is needed to avoid messy test progress output
             self._config.option.verbose = 1
 
+        with self._wrap_live_logs_context("runtestloop"):
+            yield
+
+    @contextmanager
+    def _wrap_live_logs_context(self, when: str) -> Generator[None, None, None]:
         with self.live_logs_context():
             if self.log_cli_handler:
-                self.log_cli_handler.set_when("runtestloop")
+                self.log_cli_handler.set_when(when)
             if self.log_file_handler is not None:
                 with catching_logs(self.log_file_handler, level=self.log_file_level):
-                    yield  # run all the tests
+                    yield
             else:
-                yield  # run all the tests
+                yield
 
 
 class _LiveLoggingStreamHandler(logging.StreamHandler):
