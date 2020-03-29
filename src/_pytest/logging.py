@@ -607,10 +607,19 @@ class LoggingPlugin:
             "--log-cli-level"
         ) is not None or self._config.getini("log_cli")
 
-    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-    def pytest_collection(self) -> Generator[None, None, None]:
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_make_collect_report(self):
         with self._wrap_live_logs_context("collection"):
-            yield
+            with catching_logs(
+                LogCaptureHandler(), formatter=self.formatter, level=self.log_level
+            ) as log_handler:
+                outcome = yield
+
+        if self.print_logs:
+            rep = outcome.get_result()
+            log = log_handler.stream.getvalue().strip()
+            if log:
+                rep.sections.append(("Captured log", log))
 
     @contextmanager
     def _runtest_for(self, item, when):
