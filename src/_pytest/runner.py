@@ -343,7 +343,7 @@ class SetupState:
         self._callfinalizers(colitem)
         colitem.teardown()
         for colitem in self._finalizers:
-            assert colitem in self.stack
+            assert colitem in self.stack, (colitem, self.stack)
 
     def teardown_all(self):
         while self.stack:
