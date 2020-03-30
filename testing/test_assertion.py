@@ -170,7 +170,6 @@ class TestImportHookInstallation:
         monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
         # Make sure the hook is installed early enough so that plugins
         # installed via setuptools are rewritten.
-        testdir.tmpdir.join("hampkg").ensure(dir=1)
         contents = {
             "hampkg/__init__.py": """\
                 import pytest
@@ -221,20 +220,29 @@ class TestImportHookInstallation:
                 check_first([10, 30], 30)
 
             def test2(check_first2):
-                check_first([10, 30], 30)
+                check_first2([10, 30], 30)
             """,
         }
         testdir.makepyfile(**contents)
         result = testdir.run(
-            sys.executable, "mainwrapper.py", "-s", "--assert=%s" % mode
+            sys.executable, "mainwrapper.py", "--tb=short", "--assert={}".format(mode),
         )
         if mode == "plain":
-            expected = "E       AssertionError"
-        elif mode == "rewrite":
-            expected = "*assert 10 == 30*"
+            expected = "E   AssertionError"
         else:
-            assert 0
-        result.stdout.fnmatch_lines([expected])
+            expected = "E   assert 10 == 30"
+
+        result.stdout.fnmatch_lines(
+            [
+                "spamplugin.py:7: in check",
+                "    assert values.pop(0) == value",
+                expected,
+                "hampkg/__init__.py:6: in check",
+                "    assert values.pop(0) == value",
+                expected,
+                "*= 2 failed in *",
+            ]
+        )
 
     def test_rewrite_ast(self, testdir):
         testdir.tmpdir.join("pkg").ensure(dir=1)

@@ -8,10 +8,12 @@ from typing import Tuple
 from typing import TypeVar
 
 from _pytest import outcomes
+from _pytest._code.code import ExceptionInfo
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import hookimpl
 from _pytest.config.exceptions import UsageError
+from _pytest.main import Interrupted
 
 if TYPE_CHECKING:
     from typing import Type
@@ -267,7 +269,7 @@ class pytestPDB(PdbBase):
 
     def pytest_unconfigure(self, config):
         pdb, set_trace = self._saved_pdb_set_trace
-        pdb.set_trace = set_trace  # type: ignore
+        pdb.set_trace = set_trace
 
     def set_trace(self, *args, **kwargs):
         """Invoke debugging via ``Pdb.set_trace``, dropping any IO capturing."""
@@ -283,7 +285,7 @@ def set_trace(*, header=None):
 
     pdb_ = pdb.Pdb()
     if header is not None:
-        pdb_.message(header)  # type: ignore
+        pdb_.message(header)
     pdb_.set_trace(sys._getframe().f_back)
 
 
@@ -324,6 +326,14 @@ class PdbInvoke(PdbBase):
         return report
 
     def pytest_internalerror(self, excrepr, excinfo):
+        tb = _postmortem_traceback(excinfo)
+        self.post_mortem(tb)
+
+    def pytest_keyboard_interrupt(self, excinfo: ExceptionInfo) -> None:
+        if isinstance(excinfo.value, outcomes.exit.Exception):
+            return
+        if isinstance(excinfo.value, Interrupted):
+            return
         tb = _postmortem_traceback(excinfo)
         self.post_mortem(tb)
 

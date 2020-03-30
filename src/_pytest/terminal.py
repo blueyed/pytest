@@ -14,10 +14,10 @@ from functools import partial
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Mapping
 from typing import Optional
-from typing import Set
 from typing import Tuple
 from typing import Union
 
@@ -29,10 +29,12 @@ from wcwidth import wcswidth
 
 import pytest
 from _pytest import nodes
+from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprFileLocation
 from _pytest._io import TerminalWriter
 from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import shell_quote
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import ExitCode
 from _pytest.main import Session
@@ -40,6 +42,9 @@ from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import Path
 from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
+
+if TYPE_CHECKING:
+    from _pytest._code.code import _TracebackStyle
 
 REPORT_COLLECTING_RESOLUTION = 0.5
 
@@ -378,7 +383,7 @@ class TerminalReporter:
 
         self.config = config
         self._numcollected = 0
-        self._session = None  # type: Optional[Session]
+        self._session = None  # type: Session  # type: ignore[assignment]
         self._showfspath = None
 
         self.stats = {}  # type: Dict[str, List[Any]]
@@ -392,7 +397,7 @@ class TerminalReporter:
         self.reportchars = getreportopt(config)
         self.hasmarkup = self._tw.hasmarkup
         self.isatty = file.isatty()
-        self._progress_nodeids_reported = set()  # type: Set[str]
+        self._progress_items_reported = 0
         self._show_progress_info = self._determine_show_progress_info()
         self._collect_report_last_write = None  # type: Optional[float]
 
@@ -413,6 +418,9 @@ class TerminalReporter:
     def writer(self, value: TerminalWriter) -> None:
         self._warn_deprecated_writer()
         self._tw = value
+
+        self._collect_ignored = {}  # type: Dict[str, List[py.path.local]]
+        """Information about ignored paths (for reporting)."""
 
     def _determine_show_progress_info(self):
         """Return True if we should display progress information based on the current config"""
@@ -573,6 +581,8 @@ class TerminalReporter:
         else:
             markup = None
         self._add_stats(category, [rep])
+        if rep.when == "call" or (rep.when == "setup" and rep.failed):
+            self._progress_items_reported += 1
         if not letter and not word:
             # probably passed setup/teardown
             return
@@ -595,7 +605,6 @@ class TerminalReporter:
             else:
                 self._tw.write(letter, **markup)
         else:
-            self._progress_nodeids_reported.add(rep.nodeid)
             line = self._locationline(rep.nodeid, *rep.location)
             if not running_xdist:
                 self.write_ensure_prefix(line, word, **markup)
@@ -603,7 +612,7 @@ class TerminalReporter:
                     self._write_progress_information_filling_space()
             else:
                 self.ensure_newline()
-                self._tw.write("[%s]" % rep.node.gateway.id)  # type: ignore
+                self._tw.write("[%s]" % rep.node.gateway.id)
                 if self._show_progress_info:
                     self._tw.write(
                         self._get_progress_information_message() + " ", cyan=True
@@ -615,45 +624,51 @@ class TerminalReporter:
                 self.currentfspath = -2
 
     @property
-    def _is_last_item(self):
-        return len(self._progress_nodeids_reported) == self._session.testscollected
+    def _is_last_item(self) -> bool:
+        return self._progress_items_reported == self._session.testscollected
 
-    def pytest_runtest_logfinish(self, nodeid):
-        assert self._session
-        if self.verbosity <= 0 and self._show_progress_info:
-            if self._show_progress_info == "count":
-                num_tests = self._session.testscollected
-                progress_length = len(" [{}/{}]".format(str(num_tests), str(num_tests)))
-            else:
-                progress_length = len(" [100%]")
+    def pytest_runtest_logfinish(self) -> None:
+        """Write progress if past edge."""
+        if self.verbosity > 0 or not self._show_progress_info:
+            return
 
-            self._progress_nodeids_reported.add(nodeid)
+        if self._show_progress_info == "count":
+            num_tests = self._session.testscollected
+            progress_length = len(" [{0}/{0}]".format(num_tests))
+        else:
+            progress_length = len(" [100%]")
 
-            if self._is_last_item:
-                self._write_progress_information_filling_space()
-            else:
-                main_color, _ = self._get_main_color()
-                w = self._width_of_current_line
-                screen_width = self._tw.fullwidth
-                past_edge = w + progress_length + 1 >= screen_width
-                if past_edge:
-                    msg = self._get_progress_information_message()
-                    self._tw.write(msg + "\n", **{main_color: True})
+        w = self._width_of_current_line
+        past_edge = w + progress_length + 1 >= self._tw.fullwidth
+        if past_edge:
+            msg = self._get_progress_information_message()
+            main_color, _ = self._get_main_color()
+            self._tw.write(msg + "\n", **{main_color: True})
+
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_runtestloop(self) -> Generator[None, None, None]:
+        """Write final progress indicator."""
+        outcome = yield  # type: pluggy.callers._Result
+        if (
+            getattr(self, "_tests_ran", False)
+            and self.verbosity <= 0
+            and self._show_progress_info
+            and not outcome.excinfo
+        ):
+            self._write_progress_information_filling_space()
 
     def _get_progress_information_message(self) -> str:
-        assert self._session
         collected = self._session.testscollected
         if self._show_progress_info == "count":
             if collected:
-                progress = self._progress_nodeids_reported
                 counter_format = "{{:{}d}}".format(len(str(collected)))
                 format_string = " [{}/{{}}]".format(counter_format)
-                return format_string.format(len(progress), collected)
+                return format_string.format(self._progress_items_reported, collected)
             return " [ {} / {} ]".format(collected, collected)
         else:
             if collected:
                 return " [{:3d}%]".format(
-                    len(self._progress_nodeids_reported) * 100 // collected
+                    self._progress_items_reported * 100 // collected
                 )
             return " [100%]"
 
@@ -691,7 +706,7 @@ class TerminalReporter:
         if self.isatty:
             self.report_collect()
 
-    def report_collect(self, final=False):
+    def report_collect(self, final: bool = False) -> None:
         if self.config.option.verbose < 0:
             return
 
@@ -724,12 +739,53 @@ class TerminalReporter:
             line += " / %d skipped" % skipped
         if self._numcollected > selected > 0:
             line += " / %d selected" % selected
+        if self._collect_ignored:
+            ignored_count = sum(len(x) for x in self._collect_ignored.values())
+            line += " ({} {} ignored)".format(
+                ignored_count, "path" if ignored_count == 1 else "paths"
+            )
         if self.isatty:
             self.rewrite(line, bold=True, erase=True)
             if final:
                 self.write("\n")
         else:
             self.write_line(line)
+
+    def _verbose_collect_ignored(self) -> Optional[List[str]]:
+        """Get information about ignored files during collection."""
+        verbosity = self.config.option.verbose
+        if not self._collect_ignored or verbosity < 1:
+            return []
+
+        total = 0
+        desc = []
+        ret = []
+        for via, paths in self._collect_ignored.items():
+            count = len(paths)
+            total += count
+            if len(self._collect_ignored) > 1:
+                desc.append("{} ({})".format(via, count))
+            else:
+                desc.append("via {}".format(via))
+
+        ret = [
+            "ignored {} {} ({})".format(
+                total, "path" if total == 1 else "paths", ", ".join(desc)
+            )
+        ]
+        if verbosity > 1:
+            ret[-1] += ":"
+            indent = "  " if len(self._collect_ignored) > 1 else ""
+            for via, paths in self._collect_ignored.items():
+                if indent:
+                    ret.append("  via {}:".format(via))
+                for path in paths:
+                    ret.append(
+                        "{} - {}".format(
+                            indent, self.config.invocation_dir.bestrelpath(path)
+                        )
+                    )
+        return ret
 
     @pytest.hookimpl(trylast=True)
     def pytest_sessionstart(self, session: Session) -> None:
@@ -802,11 +858,27 @@ class TerminalReporter:
 
         return result
 
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_ignore_collect(
+        self, path: py.path.local
+    ) -> Generator[
+        None, pluggy.callers._Result, None,
+    ]:
+        """Register ignored files during collection for reporting."""
+        outcome = yield
+        ret = (
+            outcome.get_result()
+        )  # type: Optional[Union[bool, Tuple[bool, Optional[str]]]]
+        if isinstance(ret, tuple):
+            ignored, desc = ret[:2]
+            if ignored and desc:
+                self._collect_ignored.setdefault(desc, []).append(path)
+
     def pytest_collection_finish(self, session):
         self.report_collect(True)
 
-        if self.config.getoption("collectonly"):
-            self._printcollecteditems(session.items)
+        for line in self._verbose_collect_ignored():
+            self._tw.line(line)
 
         lines = self.config.hook.pytest_report_collectionfinish(
             config=self.config, startdir=self.startdir, items=session.items
@@ -814,10 +886,15 @@ class TerminalReporter:
         self._write_report_lines_from_hooks(lines)
 
         if self.config.getoption("collectonly"):
+            if session.items:
+                if self.config.option.verbose > -1:
+                    self._tw.line("")
+                self._printcollecteditems(session.items)
+
             failed = self.stats.get("failed")
             if failed:
                 self.section("collection failures", "!")
-                for rep in self.stats.get("failed"):
+                for rep in failed:
                     rep.toterminal(self._tw)
 
     def _printcollecteditems(self, items):
@@ -880,7 +957,7 @@ class TerminalReporter:
             if session.shouldfail:
                 self.write_line("!! {} !!".format(session.shouldfail), red=True)
         else:
-            self.summary_stats(session)
+            self.summary_stats()
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_terminal_summary(self):
@@ -893,8 +970,10 @@ class TerminalReporter:
         # Display any extra warnings from teardown here (if any).
         self.summary_warnings()
 
-    def pytest_keyboard_interrupt(self, excinfo):
-        self._keyboardinterrupt_memo = excinfo.getrepr(funcargs=True)
+    def pytest_keyboard_interrupt(self, excinfo: ExceptionInfo) -> None:
+        tbstyle = self.config.getoption("tbstyle", "auto")
+        style = "long" if tbstyle == "auto" else tbstyle  # type: _TracebackStyle
+        self._keyboardinterrupt_memo = excinfo.getrepr(funcargs=True, style=style)
 
     def pytest_unconfigure(self):
         if hasattr(self, "_keyboardinterrupt_memo"):
@@ -1022,7 +1101,7 @@ class TerminalReporter:
                     message = message.rstrip()
                 self._tw.line(message)
                 self._tw.line()
-            self._tw.line("-- Docs: https://docs.pytest.org/en/latest/warnings.html")
+        self._tw.line("-- Docs: https://docs.pytest.org/en/latest/warnings.html")
 
     def summary_passes(self):
         if self.config.option.tbstyle != "no":
@@ -1107,9 +1186,11 @@ class TerminalReporter:
                 content = content[:-1]
             self._tw.line(content)
 
-    def summary_stats(self, session: Session) -> None:
+    def summary_stats(self) -> None:
         session_duration = time.time() - self._sessionstarttime
         (parts, main_color) = self.build_summary_stats_line()
+        if self._session.exitstatus == ExitCode.INTERNAL_ERROR:
+            main_color = "red"
         line_parts = []
 
         display_sep = self.verbosity >= 0
@@ -1136,8 +1217,8 @@ class TerminalReporter:
             fullwidth += len(markup_for_end_sep)
             msg += markup_for_end_sep
 
-        if session.shouldfail:
-            msg += " ({})".format(session.shouldfail)
+        if self._session.shouldfail:
+            msg += " ({})".format(self._session.shouldfail)
 
         if display_sep:
             self.write_sep("=", msg, fullwidth=fullwidth, **main_markup)

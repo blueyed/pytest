@@ -18,9 +18,10 @@ def test_version(testdir, pytestconfig):
 def test_help(testdir: Testdir) -> None:
     result = testdir.runpytest("--help", "-p", "no:[defaults]")
     assert result.ret == 0
+    trans_escape = str.maketrans({"[": "[[]", "]": "[]]"})
     result.stdout.fnmatch_lines(
         """
-        usage: * [[]options[]] [[]file_or_dir[]] [[]file_or_dir[]] [[]...[]]
+        usage: * [options] [file_or_dir] [file_or_dir] [...]
 
         positional arguments:
           file_or_dir
@@ -31,7 +32,8 @@ def test_help(testdir: Testdir) -> None:
           --durations=N *
 
         collection:
-          --[[]no-[]]collect-only, --[[]no-[]]co
+          --[no-]collect-only, --[no-]co
+          --[no-]conftest       Don't load any conftest.py files.
 
         test session debugging and configuration:
           -V, --version         display pytest version and information about plugins.
@@ -41,9 +43,43 @@ def test_help(testdir: Testdir) -> None:
         *minversion*
         *to see*markers*pytest --markers*
         *to see*fixtures*pytest --fixtures*
-    """
+    """.translate(
+            trans_escape
+        )
     )
     result.stdout.no_fnmatch_line("logging:")
+
+
+@pytest.mark.parametrize("method", ("runpytest_inprocess", "runpytest_subprocess"))
+def test_help_unconfigures_always(method: str, testdir: Testdir) -> None:
+    testdir.makeconftest(
+        """
+        def pytest_addoption(parser):
+            parser._usage = "%(crash_help)s"
+        """
+    )
+    testdir.makepyfile(
+        myplugin="""
+        def pytest_configure():
+            print("plugin pytest_configure")
+
+        def pytest_unconfigure():
+            print("plugin pytest_unconfigure")
+        """
+    )
+    testdir.syspathinsert()
+    result = getattr(testdir, method)("--help", "-p", "no:[defaults]", "-p", "myplugin")
+    assert result.stdout.lines == [
+        "plugin pytest_configure",
+        "plugin pytest_unconfigure",
+    ]
+    assert "KeyError: 'crash_help'" in result.stderr.lines
+
+    # XXX: should have the same exitcode?!
+    if method == "runpytest_inprocess":
+        assert result.ret == ExitCode.INTERNAL_ERROR
+    else:
+        assert result.ret == ExitCode.TESTS_FAILED
 
 
 def test_hookvalidation_unknown(testdir):

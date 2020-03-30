@@ -143,6 +143,7 @@ def pytest_addoption(parser):
         help="only load conftest.py's relative to specified dir.",
     )
     group.addoption(
+        "--no-conftest",
         "--noconftest",
         action="store_true",
         dest="noconftest",
@@ -301,38 +302,6 @@ def _in_venv(path):
     return any([fname.basename in activates for fname in bindir.listdir()])
 
 
-def pytest_ignore_collect(
-    path: py.path.local, config: Config
-) -> "Optional[Literal[True]]":
-    if path.basename[:1] == ".":
-        return True
-
-    ignore_paths = config._getconftest_pathlist("collect_ignore", path=path.dirpath())
-    ignore_paths = ignore_paths or []
-    excludeopt = config.getoption("ignore")
-    if excludeopt:
-        ignore_paths.extend([py.path.local(x) for x in excludeopt])
-
-    if py.path.local(path) in ignore_paths:
-        return True
-
-    ignore_globs = config._getconftest_pathlist(
-        "collect_ignore_glob", path=path.dirpath()
-    )
-    ignore_globs = ignore_globs or []
-    excludeglobopt = config.getoption("ignore_glob")
-    if excludeglobopt:
-        ignore_globs.extend([py.path.local(x) for x in excludeglobopt])
-
-    if any(fnmatch.fnmatch(str(path), str(glob)) for glob in ignore_globs):
-        return True
-
-    allow_in_venv = config.getoption("collect_in_virtualenv")
-    if not allow_in_venv and _in_venv(path):
-        return True
-    return None
-
-
 def pytest_collection_modifyitems(items, config):
     deselect_prefixes = tuple(config.getoption("deselect") or [])
     if not deselect_prefixes:
@@ -441,6 +410,41 @@ class Session(nodes.FSCollector):
             raise self.Failed(self.shouldfail)
         if self.shouldstop:
             raise self.Interrupted(self.shouldstop)
+
+    def pytest_ignore_collect(
+        self, path: py.path.local, config: Config
+    ) -> "Optional[Tuple[Literal[True], Optional[str]]]":
+        if path.basename[:1] == ".":
+            return (True, None)
+
+        collect_ignore = config._getconftest_pathlist(
+            "collect_ignore", path=path.dirpath()
+        )
+        if collect_ignore and py.path.local(path) in collect_ignore:
+            return (True, "collect_ignore")
+        excludeopt = config.getoption("ignore")
+        if excludeopt:
+            ignore_paths = [py.path.local(x) for x in excludeopt]
+            if py.path.local(path) in ignore_paths:
+                return (True, "--ignore")
+
+        collect_ignore_glob = config._getconftest_pathlist(
+            "collect_ignore_glob", path=path.dirpath()
+        )
+        if collect_ignore_glob and any(
+            fnmatch.fnmatch(str(path), str(glob)) for glob in collect_ignore_glob
+        ):
+            return (True, "collect_ignore_glob")
+        excludeglobopt = config.getoption("ignore_glob")
+        if excludeglobopt:
+            ignore_globs = [py.path.local(x) for x in excludeglobopt]
+            if any(fnmatch.fnmatch(str(path), str(glob)) for glob in ignore_globs):
+                return (True, "--ignore_glob")
+
+        allow_in_venv = config.getoption("collect_in_virtualenv")
+        if not allow_in_venv and _in_venv(path):
+            return (True, "--collect-in-virtualenv")
+        return None
 
     @hookimpl(tryfirst=True)
     def pytest_runtest_logreport(self, report):

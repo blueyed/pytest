@@ -9,8 +9,7 @@ import py
 
 import pytest
 from _pytest.config import ExitCode
-
-pytest_plugins = ("pytester",)
+from _pytest.pytester import Testdir
 
 
 class TestNewAPI:
@@ -64,30 +63,30 @@ class TestNewAPI:
         finally:
             testdir.tmpdir.ensure_dir(".pytest_cache").chmod(mode)
 
-    @pytest.mark.skipif(sys.platform.startswith("win"), reason="no chmod on windows")
     @pytest.mark.filterwarnings("default")
     def test_cache_failure_warns(self, testdir, monkeypatch):
         monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
         cache_dir = str(testdir.tmpdir.ensure_dir(".pytest_cache"))
-        mode = os.stat(cache_dir)[stat.ST_MODE]
-        testdir.tmpdir.ensure_dir(".pytest_cache").chmod(0)
-        try:
-            testdir.makepyfile("def test_error(): raise Exception")
-            result = testdir.runpytest()
-            assert result.ret == 1
-            result.stdout.fnmatch_lines(
-                [
-                    # Validate location/stacklevel of warning from cacheprovider.
-                    "*= warnings summary [[]config[]] =*",
-                    "*/cacheprovider.py:*",
-                    "  */cacheprovider.py:*: PytestCacheWarning: could not create cache path "
-                    "{}/v/cache/nodeids (*), setting readonly.".format(cache_dir),
-                    '    config.cache.set("cache/nodeids", self.cached_nodeids)',
-                    "*1 failed, 1 warning in*",
-                ]
-            )
-        finally:
-            testdir.tmpdir.ensure_dir(".pytest_cache").chmod(mode)
+
+        def raising_mkdir(*args, **kwargs):
+            raise OSError("my OSError")
+
+        monkeypatch.setattr("pathlib.Path.mkdir", raising_mkdir)
+
+        testdir.makepyfile("def test_error(): raise Exception")
+        result = testdir.runpytest("-s")
+        assert result.ret == 1
+        result.stdout.fnmatch_lines(
+            [
+                # Validate location/stacklevel of warning from cacheprovider.
+                "*= warnings summary [[]config[]] =*",
+                "*/cacheprovider.py:*",
+                "  */cacheprovider.py:*: PytestCacheWarning: could not create cache path "
+                "{}/v/cache/nodeids (my OSError), setting readonly.".format(cache_dir),
+                '    config.cache.set("cache/nodeids", self.cached_nodeids)',
+                "*1 failed, 1 warning in*",
+            ]
+        )
 
     def test_config_cache(self, testdir):
         testdir.makeconftest(
@@ -275,9 +274,9 @@ class TestLastFailed:
         result = testdir.runpytest(str(p), "--lf")
         result.stdout.fnmatch_lines(
             [
-                "collected 2 items",
+                "collected 3 items / 1 deselected / 2 selected",
                 "run-last-failure: rerun previous 2 failures",
-                "*= 2 passed in *",
+                "*= 2 passed, 1 deselected in *",
             ]
         )
         result = testdir.runpytest(str(p), "--lf")
@@ -372,7 +371,13 @@ class TestLastFailed:
         result = testdir.runpytest("--lf", p2)
         result.stdout.fnmatch_lines(["*1 passed*"])
         result = testdir.runpytest("--lf", p)
-        result.stdout.fnmatch_lines(["collected 1 item", "*= 1 failed in *"])
+        result.stdout.fnmatch_lines(
+            [
+                "collected 2 items / 1 deselected / 1 selected",
+                "run-last-failure: rerun previous 1 failure",
+                "*= 1 failed, 1 deselected in *",
+            ]
+        )
 
     def test_lastfailed_usecase_splice(self, testdir, monkeypatch):
         monkeypatch.setattr("sys.dont_write_bytecode", True)
@@ -722,9 +727,9 @@ class TestLastFailed:
         result = testdir.runpytest(test_foo, "--last-failed")
         result.stdout.fnmatch_lines(
             [
-                "collected 1 item",
+                "collected 2 items / 1 deselected / 1 selected",
                 "run-last-failure: rerun previous 1 failure",
-                "*= 1 passed in *",
+                "*= 1 passed, 1 deselected in *",
             ]
         )
         assert self.get_cached_last_failed(testdir) == []
@@ -875,13 +880,125 @@ class TestLastFailed:
         result = testdir.runpytest("--lf", "-rf")
         result.stdout.fnmatch_lines(
             [
-                "collected 2 items",
-                "run-last-failure: 1 known failures not in selected tests",
+                "collected 1 item",
+                "run-last-failure: 1 known failures not in selected tests (skipped 1 file)",
                 "pkg1/test_1.py F *",
-                "pkg1/test_2.py . *",
                 "FAILED pkg1/test_1.py:1::test_renamed - assert 0",
-                "* 1 failed, 1 passed in *",
+                "* 1 failed in *",
             ]
+        )
+
+    def test_lastfailed_args_with_deselected(self, testdir: Testdir) -> None:
+        """Test regression with --lf running into NoMatch error.
+
+        This was caused by it not collecting (non-failed) nodes given as
+        arguments.
+        """
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    def test_pass(): pass
+                    def test_fail(): assert 0
+                """,
+            }
+        )
+        result = testdir.runpytest()
+        result.stdout.fnmatch_lines(["collected 2 items", "* 1 failed, 1 passed in *"])
+        assert result.ret == 1
+
+        result = testdir.runpytest("pkg1/test_1.py::test_pass", "--lf", "--co")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                "*collected 1 item",
+                "run-last-failure: 1 known failures not in selected tests",
+                "",
+                "" "<Module pkg1/test_1.py>",
+                "  <Function test_pass>",
+            ],
+            consecutive=True,
+        )
+
+        result = testdir.runpytest(
+            "pkg1/test_1.py::test_pass", "pkg1/test_1.py::test_fail", "--lf", "--co"
+        )
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                "collected 2 items / 1 deselected / 1 selected",
+                "run-last-failure: rerun previous 1 failure",
+                "",
+                "<Module pkg1/test_1.py>",
+                "  <Function test_fail>",
+                "*= 1 deselected in *",
+            ],
+        )
+
+    def test_lastfailed_with_class_items(self, testdir: Testdir) -> None:
+        """Test regression with --lf deselecting whole classes."""
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    class TestFoo:
+                        def test_pass(self): pass
+                        def test_fail(self): assert 0
+
+                    def test_other(): assert 0
+                """,
+            }
+        )
+        result = testdir.runpytest()
+        result.stdout.fnmatch_lines(["collected 3 items", "* 2 failed, 1 passed in *"])
+        assert result.ret == 1
+
+        result = testdir.runpytest("--lf", "--co")
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                "collected 3 items / 1 deselected / 2 selected",
+                "run-last-failure: rerun previous 2 failures",
+                "",
+                "<Module pkg1/test_1.py>",
+                "  <Class TestFoo>",
+                "      <Function test_fail>",
+                "  <Function test_other>",
+                "",
+                "*= 1 deselected in *",
+            ],
+            consecutive=True,
+        )
+
+    def test_lastfailed_with_all_filtered(self, testdir: Testdir) -> None:
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    def test_fail(): assert 0
+                    def test_pass(): pass
+                """,
+            }
+        )
+        result = testdir.runpytest()
+        result.stdout.fnmatch_lines(["collected 2 items", "* 1 failed, 1 passed in *"])
+        assert result.ret == 1
+
+        # Remove known failure.
+        testdir.makepyfile(
+            **{
+                "pkg1/test_1.py": """
+                    def test_pass(): pass
+                """,
+            }
+        )
+        result = testdir.runpytest("--lf", "--co")
+        assert result.ret == ExitCode.NO_TESTS_COLLECTED
+        result.stdout.fnmatch_lines(
+            [
+                "collected 0 items",
+                "run-last-failure: 1 known failures not in selected tests",
+                "",
+                "*= no tests ran in*",
+            ],
+            consecutive=True,
         )
 
 

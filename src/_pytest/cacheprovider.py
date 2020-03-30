@@ -191,7 +191,6 @@ class LFPluginCollWrapper:
             res.result = sorted(
                 res.result, key=lambda x: 0 if Path(str(x.fspath)) in lf_paths else 1,
             )
-            out.force_result(res)
             return
 
         elif isinstance(collector, Module):
@@ -199,19 +198,31 @@ class LFPluginCollWrapper:
                 out = yield
                 res = out.get_result()
 
+                session = collector.session
+                lastfailed = self.lfplugin.lastfailed
+                known_nodeids = self.lfplugin.known_nodeids
                 filtered_result = [
-                    x for x in res.result if x.nodeid in self.lfplugin.lastfailed
+                    x
+                    for x in res.result
+                    if x.nodeid in lastfailed
+                    # Include any passed arguments.
+                    # This includes the whole module then (and deselects
+                    # later), because it is not trivial / error-prone to match
+                    # initial args to nodeids again.
+                    or session.isinitpath(x.fspath)
+                    # Keep all sub-collectors.
+                    or isinstance(x, nodes.Collector)
+                    # Keep any new (unknown) node ids.
+                    or x.nodeid not in known_nodeids
                 ]
-                if filtered_result:
-                    res.result = filtered_result
-                    out.force_result(res)
+                res.result = filtered_result
 
-                    if not self._collected_at_least_one_failure:
-                        self.lfplugin.config.pluginmanager.register(
-                            LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
-                        )
-                        self._collected_at_least_one_failure = True
-                return res
+                if not self._collected_at_least_one_failure:
+                    self.lfplugin.config.pluginmanager.register(
+                        LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
+                    )
+                    self._collected_at_least_one_failure = True
+                return
         yield
 
 
@@ -248,6 +259,7 @@ class LFPlugin:
 
         if config.getoption("lf"):
             self._last_failed_paths = self.get_last_failed_paths()
+            self.known_nodeids = config.cache.get("cache/nodeids", [])
             config.pluginmanager.register(
                 LFPluginCollWrapper(self), "lfplugin-collwrapper"
             )

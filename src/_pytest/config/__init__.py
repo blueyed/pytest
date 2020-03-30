@@ -1106,6 +1106,8 @@ class Config:
             return [t for t in map(lambda x: x.strip(), value.split("\n")) if t]
         elif type == "bool":
             return bool(_strtobool(value.strip()))
+        elif type == "int":
+            return int(value.strip())
         else:
             assert type is None
             return value

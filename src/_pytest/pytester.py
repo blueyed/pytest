@@ -8,6 +8,7 @@ import re
 import shlex
 import subprocess
 import sys
+import textwrap
 import time
 import traceback
 from fnmatch import fnmatch
@@ -586,19 +587,10 @@ def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
 class Testdir(Generic[AnyStr]):
     """Temporary test directory with tools to test/run pytest itself.
 
-    This is based on the ``tmpdir`` fixture but provides a number of methods
+    This is based on the :fixture:`tmpdir fixture <fixture>`, but provides
+    a number of methods
     which aid with testing pytest itself.  Unless :py:meth:`chdir` is used all
     methods will use :py:attr:`tmpdir` as their current working directory.
-
-    Attributes:
-
-    :ivar tmpdir: The :py:class:`py.path.local` instance of the temporary directory.
-
-    :ivar plugins: A list of plugins to use with :py:meth:`parseconfig` and
-       :py:meth:`runpytest`.  Initially this is an empty list but plugins can
-       be added to the list.  The type of items to add to the list depends on
-       the method using them so refer to them for details.
-
     """
 
     __test__ = False
@@ -619,9 +611,18 @@ class Testdir(Generic[AnyStr]):
         else:
             name = request.node.name
         self._name = name
-        self.tmpdir = tmpdir_factory.mktemp(name, numbered=True)
+        self.tmpdir = tmpdir_factory.mktemp(name, numbered=True)  # type: py.path.local
+        """The base temporary directory.
+
+        :type: py.path.local"""
         self.test_tmproot = tmpdir_factory.mktemp("tmp-" + name, numbered=True)
         self.plugins = []  # type: List[Union[str, _PluggyPlugin]]
+        """A list of plugins to use with :func:`parseconfig` and
+        :func:`runpytest`.
+
+        Initially this is an empty list but plugins can be added to the list.
+        The type of items to add to the list depends on the method using them
+        so refer to them for details."""
         self._cwd_snapshot = CwdSnapshot()
         self._sys_path_snapshot = SysPathsSnapshot()
         self._sys_modules_snapshot = self.__take_sys_modules_snapshot()
@@ -721,6 +722,7 @@ class Testdir(Generic[AnyStr]):
 
             testdir.makefile(".ini", pytest="[pytest]\naddopts=-rs\n")
 
+        See also :func:`makefiles`.
         """
         return self._makefile(ext, args, kwargs)
 
@@ -745,11 +747,93 @@ class Testdir(Generic[AnyStr]):
         """Shortcut for .makefile() with a .txt extension."""
         return self._makefile(".txt", args, kwargs)
 
+    def makefiles(
+        self,
+        files: Mapping[str, str],
+        *,
+        base_path: Optional[Union[str, Path]] = None,
+        dedent: bool = True,
+        strip_outer_newlines: bool = True,
+        clobber: bool = False
+    ) -> List[Path]:
+        """Create the given set of files.
+
+        This is a more straight-forward API than the other helpers (e.g.
+        :func:`makepyfile`).
+
+        :param Mapping[str,str] files:
+            Mapping of filenames to file contents.
+
+            Absolute paths are handled, but have to be inside of :attr:`tmpdir`.
+        :param base_path:
+            Optional base path for relative paths
+            (defaults to current working directory).
+        :param bool dedent:
+            Dedent the contents (via :py:func:`python:textwrap.dedent`).
+        :param bool strip_outer_newlines:
+            Strip leading and trailing newlines from contents.
+        :param bool clobber:
+            Overwrite existing files or (dangling) symlinks.
+
+            (Dangling) symlinks are replaced with regular files.
+        :returns: List[_pytest.pathlib.Path]
+        """
+        tmpdir_path = Path(str(self.tmpdir)).resolve()
+
+        # Validate that files are inside of tmpdir, might raise ValueError.
+        if base_path:
+            base_path = Path(base_path).absolute()
+        else:
+            base_path = Path.cwd()
+        validated_files = []
+        for k, v in files.items():
+            abspath = Path(os.path.normpath(base_path / k))
+            assert abspath.is_absolute(), abspath
+            if clobber:
+                if not (abspath.is_file() or abspath.is_symlink()):
+                    raise ValueError(
+                        "path is not a file/symlink, not clobbering: {!r}".format(
+                            str(abspath)
+                        )
+                    )
+            else:
+                if abspath.exists():
+                    raise ValueError("path exists already: {!r}".format(str(abspath)))
+                if abspath.is_symlink():
+                    raise ValueError(
+                        "path is a dangling symlink: {!r}".format(str(abspath))
+                    )
+            try:
+                abspath.relative_to(tmpdir_path)
+            except ValueError as exc:
+                raise ValueError(str(exc))
+            validated_files.append((abspath, v))
+
+        paths = []
+        for fpath, content in validated_files:
+            path = tmpdir_path.joinpath(fpath)
+            if not path.parent.is_dir():
+                path.parent.mkdir(parents=True)
+            if strip_outer_newlines:
+                content = content.strip("\n")
+            if dedent:
+                content = textwrap.dedent(content)
+            if clobber:
+                if path.is_symlink():
+                    path.unlink()
+                else:
+                    assert path.is_file(), path
+            else:
+                assert not path.exists(), path
+            with open(str(path), "w") as fp:
+                fp.write(content)
+            paths.append(path)
+        return paths
+
     def syspathinsert(self, path=None):
         """Prepend a directory to sys.path, defaults to :py:attr:`tmpdir`.
 
-        This is undone automatically when this object dies at the end of each
-        test.
+        This is undone automatically at the end of each test.
         """
         if path is None:
             path = self.tmpdir
@@ -1002,7 +1086,7 @@ class Testdir(Generic[AnyStr]):
             else:
                 stdin = CLOSE_STDIN
 
-        if isinstance(stdin, str):
+        if isinstance(stdin, (bytes, str)):
 
             class EchoingInput(StringIO):
                 def readline(self, *args, **kwargs):
@@ -1010,6 +1094,9 @@ class Testdir(Generic[AnyStr]):
                     if ret:
                         sys.stdout.write(ret)
                     return ret
+
+            if isinstance(stdin, bytes):
+                stdin = stdin.decode("utf8")
 
             stdin = EchoingInput(stdin)
         elif stdin is None:
@@ -1204,7 +1291,7 @@ class Testdir(Generic[AnyStr]):
         cmdargs,
         stdout: Optional[Union[int, IO]] = subprocess.PIPE,
         stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
         *,
         encoding: None = ...,
         **kw
@@ -1217,7 +1304,7 @@ class Testdir(Generic[AnyStr]):
         cmdargs,
         stdout: Optional[Union[int, IO]] = subprocess.PIPE,
         stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
         *,
         encoding: str,
         **kw
@@ -1229,7 +1316,7 @@ class Testdir(Generic[AnyStr]):
         cmdargs,
         stdout: Optional[Union[int, IO]] = subprocess.PIPE,
         stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN,
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
         *,
         encoding: Optional[str] = None,
         **kw
@@ -1251,7 +1338,7 @@ class Testdir(Generic[AnyStr]):
 
         if stdin is CLOSE_STDIN:
             kw["stdin"] = subprocess.PIPE
-        elif isinstance(stdin, bytes):
+        elif isinstance(stdin, (bytes, str)):
             kw["stdin"] = subprocess.PIPE
         else:
             kw["stdin"] = stdin
@@ -1265,6 +1352,9 @@ class Testdir(Generic[AnyStr]):
         elif isinstance(stdin, bytes):
             assert popen.stdin
             popen.stdin.write(stdin)
+        elif isinstance(stdin, str):
+            assert popen.stdin
+            popen.stdin.write(stdin.encode("utf8"))
 
         return popen
 
@@ -1272,7 +1362,7 @@ class Testdir(Generic[AnyStr]):
         self,
         *cmdargs,
         timeout=None,
-        stdin: Optional[Union[CloseStdinType, bytes, int, IO]] = CLOSE_STDIN
+        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN
     ) -> RunResult:
         """Run a command with arguments.
 
@@ -1281,8 +1371,8 @@ class Testdir(Generic[AnyStr]):
         :param args: the sequence of arguments to pass to `subprocess.Popen()`
         :kwarg timeout: the period in seconds after which to timeout and raise
             :py:class:`Testdir.TimeoutExpired`
-        :kwarg stdin: optional standard input.  Bytes are being send, closing
-            the pipe, otherwise it is passed through to ``popen``.
+        :kwarg stdin: optional standard input.  Bytes/strings are being send,
+            closing the pipe, otherwise it is passed through to ``popen``.
 
             Defaults to :attr:`CLOSE_STDIN`, which translates to using a pipe
             (:data:`python:subprocess.PIPE`) that gets closed.
@@ -1308,7 +1398,7 @@ class Testdir(Generic[AnyStr]):
                 stderr=f2,
                 close_fds=(sys.platform != "win32"),
             )
-            if isinstance(stdin, bytes):
+            if isinstance(stdin, (bytes, str)):
                 assert popen.stdin
                 popen.stdin.close()
 

@@ -244,37 +244,82 @@ class TestTerminal:
         result.stdout.fnmatch_lines(["*a123/test_hello123.py*PASS*"])
         result.stdout.no_fnmatch_line("* <- *")
 
-    @pytest.mark.parametrize("fulltrace", ("", "--fulltrace"))
-    def test_keyboard_interrupt(self, testdir, fulltrace):
+    @pytest.mark.parametrize(
+        "args", ((), ("--fulltrace",), ("--fulltrace", "--tb=short"))
+    )
+    def test_keyboard_interrupt(self, args: Tuple[str, ...], testdir: Testdir) -> None:
         testdir.makepyfile(
             """
             def test_foobar():
                 assert 0
-            def test_spamegg():
-                import py; pytest.skip('skip me please!')
             def test_interrupt_me():
                 raise KeyboardInterrupt   # simulating the user
         """
         )
 
-        result = testdir.runpytest(fulltrace, no_reraise_ctrlc=True)
-        result.stdout.fnmatch_lines(
-            [
-                "    def test_foobar():",
-                ">       assert 0",
-                "E       assert 0",
-                "*_keyboard_interrupt.py:6: KeyboardInterrupt*",
-            ]
+        fulltrace_note = (
+            "(to show a full traceback on KeyboardInterrupt use --full-trace)"
         )
-        if fulltrace:
+        result = testdir.runpytest(*args, no_reraise_ctrlc=True)
+        if args == ():
             result.stdout.fnmatch_lines(
-                ["*raise KeyboardInterrupt   # simulating the user*"]
+                [
+                    "    def test_foobar():",
+                    ">       assert 0",
+                    "E       assert 0",
+                    "*= short test summary info =*",
+                    "*! KeyboardInterrupt !*",
+                    "*_keyboard_interrupt.py:4: KeyboardInterrupt",
+                    fulltrace_note,
+                ]
+            )
+            return
+
+        assert fulltrace_note not in result.stdout.str()
+        if args == ("--fulltrace",):
+            result.stdout.fnmatch_lines(
+                [
+                    "test_keyboard_interrupt.py F",
+                    "",
+                    "*= FAILURES =*",
+                    "*_ test_foobar _*",
+                    "    def test_foobar():",
+                    ">       assert 0",
+                    "E       assert 0",
+                    "",
+                    "test_keyboard_interrupt.py:2: assert 0",
+                    "*= short test summary info =*",
+                    "FAILED test_keyboard_interrupt.py:2::test_foobar - assert 0",
+                    "*! KeyboardInterrupt !*",
+                    "    def test_interrupt_me():",
+                    ">       raise KeyboardInterrupt   # simulating the user",
+                    "E       KeyboardInterrupt",
+                    "",
+                    "test_keyboard_interrupt.py:4: KeyboardInterrupt",
+                    "*= 1 failed in *",
+                ]
+            )
+        elif args == ("--fulltrace", "--tb=short"):
+            result.stdout.fnmatch_lines(
+                [
+                    "test_keyboard_interrupt.py F",
+                    "",
+                    "*= FAILURES =*",
+                    "*_ test_foobar _*",
+                    "test_keyboard_interrupt.py:2: in test_foobar",
+                    "    assert 0",
+                    "E   assert 0",
+                    "*= short test summary info =*",
+                    "FAILED test_keyboard_interrupt.py:2::test_foobar - assert 0",
+                    "*! KeyboardInterrupt !*",
+                    "test_keyboard_interrupt.py:4: in test_interrupt_me",
+                    "    raise KeyboardInterrupt   # simulating the user",
+                    "E   KeyboardInterrupt",
+                    "*= 1 failed in *",
+                ]
             )
         else:
-            result.stdout.fnmatch_lines(
-                ["(to show a full traceback on KeyboardInterrupt use --full-trace)"]
-            )
-        result.stdout.fnmatch_lines(["*KeyboardInterrupt*"])
+            assert False, args
 
     def test_keyboard_in_sessionstart(self, testdir):
         testdir.makeconftest(
@@ -356,15 +401,23 @@ class TestCollectonly:
         result = testdir.runpytest("--collect-only")
         result.stdout.fnmatch_lines(["*raise ValueError*", "*1 error*"])
 
-    def test_collectonly_fatal(self, testdir):
+    def test_collectonly_fatal(self, testdir: Testdir, color_mapping) -> None:
         testdir.makeconftest(
             """
             def pytest_collectstart(collector):
                 assert 0, "urgs"
         """
         )
+        testdir.monkeypatch.setenv("PY_COLORS", "1")
         result = testdir.runpytest("--collect-only")
-        result.stdout.fnmatch_lines(["*INTERNAL*args*"])
+        result.stdout.fnmatch_lines(
+            color_mapping.format_for_fnmatch(
+                [
+                    "*INTERNAL*args*",
+                    "{red}=*= {yellow}no tests ran{reset}{red} in *{reset}{red} =*={reset}",
+                ]
+            )
+        )
         assert result.ret == 3
 
     def test_collectonly_simple(self, testdir):
@@ -1541,9 +1594,11 @@ def test_terminal_summary_warnings_are_displayed(testdir):
         [
             "*= warnings summary [[]runtest[]] =*",
             "*warning_from_test*",
+            "-- Docs: https://docs*",
             "*= short test summary info =*",
             "*= warnings summary (final) [[]config[]] =*",
             "*conftest.py:3:*internal warning",
+            "-- Docs: https://docs*",
             "*== 1 failed, 2 warnings in *",
         ]
     )
@@ -1834,6 +1889,16 @@ class TestProgressOutputStyle:
             """,
         )
 
+    @pytest.fixture
+    def progress_files_non_verbose(self, testdir: Testdir) -> None:
+        testdir.makepyfile(
+            test_more_than_width="""
+                import pytest
+                @pytest.mark.parametrize('i', range(100))
+                def test_more_than_width(i): pass
+            """,
+        )
+
     def test_zero_tests_collected(self, testdir):
         """Some plugins (testmon for example) might issue pytest_runtest_logreport without any tests being
         actually collected (#2971)."""
@@ -1852,14 +1917,57 @@ class TestProgressOutputStyle:
         output.stdout.no_fnmatch_line("*ZeroDivisionError*")
         output.stdout.fnmatch_lines(["=* 2 passed in *="])
 
-    def test_normal(self, many_tests_files, testdir):
+    def test_normal(self, many_tests_files, progress_files_non_verbose, testdir):
         output = testdir.runpytest()
-        output.stdout.re_match_lines(
+        output.stdout.fnmatch_lines(
             [
-                r"test_bar.py \.{10} \s+ \[ 50%\]",
-                r"test_foo.py \.{5} \s+ \[ 75%\]",
-                r"test_foobar.py \.{5} \s+ \[100%\]",
+                "test_bar.py ..........                                                   [[]  8%[]]",
+                "test_foo.py .....                                                        [[] 12%[]]",
+                "test_foobar.py .....                                                     [[] 16%[]]",
+                "test_more_than_width.py ................................................ [[] 56%[]]",
+                "....................................................                     [[]100%[]]",
+                "*= 120 passed in *",
             ]
+        )
+
+    def test_same_nodeids(self, testdir: Testdir, color_mapping) -> None:
+        p1 = testdir.makeconftest(
+            """
+            def pytest_collection_modifyitems(items):
+                for item in items[1:]:
+                    item._nodeid = items[0].nodeid
+            """
+        )
+        p1 = testdir.makepyfile(
+            """
+            import pytest
+
+            @pytest.fixture
+            def err_setup():
+                assert 0, "setup-error"
+
+            @pytest.fixture
+            def err_teardown():
+                yield
+                assert 0, "teardown-error"
+
+            def test1(err_setup): pass
+            def test2(err_teardown): pass
+            def test3(): pass
+            def test4(): pass
+            """
+        )
+        result = testdir.runpytest("-v", str(p1))
+        result.stdout.fnmatch_lines(
+            color_mapping.format_for_fnmatch(
+                [
+                    "test_same_nodeids.py::test1 ERROR  * [ 25%]",
+                    "test_same_nodeids.py::test1 PASSED * [ 50%]",
+                    "test_same_nodeids.py::test1 ERROR  * [ 50%]",
+                    "test_same_nodeids.py::test1 PASSED * [ 75%]",
+                    "test_same_nodeids.py::test1 PASSED * [100%]",
+                ]
+            )
         )
 
     def test_colored_progress(self, testdir, monkeypatch, color_mapping):
@@ -1912,7 +2020,7 @@ class TestProgressOutputStyle:
             )
         )
 
-    def test_count(self, many_tests_files, testdir):
+    def test_count(self, many_tests_files, progress_files_non_verbose, testdir):
         testdir.makeini(
             """
             [pytest]
@@ -1920,11 +2028,14 @@ class TestProgressOutputStyle:
         """
         )
         output = testdir.runpytest()
-        output.stdout.re_match_lines(
+        output.stdout.fnmatch_lines(
             [
-                r"test_bar.py \.{10} \s+ \[10/20\]",
-                r"test_foo.py \.{5} \s+ \[15/20\]",
-                r"test_foobar.py \.{5} \s+ \[20/20\]",
+                "test_bar.py ..........                                                [[] 10/120[]]",
+                "test_foo.py .....                                                     [[] 15/120[]]",
+                "test_foobar.py .....                                                  [[] 20/120[]]",
+                "test_more_than_width.py ............................................. [[] 65/120[]]",
+                ".......................................................               [[]120/120[]]",
+                "*= 120 passed in *",
             ]
         )
 

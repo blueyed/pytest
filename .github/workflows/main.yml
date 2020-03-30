@@ -70,7 +70,7 @@ jobs:
           - name: "windows-py37"
             python: "3.7"
             os: windows-latest
-            tox_env: "py37-xdist-coverage"
+            tox_env: "py37-coverage"
             script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
@@ -102,11 +102,11 @@ jobs:
 
     # Caching.
     - name: set PY_CACHE_KEY
-      run: echo "::set-env name=PY_CACHE_KEY::$(python --version --version | sha256sum | cut -d' ' -f1)"
+      run: echo "::set-env name=PY_CACHE_KEY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
     - name: Cache .tox
       uses: actions/cache@v1
       with:
-        path: ${{ env.GITHUB_WORKSPACE }}/pytest/pytest/.tox/${{ matrix.tox_env }}
+        path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
         key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting_ci')
@@ -115,12 +115,13 @@ jobs:
         path: ~/.cache/pre-commit
         key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
 
-    - name: Install tox
+    - name: Install tox / version information
       env:
         PIP_DISABLE_PIP_VERSION_CHECK: "1"
       run: |
         python -m pip --version
         python -m pip install git+https://github.com/blueyed/tox@master
+        python -m pip list
 
     - name: Setup tox environment
       run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}

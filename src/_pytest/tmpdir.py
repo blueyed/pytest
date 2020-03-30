@@ -149,10 +149,7 @@ def tmp_path_factory(request: FixtureRequest) -> TempPathFactory:
 
 
 def _mk_tmp(request: FixtureRequest, factory: TempPathFactory) -> Path:
-    name = request.node.name
-    name = re.sub(r"[\W]", "_", name)
-    MAXVAL = 30
-    name = name[:MAXVAL]
+    name = re.sub(r"\W+", "_", request.node.name)[:30]
     return factory.mktemp(name, numbered=True)
 
 
