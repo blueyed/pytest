@@ -363,7 +363,7 @@ class WarningReport:
         ).rstrip()
 
     @property
-    def source_line(self) -> Optional[str]:
+    def source_line(self) -> str:
         line = self.warning.line
         if line is None:
             line = linecache.getline(self.warning.filename, self.warning.lineno)

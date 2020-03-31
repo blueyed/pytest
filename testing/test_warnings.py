@@ -265,6 +265,10 @@ def test_warning_captured_hook(testdir):
 
         warnings.warn(UserWarning("collect warning"))
 
+        # WarningMessage with "line".
+        warnings.showwarning("msgwithline", UserWarning, "fname", 0, line="custom line")
+        warnings.showwarning("msgwithnoline", UserWarning, "fn2", 0, line="")
+
         @pytest.fixture
         def fix():
             warnings.warn(UserWarning("setup warning"))
@@ -281,18 +285,26 @@ def test_warning_captured_hook(testdir):
 
     class WarningCollector:
         def pytest_warning_captured(self, warning_message, when, item):
-            imge_name = item.name if item is not None else ""
-            collected.append((str(warning_message.message), when, imge_name))
+            item_name = item.name if item is not None else ""
+            col = (
+                str(warning_message.message),
+                when,
+                item_name,
+                warning_message.line,
+            )
+            collected.append(col)
 
     result = testdir.runpytest(plugins=[WarningCollector()])
     result.stdout.fnmatch_lines(["*1 passed*"])
 
     expected = [
-        ("config warning", "config", ""),
-        ("collect warning", "collect", ""),
-        ("setup warning", "runtest", "test_func"),
-        ("call warning", "runtest", "test_func"),
-        ("teardown warning", "runtest", "test_func"),
+        ("config warning", "config", "", None),
+        ("collect warning", "collect", "", None),
+        ("msgwithline", "collect", "", "custom line"),
+        ("msgwithnoline", "collect", "", ""),
+        ("setup warning", "runtest", "test_func", None),
+        ("call warning", "runtest", "test_func", None),
+        ("teardown warning", "runtest", "test_func", None),
     ]
     assert collected == expected
 
