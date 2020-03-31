@@ -2,6 +2,7 @@ import gc
 
 import pytest
 from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
 
 
 def test_simple_unittest(testdir):
@@ -721,6 +722,45 @@ def test_unorderable_types(testdir):
     result = testdir.runpytest()
     result.stdout.no_fnmatch_line("*TypeError*")
     assert result.ret == ExitCode.NO_TESTS_COLLECTED
+
+
+def test_order(testdir: Testdir) -> None:
+    """Test for unittest's behavior to sort tests by default (via TestLoader).
+
+    This could be made configurable maybe."""
+    testdir.makepyfile(
+        """
+        import unittest
+
+        def test3(): pass
+        def test1(): pass
+        def test2(): pass
+
+        class Test(unittest.TestCase):
+            def test3(self):
+                pass
+            def test1(self):
+                pass
+            def test2(self):
+                pass
+    """
+    )
+    result = testdir.runpytest("--co")
+    result.stdout.fnmatch_lines(
+        [
+            "collected 6 items",
+            "",
+            "<Module test_order.py>",
+            "  <Function test3>",
+            "  <Function test1>",
+            "  <Function test2>",
+            "  <UnitTestCase Test>",
+            "    <TestCaseFunction test1>",
+            "    <TestCaseFunction test2>",
+            "    <TestCaseFunction test3>",
+        ]
+    )
+    assert result.ret == 0
 
 
 def test_unittest_typerror_traceback(testdir):
