@@ -369,7 +369,7 @@ class WarningReport:
             line = linecache.getline(self.warning.filename, self.warning.lineno)
         return line
 
-    def get_location(self, config: Config) -> Optional[str]:
+    def get_location(self, config: Config) -> str:
         """
         Returns the more user-friendly information about the location
         of a warning.
@@ -1058,7 +1058,7 @@ class TerminalReporter:
                 source_locs = []
                 for w in warning_reports:
                     location = w.get_location(self.config)
-                    if not location or location in locations:
+                    if location in locations:
                         continue
                     self._tw.line(location)
                     locations.append(location)
@@ -1071,12 +1071,9 @@ class TerminalReporter:
                     if line:
                         self._tw.line("    {}".format(line.strip()))
 
-                if locations:
-                    lines = message.splitlines()
-                    indented = "\n".join("  " + x for x in lines)
-                    message = indented.rstrip()
-                else:
-                    message = message.rstrip()
+                lines = message.splitlines()
+                indented = "\n".join("  " + x for x in lines)
+                message = indented.rstrip()
                 self._tw.line(message)
                 self._tw.line()
         self._tw.line("-- Docs: https://docs.pytest.org/en/latest/warnings.html")
