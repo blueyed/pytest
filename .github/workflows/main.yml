@@ -141,7 +141,9 @@ jobs:
       if: (contains(matrix.tox_env, '-coverage'))
       env:
         CODECOV_NAME: ${{ matrix.name }}
-      run: bash scripts/report-coverage.sh -F GHA,${{ runner.os }}
+      run: |
+        .${{ matrix.tox_env }}/bin/coverage report -m
+        bash scripts/report-coverage.sh -F GHA,${{ runner.os }}
 
   deploy:
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && github.repository == 'pytest-dev/pytest'
