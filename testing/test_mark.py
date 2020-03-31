@@ -1017,6 +1017,7 @@ def test_addmarker_order():
     session.own_markers = []
     session.parent = None
     session.nodeid = ""
+    session.listchain = lambda: [session]
     node = Node.from_parent(session, name="Test")
     node.add_marker("foo")
     node.add_marker("bar")

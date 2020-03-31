@@ -148,6 +148,8 @@ class Node(metaclass=NodeMeta):
             if self.name != "()":
                 self._nodeid += "::" + self.name
 
+        self._chain = self.listchain()
+
     @classmethod
     def from_parent(cls, parent: "Node", **kw):
         """
@@ -226,16 +228,12 @@ class Node(metaclass=NodeMeta):
     def teardown(self):
         pass
 
-    def listchain(self):
+    def listchain(self) -> List["Node"]:
         """ return list of all parent collectors up to self,
             starting from root of collection tree. """
-        chain = []
-        item = self  # type: Optional[Node]
-        while item is not None:
-            chain.append(item)
-            item = item.parent
-        chain.reverse()
-        return chain
+        if not self.parent:
+            return [self]
+        return self.parent.listchain() + [self]
 
     def add_marker(
         self, marker: Union[str, MarkDecorator], append: bool = True
@@ -276,7 +274,7 @@ class Node(metaclass=NodeMeta):
         iterate over all markers of the node
         returns sequence of tuples (node, mark)
         """
-        for node in reversed(self.listchain()):
+        for node in reversed(self._chain):
             for mark in node.own_markers:
                 if name is None or getattr(mark, "name", None) == name:
                     yield node, mark
@@ -293,12 +291,12 @@ class Node(metaclass=NodeMeta):
     def listextrakeywords(self):
         """ Return a set of all extra keywords in self and any parents."""
         extra_keywords = set()  # type: Set[str]
-        for item in self.listchain():
+        for item in self._chain:
             extra_keywords.update(item.extra_keyword_matches)
         return extra_keywords
 
     def listnames(self):
-        return [x.name for x in self.listchain()]
+        return [x.name for x in self._chain]
 
     def addfinalizer(self, fin):
         """ register a function to be called when this node is finalized.
