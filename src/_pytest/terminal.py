@@ -356,7 +356,7 @@ class WarningReport:
 
     @property
     def message(self) -> str:
-        """Formatted warning (the standard way)."""
+        """Formatted warning (the standard way, without trailing newline)."""
         wm = self.warning
         return warnings.formatwarning(
             str(wm.message), wm.category, wm.filename, wm.lineno, wm.line,
