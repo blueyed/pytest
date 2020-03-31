@@ -974,19 +974,9 @@ class TerminalReporter:
                 )
 
     def _locationline(self, nodeid, fspath, lineno, domain):
-        def mkrel(nodeid):
-            line = self.config.cwd_relative_nodeid(nodeid)
-            if domain and line.endswith(domain):
-                line = line[: -len(domain)]
-                values = domain.split("[")
-                values[0] = values[0].replace(".", "::")  # don't replace '.' in params
-                line += "[".join(values)
-            return line
-
-        # collect_fspath comes from testid which has a "/"-normalized path
-
         if fspath:
-            res = mkrel(nodeid)
+            res = self.config.cwd_relative_nodeid(nodeid)
+            # collect_fspath comes from testid which has a "/"-normalized path
             if self.verbosity >= 2 and nodeid.split("::")[0] != fspath.replace(
                 "\\", nodes.SEP
             ):
