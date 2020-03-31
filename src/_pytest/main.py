@@ -2,12 +2,14 @@
 import fnmatch
 import functools
 import importlib
+import inspect
 import os
 import re
 import sys
 from typing import Callable
 from typing import Dict
 from typing import FrozenSet
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Sequence
@@ -344,6 +346,23 @@ class _bestrelpath_cache(dict):
         return r
 
 
+class ArgPath:
+    """A path specified as argument (or implicit via testpaths)."""
+
+    def __init__(
+        self,
+        path: py.path.local,
+        lnum_range: Optional[Tuple[Optional[int], Optional[int]]] = None,
+    ) -> None:
+        self._path = path
+        self._lnum_range = lnum_range
+
+    def __repr__(self) -> str:
+        return "<{} {!r} _lnum_range={!r}>".format(
+            self.__class__.__name__, self._path, self._lnum_range,
+        )
+
+
 class Session(nodes.FSCollector):
     Interrupted = Interrupted
     Failed = Failed
@@ -458,7 +477,7 @@ class Session(nodes.FSCollector):
 
     pytest_collectreport = pytest_runtest_logreport
 
-    def isinitpath(self, path):
+    def isinitpath(self, path: py.path.local) -> bool:
         return path in self._initialpaths
 
     def gethookproxy(self, fspath: py.path.local):
@@ -496,12 +515,12 @@ class Session(nodes.FSCollector):
         self.trace.root.indent += 1
         self._notfound = []
         initialpaths = []  # type: List[py.path.local]
-        self._initial_parts = []  # type: List[Tuple[py.path.local, List[str]]]
+        self._initial_parts = []  # type: List[Tuple[ArgPath, List[str]]]
         self.items = items = []  # type: List[nodes.Item]
         for arg in args:
-            fspath, parts = self._parsearg(arg)
-            self._initial_parts.append((fspath, parts))
-            initialpaths.append(fspath)
+            argpath, parts = self._parsearg(arg)
+            self._initial_parts.append((argpath, parts))
+            initialpaths.append(argpath._path)
         self._initialpaths = frozenset(initialpaths)
         rep = collect_one_node(self)
         self.ihook.pytest_collectreport(report=rep)
@@ -520,12 +539,15 @@ class Session(nodes.FSCollector):
                     self.items.extend(self.genitems(node))
             return items
 
-    def collect(self):
-        for fspath, parts in self._initial_parts:
+    def collect(self) -> Iterator[Union[nodes.Item, nodes.Collector]]:
+        for argpath, parts in self._initial_parts:
+            fspath = argpath._path
             self.trace("processing argument", (fspath, parts))
             self.trace.root.indent += 1
             try:
-                yield from self._collect(fspath, parts)
+                for collector in self._collect(fspath, parts):
+                    collector._via_initial_part = (argpath, parts)
+                    yield collector
             except NoMatch:
                 report_arg = "::".join((str(fspath), *parts))
                 # we are inside a make_report hook so
@@ -638,7 +660,7 @@ class Session(nodes.FSCollector):
             return spec.origin
 
     @staticmethod
-    def _parse_fname_lineno(
+    def _parse_fname_lnum_range(
         arg: str,
     ) -> Tuple[str, Tuple[Optional[int], Optional[int]]]:
         fname = arg
@@ -647,24 +669,25 @@ class Session(nodes.FSCollector):
             m = RE_FNAME_LINENO.match(arg)
             if m:
                 fname = m.group(1)
-                is_range = m.group(3)
                 start_ = m.group(2)
                 if start_:
                     start = int(start_)
                 end_ = m.group(4)
                 if end_:
                     end = int(end_)
-                elif not is_range:
-                    end = start
+                else:
+                    is_range = m.group(3)
+                    if not is_range:
+                        end = start
         return fname, (start, end)
 
-    def _parsearg(self, arg):
+    def _parsearg(self, arg: str) -> Tuple[ArgPath, List[str]]:
         """ return (fspath, names) tuple after checking the file exists. """
         strpath, *parts = str(arg).split("::")
         if self.config.option.pyargs:
             strpath = self._tryconvertpyarg(strpath)
 
-        fname, lineno = self._parse_fname_lineno(strpath)
+        fname, lnum_range = self._parse_fname_lnum_range(strpath)
 
         relpath = fname.replace("/", os.sep)
         fspath = self.config.invocation_dir.join(relpath, abs=True)
@@ -674,9 +697,8 @@ class Session(nodes.FSCollector):
                     "file or package not found: " + arg + " (missing __init__.py?)"
                 )
             raise UsageError("file not found: " + arg)
-        fspath = fspath.realpath()
-        fspath.lineno = lineno
-        return (fspath, parts)
+        argpath = ArgPath(fspath.realpath(), lnum_range=lnum_range)
+        return (argpath, parts)
 
     def matchnodes(self, matching, names):
         self.trace("matchnodes", matching, names)
@@ -735,17 +757,13 @@ class Session(nodes.FSCollector):
             assert isinstance(node, nodes.Collector)
             rep = collect_one_node(node)
             if rep.passed:
-                for subnode in rep.result:
-                    try:
-                        collect_lnum = node.fspath.lineno
-                    except AttributeError:
-                        collect_lnum = None
-
-                    if collect_lnum and (collect_lnum[0] or collect_lnum[1]):
-                        import inspect
-
-                        start, end = collect_lnum
-
+                if hasattr(node, "_via_initial_part"):
+                    collect_lnum = node._via_initial_part[0]._lnum_range
+                else:
+                    collect_lnum = None
+                if collect_lnum and (collect_lnum[0] or collect_lnum[1]):
+                    start, end = collect_lnum
+                    for subnode in rep.result:
                         for item in self.genitems(subnode):
                             lines, lnum = inspect.getsourcelines(item.obj)
                             if (end is None or end >= lnum) and (
@@ -754,6 +772,7 @@ class Session(nodes.FSCollector):
                                 yield item
                             else:
                                 node.ihook.pytest_deselected(items=[item])
-                    else:
+                else:
+                    for subnode in rep.result:
                         yield from self.genitems(subnode)
             node.ihook.pytest_collectreport(report=rep)
