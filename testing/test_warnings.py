@@ -295,7 +295,42 @@ def test_warning_captured_hook(testdir):
             collected.append(col)
 
     result = testdir.runpytest(plugins=[WarningCollector()])
-    result.stdout.fnmatch_lines(["*1 passed*"])
+    result.stdout.fnmatch_lines(
+        [
+            "*= warnings summary [[]config[]] =*",
+            "conftest.py:3",
+            '    _issue_warning_captured(UserWarning("config warning"), config.hook, stacklevel=2)',
+            "  UserWarning: config warning",
+            "",
+            "*= warnings summary [[]collect[]] =*",
+            "test_warning_captured_hook.py:3",
+            '    warnings.warn(UserWarning("collect warning"))',
+            "  UserWarning: collect warning",
+            "",
+            "fname:0",
+            "    custom line",
+            "  UserWarning: msgwithline",
+            "",
+            "fn2:0",
+            "  UserWarning: msgwithnoline",
+            "",
+            "*= warnings summary [[]runtest[]] =*",
+            "test_warning_captured_hook.py:11::test_func",
+            '    warnings.warn(UserWarning("setup warning"))',
+            "  UserWarning: setup warning",
+            "",
+            "test_warning_captured_hook.py:16::test_func",
+            '    warnings.warn(UserWarning("call warning"))',
+            "  UserWarning: call warning",
+            "",
+            "test_warning_captured_hook.py:13::test_func",
+            '    warnings.warn(UserWarning("teardown warning"))',
+            "  UserWarning: teardown warning",
+            "",
+            "-- Docs: https://docs.pytest.org/en/latest/warnings.html",
+            "*= 1 passed, 7 warnings in *",
+        ]
+    )
 
     expected = [
         ("config warning", "config", "", None),
