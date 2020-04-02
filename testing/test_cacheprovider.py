@@ -866,25 +866,38 @@ class TestLastFailed:
 
         # Recreate file with known failure.
         testdir.makepyfile(**{"pkg1/test_1.py": """def test_1(): assert 0"""})
-        result = testdir.runpytest("--lf")
-        result.stdout.fnmatch_lines(
-            [
-                "collected 1 item",
-                "run-last-failure: rerun previous 1 failure (skipped 1 file)",
-                "* 1 failed in *",
-            ]
-        )
-
-        # Remove/rename test.
-        testdir.makepyfile(**{"pkg1/test_1.py": """def test_renamed(): assert 0"""})
         result = testdir.runpytest("--lf", "-rf")
         result.stdout.fnmatch_lines(
             [
                 "collected 1 item",
-                "run-last-failure: 1 known failures not in selected tests (skipped 1 file)",
-                "pkg1/test_1.py F *",
-                "FAILED pkg1/test_1.py:1::test_renamed - assert 0",
+                "run-last-failure: rerun previous 1 failure (skipped 1 file)",
+                "FAILED pkg1/test_1.py:1::test_1 - assert 0",
                 "* 1 failed in *",
+            ]
+        )
+
+        # Remove/rename test: collects the file again.
+        testdir.makepyfile(**{"pkg1/test_1.py": """def test_renamed(): assert 0"""})
+        result = testdir.runpytest("--lf", "-rf")
+        result.stdout.fnmatch_lines(
+            [
+                "collected 2 items",
+                "run-last-failure: 1 known failures not in selected tests",
+                "pkg1/test_1.py F *",
+                "pkg1/test_2.py . *",
+                "FAILED pkg1/test_1.py:1::test_renamed - assert 0",
+                "* 1 failed, 1 passed in *",
+            ]
+        )
+
+        result = testdir.runpytest("--lf", "--co")
+        result.stdout.fnmatch_lines(
+            [
+                "collected 1 item",
+                "run-last-failure: rerun previous 1 failure (skipped 1 file)",
+                "",
+                "<Module pkg1/test_1.py>",
+                "  <Function test_renamed>",
             ]
         )
 
@@ -990,16 +1003,19 @@ class TestLastFailed:
             }
         )
         result = testdir.runpytest("--lf", "--co")
-        assert result.ret == ExitCode.NO_TESTS_COLLECTED
         result.stdout.fnmatch_lines(
             [
-                "collected 0 items",
+                "collected 1 item",
                 "run-last-failure: 1 known failures not in selected tests",
+                "",
+                "<Module pkg1/test_1.py>",
+                "  <Function test_pass>",
                 "",
                 "*= no tests ran in*",
             ],
             consecutive=True,
         )
+        assert result.ret == 0
 
 
 class TestNewFirst:
