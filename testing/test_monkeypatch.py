@@ -5,6 +5,7 @@ import textwrap
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
+from _pytest.pytester import Testdir
 
 
 @pytest.fixture
@@ -318,7 +319,8 @@ def test_issue185_time_breaks(testdir):
     )
 
 
-def test_importerror(testdir):
+def test_importerror(testdir: Testdir) -> None:
+    testdir.syspathinsert()
     p = testdir.mkpydir("package")
     p.join("a.py").write(
         textwrap.dedent(

@@ -1070,6 +1070,7 @@ class TestAssertionRewriteHookDetails:
                 assert file.reloaded()
             """,
         )
+        testdir.syspathinsert()
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(["* 1 passed*"])
 
