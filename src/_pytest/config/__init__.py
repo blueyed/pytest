@@ -26,6 +26,7 @@ from packaging.version import Version
 from pluggy import HookimplMarker
 from pluggy import HookspecMarker
 from pluggy import PluginManager
+from pluggy.manager import DistFacade
 
 import _pytest._code
 import _pytest.deprecated
@@ -519,6 +520,42 @@ class PytestPluginManager(PluginManager):
             self.trace("loading conftestmodule {!r}".format(mod))
             self.consider_conftest(mod)
             return mod
+
+    def is_blocked_ep(self, ep: importlib_metadata.EntryPoint) -> bool:
+        """ return ``True`` if the given entrypoint plugin is blocked. """
+        return self.is_blocked(ep.name)  # type: ignore[no-any-return]
+
+    def load_setuptools_entrypoints(self, group: str, name: str = None):
+        """ Load modules from querying the specified setuptools ``group``.
+
+        :param str group: entry point group to load plugins
+        :param str name: if given, loads only plugins with the given ``name``.
+        :rtype: int
+        :return: return the number of loaded plugins by this call.
+
+        .. note::
+
+            This adopts :meth:`pluggy:pluggy.PluginManager.load_setuptools_entrypoints` to:
+
+              - add support for :func:`is_blocked_ep`
+        """
+        count = 0
+        for dist in importlib_metadata.distributions():
+            for ep in dist.entry_points:
+                if (
+                    ep.group != group
+                    or (name is not None and ep.name != name)
+                    # already registered
+                    or self.get_plugin(ep.name)
+                    or self.is_blocked_ep(ep)
+                ):
+                    continue
+
+                plugin = ep.load()
+                self.register(plugin, name=ep.name)
+                self._plugin_distinfo.append((plugin, DistFacade(dist)))
+                count += 1
+        return count
 
     #
     # API for bootstrapping plugin loading
