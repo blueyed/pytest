@@ -28,7 +28,8 @@ jobs:
 
           "macos-py36",
 
-          "windows-py37",
+          "windows-py37 (1)",
+          "windows-py37 (2)",
 
           "linting",
           "docs",
@@ -64,17 +65,26 @@ jobs:
           - name: "macos-py36"
             python: "3.6"
             os: macos-latest
-            tox_env: "py36-nopygments-xdist-coverage"
-            pytest_addopts: "-n4 --verbosity=1"
+            tox_env: "py36-nopygments-coverage"
+            pytest_addopts: "--verbosity=1"
 
-          - name: "windows-py37"
+          - name: "windows-py37 (1)"
             python: "3.7"
             os: windows-latest
-            tox_env: "py37-coverage"
+            tox_env: "py37-coverage-grouped"
             script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
-            pytest_addopts: "--verbosity=2"
+            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
+
+          - name: "windows-py37 (2)"
+            python: "3.7"
+            os: windows-latest
+            tox_env: "py37-coverage-grouped"
+            script_prefix: "env PYTEST_REORDER_TESTS=0"
+            # Coverage for:
+            # - verbosity=2
+            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
 
           - name: "linting"
             python: "3.8"
