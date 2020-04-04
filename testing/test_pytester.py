@@ -268,6 +268,31 @@ class TestInlineRunModulesCleanup:
         assert imported.data == 42
 
 
+def test_runtest_inprocess_syspathinsert_by_default(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        def test():
+            import some_mod
+        """,
+        some_mod="",
+    )
+    assert testdir.runpytest_inprocess(str(p1)).ret == 0
+
+
+def test_runtest_inprocess_syspathinsert_disabled(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        import pytest
+
+        def test():
+            with pytest.raises(ImportError):
+                import some_mod
+        """,
+        some_mod="",
+    )
+    assert testdir.runpytest_inprocess(str(p1), syspathinsert=False).ret == 0
+
+
 def test_assert_outcomes_after_pytest_error(testdir) -> None:
     testdir.makepyfile("def test_foo(): assert True")
 
@@ -1383,28 +1408,3 @@ class TestTestdirMakefiles:
         assert str(
             excinfo.value
         ) == "path is not a file/symlink, not clobbering: {!r}".format(str(directory))
-
-
-def test_runtest_inprocess_syspathinsert_by_default(testdir: Testdir) -> None:
-    p1 = testdir.makepyfile(
-        """
-        def test():
-            import some_mod
-        """,
-        some_mod="",
-    )
-    assert testdir.runpytest_inprocess(str(p1)).ret == 0
-
-
-def test_runtest_inprocess_syspathinsert_disabled(testdir: Testdir) -> None:
-    p1 = testdir.makepyfile(
-        """
-        import pytest
-
-        def test():
-            with pytest.raises(ImportError):
-                import some_mod
-        """,
-        some_mod="",
-    )
-    assert testdir.runpytest_inprocess(str(p1), syspathinsert=False).ret == 0
