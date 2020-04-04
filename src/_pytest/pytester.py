@@ -1068,9 +1068,7 @@ class Testdir(Generic[AnyStr]):
         """Return result of running pytest in-process, providing a similar
         interface to what self.runpytest() provides.
         """
-        syspathinsert = kwargs.pop("syspathinsert", False)
-
-        if syspathinsert:
+        if kwargs.pop("syspathinsert", True):
             self.syspathinsert()
         now = time.time()
 
