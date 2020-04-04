@@ -56,20 +56,34 @@ class TestModule:
             reprec = testdir.inline_run()
             reprec.assertoutcome(passed=1)
 
-    @pytest.mark.parametrize("import_mode", ("append", "prepend", "importlib"))
-    def test__importtestmodule_restores_sys_path(self, import_mode, testdir):
+    def test__importtestmodule_sys_path(self, testdir):
+        """Test current behavior of polluting sys.path via pyimport."""
         p1 = testdir.makepyfile(
             """
             import sys
+            import pytest
 
-            def test():
-                assert sys.path == {!r}
-            """.format(
-                sys.path
-            )
+            @pytest.mark.parametrize(
+                "mode_expected", (
+                    ("append", False),
+                    ("prepend", False),
+                    ("importlib", True),
+            ))
+            def test_inner(mode_expected, testdir):
+                mode, expected = mode_expected
+                p1 = testdir.makepyfile(
+                    '''
+                    import sys
+                    def test():
+                        assert (sys.path == %r) is %r
+                    ''' % (sys.path, expected,)
+                )
+                reprec = testdir.inline_run("--import-mode=" + mode, str(p1))
+                reprec.assertoutcome(passed=1)
+                """
         )
-        reprec = testdir.inline_run("--import-mode={}".format(import_mode), str(p1))
-        reprec.assertoutcome(passed=1)
+        result = testdir.runpytest_subprocess("-p", "pytester", str(p1))
+        assert result.ret == 0
 
     def test_syntax_error_in_module(self, testdir):
         modcol = testdir.getmodulecol("this is a syntax error")
