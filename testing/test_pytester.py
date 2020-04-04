@@ -276,7 +276,9 @@ def test_runtest_inprocess_syspathinsert_by_default(testdir: Testdir) -> None:
         """,
         some_mod="",
     )
+    syspath_before = sys.path[:]
     assert testdir.runpytest_inprocess(str(p1)).ret == 0
+    assert syspath_before == sys.path
 
 
 def test_runtest_inprocess_syspathinsert_disabled(testdir: Testdir) -> None:

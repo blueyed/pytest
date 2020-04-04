@@ -997,7 +997,13 @@ class Testdir(Generic[AnyStr]):
         items = [x.item for x in rec.getcalls("pytest_itemcollected")]
         return items, rec
 
-    def inline_run(self, *args, plugins=(), no_reraise_ctrlc: bool = False):
+    def inline_run(
+        self,
+        *args,
+        plugins=(),
+        no_reraise_ctrlc: bool = False,
+        syspathinsert: bool = True
+    ):
         """Run ``pytest.main()`` in-process, returning a HookRecorder.
 
         Runs the :py:func:`pytest.main` function to run all of pytest inside
@@ -1029,6 +1035,9 @@ class Testdir(Generic[AnyStr]):
             # e.g. just because they use matching test module names.
             finalizers.append(self.__take_sys_modules_snapshot().restore)
             finalizers.append(SysPathsSnapshot().restore)
+
+            if syspathinsert:
+                self.syspathinsert()
 
             # Important note:
             # - our tests should not leave any other references/registrations
@@ -1068,8 +1077,6 @@ class Testdir(Generic[AnyStr]):
         """Return result of running pytest in-process, providing a similar
         interface to what self.runpytest() provides.
         """
-        if kwargs.pop("syspathinsert", True):
-            self.syspathinsert()
         now = time.time()
 
         if "stdin" in kwargs:
