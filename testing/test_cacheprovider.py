@@ -83,7 +83,7 @@ class TestNewAPI:
                 "*/cacheprovider.py:*",
                 "  */cacheprovider.py:*: PytestCacheWarning: could not create cache path "
                 "{}/v/cache/nodeids (my OSError), setting readonly.".format(cache_dir),
-                '    config.cache.set("cache/nodeids", self.cached_nodeids)',
+                '    config.cache.set("cache/nodeids", *',
                 "*1 failed, 1 warning in*",
             ]
         )

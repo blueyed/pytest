@@ -366,11 +366,12 @@ class NFPlugin:
     ) -> Generator[None, None, None]:
         yield
 
+        known_nodeids = set(self.cached_nodeids)
         new_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
         if self.active:
             other_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
             for item in items:
-                if item.nodeid not in self.cached_nodeids:
+                if item.nodeid not in known_nodeids:
                     new_items[item.nodeid] = item
                 else:
                     other_items[item.nodeid] = item
@@ -380,7 +381,7 @@ class NFPlugin:
             ) + self._get_increasing_order(other_items.values())
         else:
             for item in items:
-                if item.nodeid not in self.cached_nodeids:
+                if item.nodeid not in known_nodeids:
                     new_items[item.nodeid] = item
         self.cached_nodeids.extend(new_items)
 
@@ -393,7 +394,7 @@ class NFPlugin:
             return
         if config.getoption("collectonly"):
             return
-        config.cache.set("cache/nodeids", self.cached_nodeids)
+        config.cache.set("cache/nodeids", list(self.cached_nodeids))
 
 
 def pytest_addoption(parser):
