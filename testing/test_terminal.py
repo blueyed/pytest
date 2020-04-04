@@ -717,17 +717,22 @@ class TestTerminalFunctional:
             result.stdout.fnmatch_lines(["plugins: *"])
 
     def test_header(self, testdir: Testdir) -> None:
-        testdir.tmpdir.join("tests").ensure_dir()
-        testdir.tmpdir.join("gui").ensure_dir()
+        root = testdir.tmpdir.join("root")
+        root.join("tests").ensure_dir()
+        root.join("gui").ensure_dir()
+
+        # Hack to get decent/typical display for rootdir (not only "~" directly).
+        testdir.tmpdir = root
+        testdir.chdir()
 
         # no ini file
         result = testdir.runpytest()
-        result.stdout.fnmatch_lines(["rootdir: ~"])
+        result.stdout.fnmatch_lines(["rootdir: ~/root"])
 
         # with inifile
         testdir.makeini("""[pytest]""")
         result = testdir.runpytest()
-        result.stdout.fnmatch_lines(["rootdir: ~, inifile: tox.ini"])
+        result.stdout.fnmatch_lines(["rootdir: ~/root, inifile: tox.ini"])
 
         # with testpaths option, and not passing anything in the command-line
         testdir.makeini(
@@ -738,17 +743,34 @@ class TestTerminalFunctional:
         )
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(
-            ["rootdir: ~, inifile: tox.ini, testpaths: tests, gui"]
+            ["rootdir: ~/root, inifile: tox.ini, testpaths: tests, gui"]
         )
 
         # with testpaths option, passing directory in command-line: do not show testpaths then
         result = testdir.runpytest("tests")
-        result.stdout.fnmatch_lines(["rootdir: ~, inifile: tox.ini"])
+        result.stdout.fnmatch_lines(["rootdir: ~/root, inifile: tox.ini"])
 
         # Reports cwd if != rootdir.
         testdir.makefile("ini", **{"tests/pytest": ""})
         result = testdir.runpytest("tests")
-        result.stdout.fnmatch_lines(["rootdir: ~/tests, inifile: pytest.ini, cwd: ~"])
+        result.stdout.fnmatch_lines(
+            ["rootdir: ~/root/tests, inifile: pytest.ini, cwd: ~/root"]
+        )
+
+    def test_header_full_rootdir_and_cachedir(self, testdir: Testdir) -> None:
+        testdir.makeini(
+            """
+            [pytest]
+            cache_dir = /tmp/elsewhere
+        """
+        )
+        result = testdir.runpytest("-v")
+        result.stdout.fnmatch_lines(
+            [
+                "rootdir: ~ ({}), inifile: tox.ini".format(testdir.tmpdir),
+                "cachedir: /tmp/elsewhere",
+            ]
+        )
 
     def test_showlocals(self, testdir):
         p1 = testdir.makepyfile(

@@ -48,8 +48,8 @@ Signature: 8a477f597d28d172789f06886806bc55
 
 @attr.s
 class Cache:
-    _cachedir = attr.ib(repr=False)
-    _config = attr.ib(repr=False)
+    _cachedir = attr.ib(type=Path, repr=False)
+    _config = attr.ib(type=Config, repr=False)
 
     # sub-directory under cache-dir for directories created by "makedir"
     _CACHE_PREFIX_DIRS = "d"
@@ -490,14 +490,16 @@ def cache(request):
     return request.config.cache
 
 
-def pytest_report_header(config):
+def pytest_report_header(config: Config) -> Optional[str]:
     """Display cachedir with --cache-show and if non-default."""
     if config.option.verbose > 0 or config.getini("cache_dir") != ".pytest_cache":
         from _pytest.pathlib import _shorten_path
 
+        assert config.cache
         return "cachedir: {}".format(
-            _shorten_path(config.cache._cachedir, config.rootdir)
+            _shorten_path(str(config.cache._cachedir), str(config.rootdir))
         )
+    return None
 
 
 def cacheshow(config, session):
