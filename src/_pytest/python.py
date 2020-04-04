@@ -515,7 +515,6 @@ class Module(nodes.File, PyCollector):
         # we assume we are only called once per module
         importmode = self.config.getoption("--import-mode")
         fspath = self.fspath
-        old_sys_path = sys.path[:] if importmode != "importlib" else None
         try:
             mod = fspath.pyimport(ensuresyspath=importmode)
         except SyntaxError:
@@ -555,9 +554,6 @@ class Module(nodes.File, PyCollector):
                 "or @pytest.mark.skipif decorators instead, and to skip a "
                 "module use `pytestmark = pytest.mark.{skip,skipif}."
             )
-        finally:
-            if old_sys_path:
-                sys.path[:] = old_sys_path
         self.config.pluginmanager.consider_module(mod)
         return mod
 
