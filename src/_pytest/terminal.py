@@ -801,8 +801,12 @@ class TerminalReporter:
             self.write_line(line)
 
     def pytest_report_header(self, config: Config) -> List[str]:
-        rootdir = _shorten_path(Path(str(config.rootdir)))
-        line = "rootdir: {}".format(rootdir)
+        rootdir = str(_shorten_path(Path(str(config.rootdir))))
+        if rootdir == "~":
+            # Typical with tests, use the full path then.
+            line = "rootdir: ~ ({})".format(config.rootdir)
+        else:
+            line = "rootdir: {}".format(rootdir)
 
         if config.inifile:
             line += ", inifile: {}".format(
