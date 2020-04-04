@@ -267,32 +267,37 @@ class TestInlineRunModulesCleanup:
         testdir.inline_run(str(test_mod))
         assert imported.data == 42
 
-
-def test_runtest_inprocess_syspathinsert_by_default(testdir: Testdir) -> None:
+def test_runtest_inprocess_syspathinsert(testdir: Testdir) -> None:
     p1 = testdir.makepyfile(
         """
-        def test():
-            import some_mod
-        """,
-        some_mod="",
-    )
-    syspath_before = sys.path[:]
-    assert testdir.runpytest_inprocess(str(p1)).ret == 0
-    assert syspath_before == sys.path
+        def test_syspathinsert_by_default(testdir) -> None:
+            import sys
+
+            p1 = testdir.makepyfile(
+                "def test(): import some_mod",
+                some_mod="",
+            )
+            syspath_before = sys.path[:]
+            assert testdir.runpytest_inprocess(str(p1)).ret == 0
+            assert syspath_before == sys.path
 
 
-def test_runtest_inprocess_syspathinsert_disabled(testdir: Testdir) -> None:
-    p1 = testdir.makepyfile(
+        def test_syspathinsert_disabled(testdir) -> None:
+            p1 = testdir.makepyfile(
+                '''
+                import pytest
+
+                def test():
+                    with pytest.raises(ImportError):
+                        import some_mod
+                ''',
+                some_mod="",
+            )
+            assert testdir.runpytest_inprocess(str(p1), syspathinsert=False).ret == 0
         """
-        import pytest
-
-        def test():
-            with pytest.raises(ImportError):
-                import some_mod
-        """,
-        some_mod="",
     )
-    assert testdir.runpytest_inprocess(str(p1), syspathinsert=False).ret == 0
+    result = testdir.runpytest_subprocess(str(p1), "-p", "pytester")
+    result.stdout.fnmatch_lines("*= 2 passed in*")
 
 
 def test_assert_outcomes_after_pytest_error(testdir) -> None:
