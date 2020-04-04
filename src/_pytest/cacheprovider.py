@@ -382,7 +382,7 @@ class NFPlugin:
         else:
             for item in items:
                 if item.nodeid not in known_nodeids:
-                    new_items[item.nodeid] = True
+                    new_items[item.nodeid] = item
         self.cached_nodeids.extend(new_items)
 
     def _get_increasing_order(self, items):
