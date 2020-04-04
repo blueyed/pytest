@@ -268,6 +268,56 @@ class TestInlineRunModulesCleanup:
         assert imported.data == 42
 
 
+def test_runtest_inprocess_syspathinsert(testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        import sys
+
+        def test_syspathinsert_by_default(testdir) -> None:
+            assert "some_mod" not in sys.modules
+
+            p1 = testdir.makepyfile(
+                '''
+                import sys
+
+                assert "some_mod" not in sys.modules
+
+                def test():
+                    import some_mod
+                ''',
+                some_mod="",
+            )
+            syspath_before = sys.path[:]
+            result = testdir.runpytest_inprocess(str(p1), "--import-mode=importlib")
+            assert result.ret == 0
+            assert syspath_before == sys.path
+
+
+        def test_syspathinsert_disabled(testdir) -> None:
+            p1 = testdir.makepyfile(
+                '''
+                import sys
+                import pytest
+
+                assert "some_mod" not in sys.modules
+
+                def test():
+                    with pytest.raises(ImportError):
+                        import some_mod
+                        print(some_mod)
+                ''',
+                some_mod="",
+            )
+            result = testdir.runpytest_inprocess(
+                str(p1), "--import-mode=importlib", syspathinsert=False,
+            )
+            assert result.ret == 0
+        """
+    )
+    result = testdir.runpytest_subprocess(str(p1), "-p", "pytester")
+    result.stdout.fnmatch_lines("*= 2 passed in*")
+
+
 def test_assert_outcomes_after_pytest_error(testdir) -> None:
     testdir.makepyfile("def test_foo(): assert True")
 
