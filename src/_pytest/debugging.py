@@ -60,7 +60,7 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure(config: Config):
+def pytest_configure(config: Config) -> None:
     import os
 
     if os.environ.get("PYTEST_HIJACK_PDB", "1") == "1":
@@ -137,12 +137,17 @@ class PdbBase(Generic[_P]):
                 pytestPDB_obj.config.pluginmanager.hook.pytest_enter_pdb(
                     config=config, pdb=self
                 )
+                # TODO: move into pytest_enter_pdb hook
+                capman = self._pytest_capman
+                capman.suspend(in_=True)
                 try:
                     return super().interaction(frame, traceback)
                 finally:
                     pytestPDB_obj.config.pluginmanager.hook.pytest_leave_pdb(
                         config=config, pdb=self
                     )
+                    # TODO: move into pytest_leave_pdb hook
+                    capman.resume()
 
             def do_debug(self, arg):
                 pytestPDB_obj._recursive_debug += 1
@@ -259,7 +264,7 @@ class PdbBase(Generic[_P]):
 
 
 class pytestPDB(PdbBase):
-    def pytest_configure(self, config):
+    def pytest_configure(self):
         import pdb
 
         self._recursive_debug = 0
@@ -267,7 +272,7 @@ class pytestPDB(PdbBase):
         self._saved_pdb_set_trace = (pdb, pdb.set_trace)
         pdb.set_trace = functools.partial(self.set_trace, self)
 
-    def pytest_unconfigure(self, config):
+    def pytest_unconfigure(self) -> None:
         pdb, set_trace = self._saved_pdb_set_trace
         pdb.set_trace = set_trace
 
@@ -276,6 +281,11 @@ class pytestPDB(PdbBase):
         frame = sys._getframe().f_back
         _pdb = self._init_pdb("set_trace", *args, **kwargs)
         _pdb.set_trace(frame)
+
+    def interaction(self, *args, **kwargs):
+        _pdb = self._init_pdb("interaction", *args, **kwargs)
+        _pdb.reset()
+        _pdb.interaction(*args, **kwargs)
 
 
 def set_trace(*, header=None):

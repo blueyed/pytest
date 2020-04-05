@@ -548,14 +548,15 @@ class TestPDB:
             """
             def function_1():
                 '''
+                >>> i = 40 + 2
                 >>> __import__('pdb').set_trace()
                 '''
         """
         )
-        # NOTE: does not use pytest.set_trace, but Python's patched pdb,
-        #       therefore "-s" is required.
-        child = testdir.spawn_pytest("--doctest-modules --pdb -s %s" % p1)
+        child = testdir.spawn_pytest("--doctest-modules %s" % p1)
         child.expect("Pdb")
+        child.sendline("p 'answer=%d' % i")
+        child.expect_exact("'answer=42'\r\n")
         child.sendline("q")
         rest = child.read().decode("utf8")
 
@@ -653,9 +654,8 @@ class TestPDB:
         child.expect(r"\n\(\(Pdb")
         child.sendline("c")
         child.expect("LEAVING RECURSIVE DEBUGGER")
-        assert b"PDB continue" not in child.before
         # No extra newline.
-        assert child.before.endswith(b"c\r\nprint_from_foo\r\n")
+        assert child.before.decode().splitlines() == [")) c", "print_from_foo"]
 
         # set_debug should not raise outcomes. Exit, if used recursively.
         child.sendline("debug 42")

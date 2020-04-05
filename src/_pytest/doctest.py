@@ -22,7 +22,9 @@ from _pytest._code.code import TerminalRepr
 from _pytest._io import TerminalWriter
 from _pytest.compat import safe_getattr
 from _pytest.compat import TYPE_CHECKING
+from _pytest.config import Config
 from _pytest.fixtures import FixtureRequest
+from _pytest.outcomes import Exit
 from _pytest.outcomes import OutcomeException
 from _pytest.python_api import approx
 from _pytest.warning_types import PytestWarning
@@ -152,8 +154,15 @@ class MultipleDoctestFailures(Exception):
         self.failures = failures
 
 
-def _init_runner_class() -> "Type[doctest.DocTestRunner]":
+def _init_runner_class(config: Config) -> "Type[doctest.DocTestRunner]":
     import doctest
+
+    # HACK
+    # TODO: check without plugin; find a better way?
+    # Currently this does it when the runner class gets requested the first
+    # time, i.e. a bit on demand (only).
+    pdbplugin = config.pluginmanager.getplugin("pdbsettrace")
+    doctest._OutputRedirectingPdb.interaction = pdbplugin.interaction  # type: ignore[attr-defined]  # noqa: F821
 
     class PytestDoctestRunner(doctest.DebugRunner):
         """
@@ -179,7 +188,7 @@ def _init_runner_class() -> "Type[doctest.DocTestRunner]":
         def report_unexpected_exception(self, out, test, example, exc_info):
             import bdb
 
-            if isinstance(exc_info[1], OutcomeException):
+            if isinstance(exc_info[1], (Exit, OutcomeException)):
                 raise exc_info[1]
             if isinstance(exc_info[1], bdb.BdbQuit):
                 outcomes.exit("Quitting debugger")
@@ -197,11 +206,13 @@ def _get_runner(
     verbose: Optional[bool] = None,
     optionflags: int = 0,
     continue_on_failure: bool = True,
+    *,
+    config: Config,
 ) -> "doctest.DocTestRunner":
     # We need this in order to do a lazy import on doctest
     global RUNNER_CLASS
     if RUNNER_CLASS is None:
-        RUNNER_CLASS = _init_runner_class()
+        RUNNER_CLASS = _init_runner_class(config)
     # Type ignored because the continue_on_failure argument is only defined on
     # PytestDoctestRunner, which is lazily defined so can't be used as a type.
     return RUNNER_CLASS(  # type: ignore
@@ -383,6 +394,7 @@ class DoctestTextfile(pytest.Module):
             optionflags=optionflags,
             checker=_get_checker(),
             continue_on_failure=_get_continue_on_failure(self.config),
+            config=self.config,
         )
 
         parser = doctest.DocTestParser()
@@ -495,6 +507,7 @@ class DoctestModule(pytest.Module):
             optionflags=optionflags,
             checker=_get_checker(),
             continue_on_failure=_get_continue_on_failure(self.config),
+            config=self.config,
         )
 
         for test in finder.find(module, module.__name__):
