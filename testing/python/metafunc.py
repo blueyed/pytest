@@ -33,6 +33,7 @@ class TestMetafunc:
         @attr.s
         class DefinitionMock(python.FunctionDefinition):
             obj = attr.ib()
+            _chain = []
 
         names = fixtures.getfuncargnames(func)
         fixtureinfo = FuncFixtureInfoMock(names)  # type: Any

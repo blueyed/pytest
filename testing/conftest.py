@@ -62,6 +62,7 @@ def pytest_collection_modifyitems(items):
         return
 
     spawn_names = {"spawn_pytest", "spawn"}
+    harder_testdir_names = {"copy_example"}
 
     for item in items:
         try:
@@ -75,6 +76,10 @@ def pytest_collection_modifyitems(items):
                 co_names = item.function.__code__.co_names
                 if spawn_names.intersection(co_names):
                     item.add_marker(pytest.mark.uses_pexpect)
+                    slowest_items.append(item)
+                elif harder_testdir_names.intersection(co_names):
+                    # Slower to debug, e.g. with `--pdb`.
+                    item.add_marker(pytest.mark.uses_copy_example)
                     slowest_items.append(item)
                 elif "runpytest_subprocess" in co_names:
                     slowest_items.append(item)

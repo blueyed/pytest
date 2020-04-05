@@ -4,6 +4,7 @@ import sys
 import py
 
 import pytest
+from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import fnmatch_ex
 from _pytest.pathlib import get_lock_path
 from _pytest.pathlib import maybe_delete_a_numbered_dir
@@ -89,3 +90,15 @@ def test_access_denied_during_cleanup(tmp_path, monkeypatch):
     lock_path = get_lock_path(path)
     maybe_delete_a_numbered_dir(path)
     assert not lock_path.is_file()
+
+
+def test_shorten_path(testdir) -> None:
+    home = str(Path.home())
+    assert os.getcwd() == str(home)
+    assert _shorten_path(home) == "~"
+    assert _shorten_path(os.path.join(home, "foo")) == "~{}foo".format(os.path.sep)
+
+    assert _shorten_path("foo") == "foo"
+    abs_foo = os.path.abspath("foo")
+    assert _shorten_path(abs_foo) == "~{}foo".format(os.path.sep)
+    assert _shorten_path(os.path.join(abs_foo, "..")) == "~"

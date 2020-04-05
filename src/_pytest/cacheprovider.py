@@ -48,8 +48,8 @@ Signature: 8a477f597d28d172789f06886806bc55
 
 @attr.s
 class Cache:
-    _cachedir = attr.ib(repr=False)
-    _config = attr.ib(repr=False)
+    _cachedir = attr.ib(type=Path, repr=False)
+    _config = attr.ib(type=Config, repr=False)
 
     # sub-directory under cache-dir for directories created by "makedir"
     _CACHE_PREFIX_DIRS = "d"
@@ -197,31 +197,28 @@ class LFPluginCollWrapper:
             if Path(str(collector.fspath)) in self.lfplugin._last_failed_paths:
                 out = yield
                 res = out.get_result()
-
-                session = collector.session
+                result = res.result
                 lastfailed = self.lfplugin.lastfailed
-                known_nodeids = self.lfplugin.known_nodeids
-                filtered_result = [
-                    x
-                    for x in res.result
-                    if x.nodeid in lastfailed
-                    # Include any passed arguments.
-                    # This includes the whole module then (and deselects
-                    # later), because it is not trivial / error-prone to match
-                    # initial args to nodeids again.
-                    or session.isinitpath(x.fspath)
-                    # Keep all sub-collectors.
-                    or isinstance(x, nodes.Collector)
-                    # Keep any new (unknown) node ids.
-                    or x.nodeid not in known_nodeids
-                ]
-                res.result = filtered_result
 
+                # Only filter with known failures.
                 if not self._collected_at_least_one_failure:
+                    if not any(x.nodeid in lastfailed for x in result):
+                        return
                     self.lfplugin.config.pluginmanager.register(
                         LFPluginCollSkipfiles(self.lfplugin), "lfplugin-collskip"
                     )
                     self._collected_at_least_one_failure = True
+
+                session = collector.session
+                result[:] = [
+                    x
+                    for x in result
+                    if x.nodeid in lastfailed
+                    # Include any passed arguments (not trivial to filter).
+                    or session.isinitpath(x.fspath)
+                    # Keep all sub-collectors.
+                    or isinstance(x, nodes.Collector)
+                ]
                 return
         yield
 
@@ -259,7 +256,6 @@ class LFPlugin:
 
         if config.getoption("lf"):
             self._last_failed_paths = self.get_last_failed_paths()
-            self.known_nodeids = config.cache.get("cache/nodeids", [])
             config.pluginmanager.register(
                 LFPluginCollWrapper(self), "lfplugin-collwrapper"
             )
@@ -370,11 +366,12 @@ class NFPlugin:
     ) -> Generator[None, None, None]:
         yield
 
+        known_nodeids = set(self.cached_nodeids)
         new_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
         if self.active:
             other_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
             for item in items:
-                if item.nodeid not in self.cached_nodeids:
+                if item.nodeid not in known_nodeids:
                     new_items[item.nodeid] = item
                 else:
                     other_items[item.nodeid] = item
@@ -384,7 +381,7 @@ class NFPlugin:
             ) + self._get_increasing_order(other_items.values())
         else:
             for item in items:
-                if item.nodeid not in self.cached_nodeids:
+                if item.nodeid not in known_nodeids:
                     new_items[item.nodeid] = item
         self.cached_nodeids.extend(new_items)
 
@@ -397,7 +394,7 @@ class NFPlugin:
             return
         if config.getoption("collectonly"):
             return
-        config.cache.set("cache/nodeids", self.cached_nodeids)
+        config.cache.set("cache/nodeids", list(self.cached_nodeids))
 
 
 def pytest_addoption(parser):
@@ -494,14 +491,16 @@ def cache(request):
     return request.config.cache
 
 
-def pytest_report_header(config):
+def pytest_report_header(config: Config) -> Optional[str]:
     """Display cachedir with --cache-show and if non-default."""
     if config.option.verbose > 0 or config.getini("cache_dir") != ".pytest_cache":
         from _pytest.pathlib import _shorten_path
 
+        assert config.cache
         return "cachedir: {}".format(
-            _shorten_path(config.cache._cachedir, config.rootdir)
+            _shorten_path(str(config.cache._cachedir), str(config.rootdir))
         )
+    return None
 
 
 def cacheshow(config, session):

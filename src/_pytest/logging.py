@@ -190,7 +190,10 @@ def pytest_addoption(parser):
         const=False,
         default=True,
         type="bool",
-        help="disable printing caught logs on failed tests.",
+        help=(
+            "disable adding caught logs as report sections"
+            ' (deprecated, use "--show-capture" instead).'
+        ),
     )
     add_option_ini(
         "--log-level",
@@ -459,13 +462,25 @@ def get_log_level_for_setting(config: Config, *setting_names: str) -> Optional[i
             break
     else:
         return None
+    return validate_log_level(log_level, setting_name)
 
-    if isinstance(log_level, str):
-        log_level = log_level.upper()
+
+def check_level(log_level: str) -> int:
     try:
-        return int(getattr(logging, log_level, log_level))
+        rv = logging._checkLevel(log_level)  # type: int  # type: ignore[attr-defined]
     except ValueError:
-        # Python logging does not recognise this as a logging level
+        log_level_upper = log_level.upper()
+        if log_level_upper != log_level:
+            rv = logging._checkLevel(log_level_upper)  # type: ignore[attr-defined]
+        else:
+            raise
+    return rv
+
+
+def validate_log_level(log_level: str, setting_name: str) -> int:
+    try:
+        return check_level(log_level)
+    except ValueError:
         raise pytest.UsageError(
             "'{}' is not recognized as a logging level name for "
             "'{}'. Please consider passing the "
@@ -596,25 +611,27 @@ class LoggingPlugin:
         )
         self.log_file_handler.setFormatter(self.log_file_formatter)
 
-    def _log_cli_enabled(self):
+    def _log_cli_enabled(self) -> bool:
         """Return True if log_cli should be considered enabled, either explicitly
-        or because --log-cli-level was given in the command-line.
+        or because --log-cli-level was given on the command-line.
         """
         return self._config.getoption(
             "--log-cli-level"
         ) is not None or self._config.getini("log_cli")
 
-    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-    def pytest_collection(self) -> Generator[None, None, None]:
-        with self.live_logs_context():
-            if self.log_cli_handler:
-                self.log_cli_handler.set_when("collection")
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_make_collect_report(self):
+        with self._wrap_live_logs_context("collection"):
+            with catching_logs(
+                LogCaptureHandler(), formatter=self.formatter, level=self.log_level
+            ) as log_handler:
+                outcome = yield
 
-            if self.log_file_handler is not None:
-                with catching_logs(self.log_file_handler, level=self.log_file_level):
-                    yield
-            else:
-                yield
+        if self.print_logs:
+            rep = outcome.get_result()
+            log = log_handler.stream.getvalue().strip()
+            if log:
+                rep.sections.append(("Captured log", log))
 
     @contextmanager
     def _runtest_for(self, item, when):
@@ -690,32 +707,18 @@ class LoggingPlugin:
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_sessionfinish(self):
-        with self.live_logs_context():
-            if self.log_cli_handler:
-                self.log_cli_handler.set_when("sessionfinish")
-            if self.log_file_handler is not None:
-                try:
-                    with catching_logs(
-                        self.log_file_handler, level=self.log_file_level
-                    ):
-                        yield
-                finally:
-                    # Close the FileHandler explicitly.
-                    # (logging.shutdown might have lost the weakref?!)
-                    self.log_file_handler.close()
-            else:
-                yield
+        with self._wrap_live_logs_context("sessionfinish"):
+            yield
+
+        if self.log_file_handler is not None:
+            # Close the FileHandler explicitly.
+            # (logging.shutdown might have lost the weakref?!)
+            self.log_file_handler.close()
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_sessionstart(self):
-        with self.live_logs_context():
-            if self.log_cli_handler:
-                self.log_cli_handler.set_when("sessionstart")
-            if self.log_file_handler is not None:
-                with catching_logs(self.log_file_handler, level=self.log_file_level):
-                    yield
-            else:
-                yield
+        with self._wrap_live_logs_context("sessionstart"):
+            yield
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtestloop(self, session):
@@ -729,12 +732,19 @@ class LoggingPlugin:
             # setting verbose flag is needed to avoid messy test progress output
             self._config.option.verbose = 1
 
+        with self._wrap_live_logs_context("runtestloop"):
+            yield
+
+    @contextmanager
+    def _wrap_live_logs_context(self, when: str) -> Generator[None, None, None]:
         with self.live_logs_context():
+            if self.log_cli_handler:
+                self.log_cli_handler.set_when(when)
             if self.log_file_handler is not None:
                 with catching_logs(self.log_file_handler, level=self.log_file_level):
-                    yield  # run all the tests
+                    yield
             else:
-                yield  # run all the tests
+                yield
 
 
 class _LiveLoggingStreamHandler(logging.StreamHandler):

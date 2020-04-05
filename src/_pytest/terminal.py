@@ -39,7 +39,6 @@ from _pytest.config import Config
 from _pytest.config import ExitCode
 from _pytest.main import Session
 from _pytest.pathlib import _shorten_path
-from _pytest.pathlib import Path
 from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
@@ -808,7 +807,7 @@ class TerminalReporter:
             or self.config.option.debug
             or getattr(self.config.option, "pastebin", None)
         ):
-            msg += " -- {}".format(_shorten_path(Path(sys.executable)))
+            msg += " -- {}".format(_shorten_path(sys.executable))
         self.write_line(msg)
         lines = self.config.hook.pytest_report_header(
             config=self.config, startdir=self.startdir
@@ -820,21 +819,26 @@ class TerminalReporter:
         for line in collapse(lines):
             self.write_line(line)
 
+    @pytest.hookimpl(trylast=True)
     def pytest_report_header(self, config: Config) -> List[str]:
-        rootdir = _shorten_path(Path(str(config.rootdir)))
-        line = "rootdir: {}".format(rootdir)
+        rootdir = _shorten_path(str(config.rootdir))
+        if rootdir == "~":
+            # Typical with tests, use the full path then.
+            line = "rootdir: ~ ({})".format(config.rootdir)
+        else:
+            line = "rootdir: {}".format(rootdir)
 
         if config.inifile:
             line += ", inifile: {}".format(
-                _shorten_path(Path(config.rootdir.bestrelpath(config.inifile)))  # type: ignore  # (currently wrong)
+                _shorten_path(config.rootdir.bestrelpath(config.inifile))  # type: ignore  # (currently wrong)
             )
-        cwd = _shorten_path(Path.cwd())
+        cwd = _shorten_path(os.getcwd())
         if rootdir != cwd:
             line += ", cwd: {}".format(cwd)
 
         testpaths = config.getini("testpaths")
         if testpaths and config.args == testpaths:
-            rel_paths = [str(_shorten_path(x)) for x in testpaths]
+            rel_paths = [_shorten_path(x) for x in testpaths]
             line += ", testpaths: {}".format(", ".join(rel_paths))
         result = [line]
 
@@ -994,19 +998,9 @@ class TerminalReporter:
                 )
 
     def _locationline(self, nodeid, fspath, lineno, domain):
-        def mkrel(nodeid):
-            line = self.config.cwd_relative_nodeid(nodeid)
-            if domain and line.endswith(domain):
-                line = line[: -len(domain)]
-                values = domain.split("[")
-                values[0] = values[0].replace(".", "::")  # don't replace '.' in params
-                line += "[".join(values)
-            return line
-
-        # collect_fspath comes from testid which has a "/"-normalized path
-
         if fspath:
-            res = mkrel(nodeid)
+            res = self.config.cwd_relative_nodeid(nodeid)
+            # collect_fspath comes from testid which has a "/"-normalized path
             if self.verbosity >= 2 and nodeid.split("::")[0] != fspath.replace(
                 "\\", nodes.SEP
             ):
@@ -1386,9 +1380,9 @@ def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
         return desc
 
     assert isinstance(crashloc.path, str), crashloc.path
-    crash_path = Path(crashloc.path)
-    if crash_path.is_absolute():
-        crash_path = _shorten_path(crash_path, Path(str(config.invocation_dir)))
+    crash_path = crashloc.path
+    if os.path.isabs(crash_path):
+        crash_path = _shorten_path(crash_path, str(config.invocation_dir))
 
     if str(crash_path).replace("\\", nodes.SEP) == path:
         if not testname:

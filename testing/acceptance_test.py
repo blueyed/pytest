@@ -768,7 +768,7 @@ class TestInvocationVariants:
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
-                "rootdir: ~",
+                "rootdir: ~ *",
                 "world/ns_pkg/world/test_world.py::test_other PASSED *",
                 "=* 1 passed in *=",
             ]

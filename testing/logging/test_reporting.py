@@ -3,6 +3,8 @@ import os
 import re
 
 import pytest
+from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
 
 
 def test_nothing_logged(testdir):
@@ -393,6 +395,30 @@ def test_log_cli_default_level_sections(testdir, request):
             "*WARNING* <<<<< END <<<<<<<*",
             "=* 2 passed in *=",
         ]
+    )
+
+
+def test_log_cli_runtestloop(testdir: Testdir) -> None:
+    testdir.makeconftest(
+        """
+        import logging
+
+        def pytest_runtestloop():
+            logging.debug("pytest_runtestloop")
+            return 1
+    """
+    )
+    result = testdir.runpytest("--log-cli-level", "debug")
+    result.stdout.fnmatch_lines(
+        [
+            "collected 0 items",
+            "",
+            "*- live log runtestloop -*",
+            "DEBUG    root:conftest.py:4 pytest_runtestloop",
+            "",
+            "=* no tests ran in *=",
+        ],
+        consecutive=True,
     )
 
 
@@ -1155,3 +1181,76 @@ def test_colored_ansi_esc_caplogtext(testdir):
     )
     result = testdir.runpytest("--log-level=INFO", "--color=yes")
     assert result.ret == 0
+
+
+@pytest.mark.parametrize("live_log", (True, False))
+def test_logging_while_collecting_nothing(live_log: bool, testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        import logging
+        logging.warning("during_collection")
+        """
+    )
+    args = [str(p1)]
+    if live_log:
+        args += ["--log-cli-level", "debug"]
+    result = testdir.runpytest(*args)
+    assert result.ret == ExitCode.NO_TESTS_COLLECTED
+    if live_log:
+        expected_lines = [
+            "rootdir: *",
+            "",
+            "*- live log collection -*",
+            "WARNING  root:test_logging_while_collecting_nothing.py:2 during_collection",
+            "collected 0 items",
+            "",
+            "*= no tests ran in *",
+        ]
+    else:
+        expected_lines = [
+            "rootdir: *",
+            "collected 0 items",
+            "",
+            "*= no tests ran in *",
+        ]
+    result.stdout.fnmatch_lines(expected_lines, consecutive=True)
+
+
+@pytest.mark.parametrize("live_log", (True, False))
+def test_logging_while_collecting_failure(live_log: bool, testdir: Testdir) -> None:
+    p1 = testdir.makepyfile(
+        """
+        import logging
+        logging.warning("during_collection")
+        assert 0, "test_coll_fail"
+        """
+    )
+    args = [str(p1)]
+    if live_log:
+        args += ["--log-cli-level", "debug"]
+    result = testdir.runpytest(*args)
+    assert result.ret == ExitCode.INTERRUPTED
+    expected_lines = [
+        "collected 0 items / 1 error",
+        "",
+        "=*= ERRORS =*=",
+        "*_ ERROR collecting test_logging_while_collecting_failure.py _*",
+        "test_logging_while_collecting_failure.py:3: in <module>",
+        '    assert 0, "test_coll_fail"',
+        "E   AssertionError: test_coll_fail",
+        "E   assert 0",
+        "*- Captured log -*",
+        "WARNING  root:test_logging_while_collecting_failure.py:2 during_collection",
+        "*= short test summary info =*",
+        "ERROR test_logging_while_collecting_failure.py:3 - *",
+        "*! Interrupted: 1 error during collection !*",
+        "*= 1 error in *=",
+    ]
+    if live_log:
+        expected_lines = [
+            "",
+            "*- live log collection -*",
+            "WARNING  root:test_logging_while_collecting_failure.py:2 during_collection",
+        ] + expected_lines
+    expected_lines = ["rootdir: *"] + expected_lines
+    result.stdout.fnmatch_lines(expected_lines, consecutive=True)
