@@ -408,7 +408,8 @@ class TerminalReporter:
             pytest.PytestDeprecationWarning(
                 "TerminalReporter.writer attribute is deprecated, use TerminalReporter._tw instead at your own risk.\n"
                 "See https://docs.pytest.org/en/latest/deprecations.html#terminalreporter-writer for more information."
-            ), stacklevel=3
+            ),
+            stacklevel=3,
         )
 
     @property
@@ -1065,9 +1066,7 @@ class TerminalReporter:
                 str(loc).split("::", 1)[0] for loc in locations
             )
             return "\n".join(
-                "{0}: {1} test{2} with warning{2}".format(
-                    k, v, "s" if v > 1 else ""
-                )
+                "{0}: {1} test{2} with warning{2}".format(k, v, "s" if v > 1 else "")
                 for k, v in counts_by_filename.items()
             )
 
