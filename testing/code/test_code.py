@@ -6,6 +6,7 @@ import pytest
 from _pytest._code import Code
 from _pytest._code import ExceptionInfo
 from _pytest._code import Frame
+from _pytest._code.code import ExceptionChainRepr
 from _pytest._code.code import ReprFuncArgs
 
 
@@ -249,3 +250,20 @@ def test_nameerror_with_decorator(testdir):
             "*= 1 error in *",
         ]
     )
+
+
+def test_ExceptionChainRepr():
+    """Test ExceptionChainRepr, especially with regard to being hashable."""
+    try:
+        raise ValueError()
+    except ValueError:
+        excinfo1 = ExceptionInfo.from_current()
+        excinfo2 = ExceptionInfo.from_current()
+
+    repr1 = excinfo1.getrepr()
+    repr2 = excinfo2.getrepr()
+    assert repr1 != repr2
+
+    assert isinstance(repr1, ExceptionChainRepr)
+    assert hash(repr1) != hash(repr2)
+    assert repr1 is not excinfo1.getrepr()

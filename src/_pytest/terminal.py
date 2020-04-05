@@ -401,6 +401,9 @@ class TerminalReporter:
         self._show_progress_info = self._determine_show_progress_info()
         self._collect_report_last_write = None  # type: Optional[float]
 
+        self._collect_ignored = {}  # type: Dict[str, List[py.path.local]]
+        """Information about ignored paths (for reporting)."""
+
     def _warn_deprecated_writer(self):
         warnings.warn(
             pytest.PytestDeprecationWarning(
@@ -418,9 +421,6 @@ class TerminalReporter:
     def writer(self, value: TerminalWriter) -> None:
         self._warn_deprecated_writer()
         self._tw = value
-
-        self._collect_ignored = {}  # type: Dict[str, List[py.path.local]]
-        """Information about ignored paths (for reporting)."""
 
     def _determine_show_progress_info(self):
         """Return True if we should display progress information based on the current config"""
