@@ -45,9 +45,9 @@ class KeywordMapping:
         # Add the names of the current item and any parent items
         import pytest
 
-        for item in item.listchain():
-            if not isinstance(item, pytest.Instance):
-                mapped_names.add(item.name)
+        for node in item.listchain():
+            if not isinstance(node, pytest.Instance):
+                mapped_names.add(node.name)
 
         # Add the names added as extra keywords to current or parent items
         mapped_names.update(item.listextrakeywords())
