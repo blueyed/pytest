@@ -930,22 +930,34 @@ def test_runtest_inprocess_tty(testdir: Testdir) -> None:
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
-    id_stdin = id(sys.stdin)
+
+def test_runtest_inprocess_tty_no_capture(testdir: Testdir) -> None:
+    # Wrapped in inner test to make it independent of outer "-s".
     p1 = testdir.makepyfile(
-        """
+        '''
         import sys
 
-        def test():
-            assert sys.stdin.isatty() is False
-            assert sys.stdout.isatty() is False
-            assert sys.stderr.isatty() is False
-            assert id(sys.stdin) == {}
-    """.format(
-            id_stdin
-        )
+        def test_inner(testdir):
+            id_stdin = id(sys.stdin)
+            p1 = testdir.makepyfile(
+                """
+                import sys
+
+                def test():
+                    assert sys.stdin.isatty() is False
+                    assert sys.stdout.isatty() is False
+                    assert sys.stderr.isatty() is False
+                    assert id(sys.stdin) == {}
+            """.format(
+                    id_stdin
+                )
+            )
+            result = testdir.runpytest(str(p1), "-s", tty=False)
+            result.stdout.fnmatch_lines(["* 1 passed in *"])
+            assert result.ret == 0
+        '''
     )
-    result = testdir.runpytest(str(p1), "-s", tty=False)
-    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    result = testdir.runpytest("-p", "pytester", str(p1))
     assert result.ret == 0
 
 
