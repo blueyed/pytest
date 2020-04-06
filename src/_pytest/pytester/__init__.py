@@ -181,7 +181,10 @@ class FdChecker:
 
     @staticmethod
     def _format_fdinfo(fdinfo, verbose):
-        ret = ", ".join("{} ({})".format(fd, stat.filemode(info[0])[0]) for fd, info in fdinfo.items())
+        ret = ", ".join(
+            "{} ({})".format(fd, stat.filemode(info[0])[0])
+            for fd, info in fdinfo.items()
+        )
 
         if verbose > 0:
             ret += "\n - " + "\n - ".join(
