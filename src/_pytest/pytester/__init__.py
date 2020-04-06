@@ -6,6 +6,7 @@ import os
 import platform
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import textwrap
@@ -32,6 +33,8 @@ import py
 
 import pytest
 from _pytest._code import Source
+from _pytest._code.code import TerminalRepr
+from _pytest._io import TerminalWriter
 from _pytest.capture import CLOSE_STDIN
 from _pytest.capture import CloseStdinType
 from _pytest.capture import MultiCapture
@@ -52,6 +55,7 @@ from _pytest.pathlib import Path
 from _pytest.python import Function
 from _pytest.python import Module
 from _pytest.reports import TestReport
+from _pytest.runner import CallInfo
 from _pytest.tmpdir import TempdirFactory
 
 
@@ -69,11 +73,12 @@ IGNORE_PAM = [  # filenames added when obtaining details about the current user
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--lsof",
+        "--check-fds",
+        "--lsof",  # deprecated
         action="store_true",
-        dest="lsof",
+        dest="check_fds",
         default=False,
-        help="run FD checks if lsof is available",
+        help="run FD checks (if /proc/self/fd is available)",
     )
 
     parser.addoption(
@@ -93,8 +98,8 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
-    if config.getvalue("lsof"):
-        checker = LsofFdLeakChecker()
+    if config.getvalue("check_fds"):
+        checker = FdChecker()
         if checker.matching_platform():
             config.pluginmanager.register(checker)
 
@@ -105,73 +110,114 @@ def pytest_configure(config):
     )
 
 
-class LsofFdLeakChecker:
-    def get_open_files(self):
-        out = self._exec_lsof()
-        open_files = self._parse_lsof_output(out)
-        return open_files
+class ReprFailItem(TerminalRepr):
+    def __init__(self, item: Item, message: str) -> None:
+        self.path, self.lineno = item.location[:2]
+        self.message = message
 
-    def _exec_lsof(self):
-        pid = os.getpid()
-        # py3: use subprocess.DEVNULL directly.
-        with open(os.devnull, "wb") as devnull:
-            return subprocess.check_output(
-                ("lsof", "-Ffn0", "-p", str(pid)), stderr=devnull
-            ).decode()
+    def toterminal(self, tw: TerminalWriter) -> None:
+        tw.write("{}".format(self.path), bold=True)
+        tw.line(":{}: {}".format(self.lineno, self.message))
 
-    def _parse_lsof_output(self, out):
-        def isopen(line):
-            return line.startswith("f") and (
-                "deleted" not in line
-                and "mem" not in line
-                and "txt" not in line
-                and "cwd" not in line
-            )
 
-        open_files = []
+class FdChecker:
+    def __init__(self):
+        self.after = {}
+        self.before = {}
 
-        for line in out.split("\n"):
-            if isopen(line):
-                fields = line.split("\0")
-                fd = fields[0][1:]
-                filename = fields[1][1:]
-                if filename in IGNORE_PAM:
-                    continue
-                if filename.startswith("/"):
-                    open_files.append((fd, filename))
+    def get_fdinfo(self):  # -> Dict[int, Any]:
+        ret = {}
+        for fd_file in list(os.scandir("/proc/self/fd")):
+            try:
+                resolved = os.readlink(fd_file.path)
+            except FileNotFoundError:
+                # scandir's fd (at least).
+                continue
+            if not os.path.exists(resolved):
+                continue  # "(deleted)"
+            try:
+                fstat = fd_file.stat()
+            except OSError:
+                pass
+            else:
+                fd = int(fd_file.name)
+                s_ifmt = stat.S_IFMT(fstat.st_mode)
+                ret[(fd, fd_file.inode())] = (s_ifmt, fstat)
+        return ret
 
-        return open_files
-
-    def matching_platform(self):
-        try:
-            subprocess.check_output(("lsof", "-v"))
-        except (OSError, subprocess.CalledProcessError):
-            return False
-        else:
-            return True
+    def matching_platform(self) -> bool:
+        return os.path.exists("/proc/self/fd")
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
-    def pytest_runtest_protocol(self, item):
-        lines1 = self.get_open_files()
+    def pytest_runtest_setup(self, item: Item) -> Generator[None, None, None]:
+        yield
+        self.before[item] = self.get_fdinfo()
+
+    @pytest.hookimpl(hookwrapper=True, trylast=True)
+    def pytest_runtest_teardown(self, item: Item) -> Generator[None, None, None]:
         yield
         if hasattr(sys, "pypy_version_info"):
             gc.collect()
-        lines2 = self.get_open_files()
+        self.after[item] = self.get_fdinfo()
 
-        new_fds = {t[0] for t in lines2} - {t[0] for t in lines1}
-        leaked_files = [t for t in lines2 if t[0] in new_fds]
-        if leaked_files:
-            error = []
-            error.append("***** %s FD leakage detected" % len(leaked_files))
-            error.extend([str(f) for f in leaked_files])
-            error.append("*** Before:")
-            error.extend([str(f) for f in lines1])
-            error.append("*** After:")
-            error.extend([str(f) for f in lines2])
-            error.append(error[0])
-            error.append("*** function %s:%s: %s " % item.location)
-            error.append("See issue #2366")
-            item.warn(pytest.PytestWarning("\n".join(error)))
+    @pytest.hookimpl(hookwrapper=True)
+    def pytest_runtest_makereport(self, item: Item, call: CallInfo):
+        outcome = yield
+        if call.when != "teardown":
+            return
+
+        longrepr = self._create_longrepr(item)
+        if not longrepr:
+            return
+
+        rep = outcome.get_result()
+        if rep.outcome != "failed":
+            rep.outcome = "failed"
+        if not rep.longrepr:
+            rep.longrepr = longrepr
+        else:
+            rep.sections.append(("FD check failure(s)", longrepr.message))
+        outcome.force_result(rep)
+
+    @staticmethod
+    def _format_fdinfo(fdinfo, verbose):
+        ret = ", ".join("{} ({})".format(fd, stat.filemode(info[0])[0]) for fd, info in fdinfo.items())
+
+        if verbose > 0:
+            ret += "\n - " + "\n - ".join(
+                "fd {}: {}, {}".format(fd, stat.filemode(info[0])[0], info[1])
+                for fd, info in fdinfo.items()
+            )
+        return ret
+
+    def _create_longrepr(self, item: Item) -> Optional[ReprFailItem]:
+        try:
+            before = self.before[item]
+        except KeyError:
+            return None
+        after = self.after[item]
+        new = {}
+        for (fd, inode), info in after.items():
+            if (fd, inode) not in before:
+                new[fd] = info
+
+        if not new:
+            return None
+
+        errors = []
+        if new:
+            errors.append(
+                "{} FD leakage{} detected: {}".format(
+                    len(new),
+                    "s" if len(new) != 1 else "",
+                    self._format_fdinfo(new, item.config.option.verbose),
+                )
+            )
+        if not errors:
+            return None
+
+        message = "\n".join(errors)
+        return ReprFailItem(item=item, message=message)
 
 
 # used at least by pytest-xdist plugin
