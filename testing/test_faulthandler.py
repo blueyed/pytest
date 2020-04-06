@@ -123,9 +123,9 @@ def test_already_initialized(faulthandler_timeout, testdir):
         "faulthandler_timeout={}".format(faulthandler_timeout),
     )
     # ensure warning is emitted if faulthandler_timeout is configured
-    warning_line = "*faulthandler.py*faulthandler module enabled before*"
+    warning_line = "  PytestConfigWarning: faulthandler module enabled before*"
     if faulthandler_timeout > 0:
-        result.stdout.fnmatch_lines(warning_line)
+        result.stdout.fnmatch_lines([warning_line])
     else:
         result.stdout.no_fnmatch_line(warning_line)
     result.stdout.fnmatch_lines("*1 passed*")

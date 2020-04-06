@@ -220,11 +220,19 @@ class TestGeneralUsage:
         )
         result = testdir.runpytest("--help")
         result.stdout.fnmatch_lines(
-            """
-            *--version*
-            *warning*conftest.py*
-        """
+            [
+                "*shown according to specified*",
+                "",
+                "warning : *_pytest?config?__init__.py:*:"
+                " PytestConfigWarning: could not load initial conftests ({}):"
+                " ModuleNotFoundError: No module named 'qwerty'".format(conftest),
+                "  *",  # source line differs between Python versions.
+            ],
+            consecutive=True,
         )
+        assert "--version" in result.stdout.str()
+        assert result.ret == 0
+
         result = testdir.runpytest()
         exc_name = (
             "ModuleNotFoundError" if sys.version_info >= (3, 6) else "ImportError"
@@ -1229,16 +1237,25 @@ def test_warn_on_async_function(testdir):
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         [
-            "test_async.py::test_1",
-            "test_async.py::test_2",
-            "test_async.py::test_3",
-            "*async def functions are not natively supported*",
-            "*3 skipped, 3 warnings in*",
-        ]
-    )
-    # ensure our warning message appears only once
-    assert (
-        result.stdout.str().count("async def functions are not natively supported") == 1
+            "test_async.py sss *",
+            "",
+            "*= warnings summary [[]runtest[]] =*",
+            "test_async.py:1::test_1",
+            "    async def test_1():",
+            "test_async.py:3::test_2",
+            "    async def test_2():",
+            "test_async.py:5::test_3",
+            "    def test_3():",
+            "  PytestUnhandledCoroutineWarning: async def functions are not natively supported and have been skipped.",
+            "  You need to install a suitable plugin for your async framework, for example:",
+            "    - pytest-asyncio",
+            "    - pytest-trio",
+            "    - pytest-tornasync",
+            "",
+            "-- Docs: *",
+            "*= 3 skipped, 3 warnings in *",
+        ],
+        consecutive=True,
     )
 
 
@@ -1260,16 +1277,25 @@ def test_warn_on_async_gen_function(testdir):
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         [
-            "test_async.py::test_1",
-            "test_async.py::test_2",
-            "test_async.py::test_3",
-            "*async def functions are not natively supported*",
-            "*3 skipped, 3 warnings in*",
-        ]
-    )
-    # ensure our warning message appears only once
-    assert (
-        result.stdout.str().count("async def functions are not natively supported") == 1
+            "test_async.py sss *",
+            "",
+            "*= warnings summary [[]runtest[]] =*",
+            "test_async.py:1::test_1",
+            "    async def test_1():",
+            "test_async.py:3::test_2",
+            "    async def test_2():",
+            "test_async.py:5::test_3",
+            "    def test_3():",
+            "  PytestUnhandledCoroutineWarning: async def functions are not natively supported and have been skipped.",
+            "  You need to install a suitable plugin for your async framework, for example:",
+            "    - pytest-asyncio",
+            "    - pytest-trio",
+            "    - pytest-tornasync",
+            "",
+            "-- Docs: *",
+            "*= 3 skipped, 3 warnings in *",
+        ],
+        consecutive=True,
     )
 
 

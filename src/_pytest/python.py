@@ -160,7 +160,7 @@ def pytest_configure(config):
     )
 
 
-def async_warn(nodeid: str) -> None:
+def async_warn(pyfuncitem: "Function") -> None:
     msg = "async def functions are not natively supported and have been skipped.\n"
     msg += (
         "You need to install a suitable plugin for your async framework, for example:\n"
@@ -168,7 +168,11 @@ def async_warn(nodeid: str) -> None:
     msg += "  - pytest-asyncio\n"
     msg += "  - pytest-trio\n"
     msg += "  - pytest-tornasync"
-    warnings.warn(PytestUnhandledCoroutineWarning(msg.format(nodeid)))
+    filename, lineno = pyfuncitem.location[:2]
+    lineno = lineno + 1 if lineno is not None else 0
+    warnings.warn_explicit(
+        msg.format(pyfuncitem.nodeid), PytestUnhandledCoroutineWarning, filename, lineno
+    )
     skip(msg="async def function and no async plugin installed (see warnings)")
 
 
@@ -178,12 +182,12 @@ def pytest_pyfunc_call(pyfuncitem: "Function"):
     if iscoroutinefunction(testfunction) or (
         sys.version_info >= (3, 6) and inspect.isasyncgenfunction(testfunction)
     ):
-        async_warn(pyfuncitem.nodeid)
+        async_warn(pyfuncitem)
     funcargs = pyfuncitem.funcargs
     testargs = {arg: funcargs[arg] for arg in pyfuncitem._fixtureinfo.argnames}
     result = testfunction(**testargs)
     if hasattr(result, "__await__") or hasattr(result, "__aiter__"):
-        async_warn(pyfuncitem.nodeid)
+        async_warn(pyfuncitem)
     return True
 
 

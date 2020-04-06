@@ -97,19 +97,6 @@ def catch_warnings_for_item(config, ihook, when, item):
             )
 
 
-def warning_record_to_str(warning_message):
-    """Convert a warnings.WarningMessage to a string."""
-    warn_msg = warning_message.message
-    msg = warnings.formatwarning(
-        warn_msg,
-        warning_message.category,
-        warning_message.filename,
-        warning_message.lineno,
-        warning_message.line,
-    )
-    return msg
-
-
 @pytest.hookimpl(hookwrapper=True, tryfirst=True)
 def pytest_runtest_protocol(item):
     with catch_warnings_for_item(
