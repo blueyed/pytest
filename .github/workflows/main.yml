@@ -76,7 +76,7 @@ jobs:
             script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
-            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1 --check-fds"
+            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
 
           - name: "windows-py37 (2)"
             python: "3.7"
