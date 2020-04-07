@@ -6,6 +6,7 @@ from _pytest.pytester import FdChecker
 from _pytest.pytester import Testdir
 
 
+@pytest.mark.pypy_specific
 @pytest.mark.skipif(not os.path.exists(FdChecker.procfspath), reason="no procfs")
 @pytest.mark.parametrize("verbosity", (0, 1))
 def test_fdchecker(verbosity: int, testdir: Testdir) -> None:
