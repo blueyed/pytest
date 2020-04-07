@@ -47,11 +47,13 @@ from _pytest.monkeypatch import MonkeyPatch
 from _pytest.nodes import Collector
 from _pytest.nodes import Item
 from _pytest.outcomes import Failed
+from _pytest.pathlib import _shorten_path
 from _pytest.pathlib import Path
 from _pytest.python import Function
 from _pytest.python import Module
 from _pytest.reports import TestReport
 from _pytest.tmpdir import TempdirFactory
+
 
 if TYPE_CHECKING:
     from typing import Type
@@ -529,18 +531,9 @@ class SysPathsSnapshot:
         sys.path[:], sys.meta_path[:] = self.__saved
 
 
-def _display_running(header, *args):
-    from _pytest.pathlib import _shorten_path
-
-    cwd = Path.cwd()
-
-    def try_rel(arg: Path) -> Path:
-        try:
-            return arg.relative_to(cwd)
-        except ValueError:
-            return arg
-
-    cmd = _shorten_path(try_rel(Path(args[0])))
+def _display_running(header: str, *args: str) -> None:
+    cwd = os.getcwd()
+    cmd = _shorten_path(args[0], relative_to=cwd)
     args_str = " ".join([shlex.quote(str(x)) for x in (cmd,) + args[1:]])
     indent = " " * (len(header) - 2)
     print("{}: {}\n{}in: {}".format(header, args_str, indent, cwd))
