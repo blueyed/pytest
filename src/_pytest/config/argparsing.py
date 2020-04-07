@@ -132,11 +132,8 @@ class Parser:
         store_true_options = []
         for option in [option for group in groups for option in group.options]:
             names = option.names()
-            action = option.attrs().get("action")
-            if action:
-                if isinstance(action, str):
-                    if action == "store_true":
-                        store_true_options.append((option, names))
+            if option.attrs().get("action") == "store_true":
+                store_true_options.append((option, names))
             all_names.extend(names)
 
         for option, option_names in store_true_options:
