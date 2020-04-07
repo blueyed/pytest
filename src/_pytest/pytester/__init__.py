@@ -85,6 +85,7 @@ def pytest_addoption(parser):
         "--lsof", "--no-lsof",  # deprecated, no validation.
         dest="check_fds",
         action=FdCheckerAction,
+        default=False,
         help="run FD checks (requires {})".format(FdChecker.procfspath),
     )
 
