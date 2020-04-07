@@ -45,12 +45,12 @@ def test_fdchecker(verbosity: int, testdir: Testdir) -> None:
                 "",
                 "*= ERRORS =*",
                 "*_ ERROR at teardown of test_leak1 _*",
-                "test_fdchecker.py:6: {}".format(leak_msg_1),
+                "test_fdchecker.py:7: {}".format(leak_msg_1),
                 "*_ ERROR at teardown of test_leak2 _*",
-                "test_fdchecker.py:9: {}".format(leak_msg_2),
+                "test_fdchecker.py:10: {}".format(leak_msg_2),
                 "*= short test summary info =*",
-                "ERROR test_fdchecker.py:6::test_leak1 - {}".format(leak_msg_1),
-                "ERROR test_fdchecker.py:9::test_leak2 - {}".format(leak_msg_2),
+                "ERROR test_fdchecker.py:7::test_leak1 - {}".format(leak_msg_1),
+                "ERROR test_fdchecker.py:10::test_leak2 - {}".format(leak_msg_2),
                 "*= 2 passed, 2 errors in *=",
             ],
             consecutive=True,
@@ -65,19 +65,19 @@ def test_fdchecker(verbosity: int, testdir: Testdir) -> None:
                 r"",
                 r"*= ERRORS =*",
                 r"*_ ERROR at teardown of test_leak1 _*",
-                r"test_fdchecker.py:6: 1 FD leakage detected: {} (c)".format(leaks[0]),
+                r"test_fdchecker.py:7: 1 FD leakage detected: {} (c)".format(leaks[0]),
                 r" - fd {}: c, os.stat_result(*)".format(leaks[0]),
                 r"*_ ERROR at teardown of test_leak2 _*",
-                r"test_fdchecker.py:9: 2 FD leakages detected: {} (c), {} (c)".format(
+                r"test_fdchecker.py:10: 2 FD leakages detected: {} (c), {} (c)".format(
                     *leaks[1:3]
                 ),
                 r" - fd {}: c, os.stat_result(*)".format(leaks[1]),
                 r" - fd {}: c, os.stat_result(*)".format(leaks[2]),
                 r"*= short test summary info =*",
-                r"ERROR test_fdchecker.py:6::test_leak1 - 1 FD leakage detected: {0} (c)\n - fd {0}: c, *".format(
+                r"ERROR test_fdchecker.py:7::test_leak1 - 1 FD leakage detected: {0} (c)\n - fd {0}: c, *".format(
                     leaks[0]
                 ),
-                r"ERROR test_fdchecker.py:9::test_leak2 - 2 FD leakages detected: {} (c), {} (c)\n - *".format(
+                r"ERROR test_fdchecker.py:10::test_leak2 - 2 FD leakages detected: {} (c), {} (c)\n - *".format(
                     *leaks[1:3]
                 ),
                 r"*= 2 passed, 2 errors in *",

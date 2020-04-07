@@ -131,6 +131,7 @@ def pytest_configure(config: Config) -> None:
 class ReprFailItem(TerminalRepr):
     def __init__(self, item: Item, message: str) -> None:
         self.path, self.lineno = item.location[:2]
+        assert self.lineno, (item, item.location)
         self.lineno += 1
         self.message = message
 
