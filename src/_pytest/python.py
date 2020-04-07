@@ -1416,6 +1416,12 @@ class Function(PyobjMixin, nodes.Item):
         if callobj is not NOTSET:
             self.obj = callobj
 
+        #: original function name, without any decorations (for example
+        #: parametrization adds a ``"[...]"`` suffix to function names).
+        #:
+        #: .. versionadded:: 3.0
+        self.originalname = originalname if originalname is not None else name
+
         self.keywords.update(self.obj.__dict__)
         self.own_markers.extend(get_unpacked_marks(self.obj))
         if callspec:
@@ -1450,12 +1456,6 @@ class Function(PyobjMixin, nodes.Item):
         self.fixturenames = fixtureinfo.names_closure
         self._initrequest()
 
-        #: original function name, without any decorations (for example
-        #: parametrization adds a ``"[...]"`` suffix to function names).
-        #:
-        #: .. versionadded:: 3.0
-        self.originalname = originalname
-
     @classmethod
     def from_parent(cls, parent, **kw):  # todo: determine sound type limitations
         """
@@ -1473,11 +1473,7 @@ class Function(PyobjMixin, nodes.Item):
         return getimfunc(self.obj)
 
     def _getobj(self):
-        name = self.name
-        i = name.find("[")  # parametrization
-        if i != -1:
-            name = name[:i]
-        return getattr(self.parent.obj, name)
+        return getattr(self.parent.obj, self.originalname)
 
     @property
     def _pyfuncitem(self):
