@@ -10,6 +10,8 @@ import pytest
 from _pytest.compat import importlib_metadata
 from _pytest.config import ExitCode
 
+pytestmark = pytest.mark.acceptance_tests
+
 
 def prepend_pythonpath(*dirs):
     cur = os.getenv("PYTHONPATH")
