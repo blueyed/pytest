@@ -1571,6 +1571,8 @@ class LineMatcher:
         from :code:`text.splitlines()`.
     """
 
+    ELLIPSIS = "..."
+
     def __init__(self, lines: List[str]) -> None:
         self.lines = lines
         self._log_output = []  # type: List[str]
@@ -1705,28 +1707,47 @@ class LineMatcher:
         __tracebackhide__ = True
         wnick = len(match_nickname) + 1
         started = False
+        in_ellipsis, ellipsis_count = False, 0
         for line in lines2:
             nomatchprinted = False
             while lines1:
                 nextline = lines1.pop(0)
+                matched = False
                 if line == nextline:
                     self._log("exact match:", repr(line))
-                    started = True
-                    break
+                    matched = True
                 elif match_func(nextline, line):
                     self._log("%s:" % match_nickname, repr(line))
                     self._log(
                         "{:>{width}}".format("with:", width=wnick), repr(nextline)
                     )
+                    matched = True
+
+                if matched:
                     started = True
+                    if in_ellipsis:
+                        if ellipsis_count:
+                            self._log(self.ELLIPSIS)
+                        in_ellipsis = False
                     break
-                else:
-                    if not nomatchprinted:
-                        self._log(
-                            "{:>{width}}".format("nomatch:", width=wnick), repr(line)
-                        )
-                        nomatchprinted = True
-                    self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
+
+                if complete or consecutive:
+                    if line == self.ELLIPSIS:
+                        if in_ellipsis:
+                            raise ValueError("ellipsis following ellipsis")
+                        self._log(self.ELLIPSIS)
+                        in_ellipsis = True
+                        break
+
+                if not nomatchprinted:
+                    self._log(
+                        "{:>{width}}".format("nomatch:", width=wnick), repr(line)
+                    )
+                    nomatchprinted = True
+
+                self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
+
+                if not in_ellipsis:
                     if complete:
                         self._fail(
                             "no complete match: {!r} with {!r}".format(line, nextline,)
