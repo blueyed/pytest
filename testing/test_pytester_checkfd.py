@@ -23,7 +23,7 @@ def test_fdchecker(verbosity: int, testdir: Testdir) -> None:
         """
     )
     result = testdir.runpytest(
-        "-s", "-p", "pytester", "--check-fds", "--verbosity={}".format(verbosity), str(p1)
+        "-p", "pytester", "--check-fds", "--verbosity={}".format(verbosity), str(p1)
     )
 
     with open("leaked", "r") as f:
@@ -98,7 +98,7 @@ def test_fdchecker_section_with_existing_error(testdir: Testdir) -> None:
         """
     )
     result = testdir.runpytest(
-        "-s", "-p", "pytester", "--check-fds", str(p1)
+        "-p", "pytester", "--check-fds", str(p1)
     )
 
     with open("leaked", "r") as f:
