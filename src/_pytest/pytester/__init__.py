@@ -69,6 +69,7 @@ if TYPE_CHECKING:
 
 class FdCheckerAction(argparse._StoreTrueAction):
     """Validate check_fds option string(s)."""
+
     def __call__(self, parser, namespace, values, option_string=None):
         if option_string.startswith("--no-"):
             setattr(namespace, self.dest, False)
@@ -81,8 +82,10 @@ class FdCheckerAction(argparse._StoreTrueAction):
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--check-fds", "--no-check-fds",
-        "--lsof", "--no-lsof",  # deprecated, no validation.
+        "--check-fds",
+        "--no-check-fds",
+        "--lsof",  # deprecated, no validation.
+        "--no-lsof",
         dest="check_fds",
         action=FdCheckerAction,
         default=False,
