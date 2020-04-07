@@ -8,6 +8,7 @@ import py
 
 import pytest
 from _pytest.compat import importlib_metadata
+from _pytest.compat import MODULE_NOT_FOUND_ERROR
 from _pytest.config import ExitCode
 
 pytestmark = pytest.mark.acceptance_tests
@@ -227,7 +228,9 @@ class TestGeneralUsage:
                 "",
                 "warning : *_pytest?config?__init__.py:*:"
                 " PytestConfigWarning: could not load initial conftests ({}):"
-                " ModuleNotFoundError: No module named 'qwerty'".format(conftest),
+                " {}: No module named 'qwerty'".format(
+                    conftest, MODULE_NOT_FOUND_ERROR
+                ),
                 "  *",  # source line differs between Python versions.
             ],
             consecutive=True,
@@ -236,9 +239,6 @@ class TestGeneralUsage:
         assert result.ret == 0
 
         result = testdir.runpytest()
-        exc_name = (
-            "ModuleNotFoundError" if sys.version_info >= (3, 6) else "ImportError"
-        )
         assert result.stdout.lines == []
         assert result.stderr.lines == [
             "ImportError while loading conftest '{}'.".format(conftest),
@@ -246,7 +246,7 @@ class TestGeneralUsage:
             "    foo()",
             "conftest.py:2: in foo",
             "    import qwerty",
-            "E   {}: No module named 'qwerty'".format(exc_name),
+            "E   {}: No module named 'qwerty'".format(MODULE_NOT_FOUND_ERROR),
         ]
 
     def test_early_skip(self, testdir):
