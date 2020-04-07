@@ -898,7 +898,7 @@ def test_runtest_inprocess_tty(testdir: Testdir) -> None:
             assert sys.stderr.isatty() is True
     """
     )
-    result = testdir.runpytest(str(p1), "-s", tty=True)
+    result = testdir.runpytest_inprocess(str(p1), "-s", tty=True)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
@@ -912,7 +912,7 @@ def test_runtest_inprocess_tty(testdir: Testdir) -> None:
             assert sys.stderr.isatty() is True
     """
     )
-    result = testdir.runpytest(str(p1), "-s", tty=True, stdin=False)
+    result = testdir.runpytest_inprocess(str(p1), "-s", tty=True, stdin=False)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
@@ -926,7 +926,7 @@ def test_runtest_inprocess_tty(testdir: Testdir) -> None:
             assert sys.stderr.isatty() is False
     """
     )
-    result = testdir.runpytest(str(p1), tty=True)
+    result = testdir.runpytest_inprocess(str(p1), tty=True)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
@@ -952,7 +952,7 @@ def test_runtest_inprocess_tty_no_capture(testdir: Testdir) -> None:
                     id_stdin
                 )
             )
-            result = testdir.runpytest(str(p1), "-s", tty=False)
+            result = testdir.runpytest_inprocess(str(p1), "-s", tty=False)
             result.stdout.fnmatch_lines(["* 1 passed in *"])
             assert result.ret == 0
         '''
