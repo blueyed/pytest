@@ -1,4 +1,5 @@
 """(disabled by default) support for testing pytest and pytest plugins."""
+import argparse
 import collections.abc
 import gc
 import importlib
@@ -66,19 +67,25 @@ if TYPE_CHECKING:
     import pexpect
 
 
-IGNORE_PAM = [  # filenames added when obtaining details about the current user
-    "/var/lib/sss/mc/passwd"
-]
+class FdCheckerAction(argparse._StoreTrueAction):
+    """Validate check_fds option string(s)."""
+    def __call__(self, parser, namespace, values, option_string=None):
+        if option_string.startswith("--no-"):
+            setattr(namespace, self.dest, False)
+        elif option_string == "--lsof":
+            # No validation for backward compatibility.
+            setattr(namespace, self.dest, "deprecated_lsof")
+        else:
+            setattr(namespace, self.dest, True)
 
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--check-fds",
-        "--lsof",  # deprecated
-        action="store_true",
+        "--check-fds", "--no-check-fds",
+        "--lsof", "--no-lsof",  # deprecated, no validation.
         dest="check_fds",
-        default=False,
-        help="run FD checks (if /proc/self/fd is available)",
+        action=FdCheckerAction,
+        help="run FD checks (requires {})".format(FdChecker.procfspath),
     )
 
     parser.addoption(
@@ -97,11 +104,18 @@ def pytest_addoption(parser):
     )
 
 
-def pytest_configure(config):
-    if config.getvalue("check_fds"):
-        checker = FdChecker()
-        if checker.matching_platform():
-            config.pluginmanager.register(checker)
+def pytest_configure(config: Config) -> None:
+    check_fds = config.getvalue("check_fds")
+    if check_fds:
+        procfspath = FdChecker.procfspath
+        if os.path.exists(procfspath):
+            config.pluginmanager.register(FdChecker())
+        elif check_fds is True:
+            raise pytest.UsageError(
+                "--check-fds: not supported on this platform (missing {})".format(
+                    procfspath
+                )
+            )
 
     config.addinivalue_line(
         "markers",
@@ -121,13 +135,15 @@ class ReprFailItem(TerminalRepr):
 
 
 class FdChecker:
+    procfspath = "/proc/self/fd"
+
     def __init__(self):
         self.after = {}
         self.before = {}
 
     def get_fdinfo(self):  # -> Dict[int, Any]:
         ret = {}
-        for fd_file in list(os.scandir("/proc/self/fd")):
+        for fd_file in list(os.scandir(self.procfspath)):
             try:
                 resolved = os.readlink(fd_file.path)
             except FileNotFoundError:
@@ -144,9 +160,6 @@ class FdChecker:
                 s_ifmt = stat.S_IFMT(fstat.st_mode)
                 ret[(fd, fd_file.inode())] = (s_ifmt, fstat)
         return ret
-
-    def matching_platform(self) -> bool:
-        return os.path.exists("/proc/self/fd")
 
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_runtest_setup(self, item: Item) -> Generator[None, None, None]:
