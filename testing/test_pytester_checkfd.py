@@ -11,7 +11,6 @@ def test_fdchecker(verbosity: int, testdir: Testdir) -> None:
         import os
 
         def log_leak(fd):
-            print("log_leak", fd)
             with open("leaked", "a") as f:
                 f.write("{}\n".format(fd))
 
@@ -86,15 +85,12 @@ def test_fdchecker_section_with_existing_error(testdir: Testdir) -> None:
         import pytest
 
         def log_leak(fd):
-            print("log_leak", fd)
             with open("leaked", "a") as f:
                 f.write("{}\n".format(fd))
 
         @pytest.fixture
         def fix():
-            print("fix_setup")
             yield
-            print("fix_teardown")
             assert 0, "teardown_error"
 
         def test_leak(fix):
