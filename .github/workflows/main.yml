@@ -48,7 +48,7 @@ jobs:
             python: "pypy3"
             os: ubuntu-latest
             tox_env: "pypy3-coverage"
-            pytest_addopts: "-m pypy_specific"
+            pytest_addopts: "-m 'pypy_specific or acceptance_tests'"
           - name: "ubuntu-py38 (pexpect, integration)"
             python: "3.8"
             os: ubuntu-latest
@@ -91,7 +91,7 @@ jobs:
             python: "3.8"
             os: ubuntu-latest
             tox_env: "py38-xdist-coverage"
-            pytest_addopts: "-m xdist_specific -n 0"
+            pytest_addopts: "-m 'xdist_specific or acceptance_tests' -n 0"
 
           - name: "linting"
             python: "3.8"
