@@ -1740,9 +1740,7 @@ class LineMatcher:
                         break
 
                 if not nomatchprinted:
-                    self._log(
-                        "{:>{width}}".format("nomatch:", width=wnick), repr(line)
-                    )
+                    self._log("{:>{width}}".format("nomatch:", width=wnick), repr(line))
                     nomatchprinted = True
 
                 self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
