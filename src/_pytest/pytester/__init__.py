@@ -1628,6 +1628,9 @@ class LineMatcher:
     def _log_text(self) -> str:
         return "\n".join(self._log_output)
 
+    def _reset(self) -> None:
+        self._log_output = []
+
     def fnmatch_lines(
         self,
         lines2: Sequence[str],
@@ -1700,6 +1703,7 @@ class LineMatcher:
         """
         if not isinstance(lines2, collections.abc.Sequence):
             raise TypeError("invalid type for lines2: {}".format(type(lines2).__name__))
+        self._reset()
         lines2 = self._getlines(lines2)
         lines1 = self.lines[:]
         nextline = None
@@ -1759,7 +1763,6 @@ class LineMatcher:
                 self._log("remains unmatched: {!r}".format(line))
                 msg = "unmatched: {!r}".format(line)
                 self._fail(msg)
-        self._log_output = []
 
     def no_fnmatch_line(self, pat: str) -> None:
         """Ensure captured lines do not match the given pattern, using ``fnmatch.fnmatch``.
@@ -1787,6 +1790,7 @@ class LineMatcher:
         :param str pat: the pattern to match lines
         """
         __tracebackhide__ = True
+        self._reset()
         nomatch_printed = False
         wnick = len(match_nickname) + 1
         for line in self.lines:
@@ -1800,13 +1804,10 @@ class LineMatcher:
                     self._log("{:>{width}}".format("nomatch:", width=wnick), repr(pat))
                     nomatch_printed = True
                 self._log("{:>{width}}".format("and:", width=wnick), repr(line))
-        self._log_output = []
 
     def _fail(self, msg: str) -> None:
         __tracebackhide__ = True
-        log_output = self._log_output
-        self._log_output = []
-        raise LineMatcherFailed(msg=msg, log_output=log_output)
+        raise LineMatcherFailed(msg=msg, log_output=self._log_output[:])
 
     def str(self) -> str:
         """Return the entire original text."""
