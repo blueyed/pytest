@@ -1723,7 +1723,9 @@ class LineMatcher:
                     msg = "unmatched: {!r}".format(line)
                     self._fail(msg)
                 nextline = lines1.pop(0)
-                self._log("{:>{width}}".format(self.ELLIPSIS, width=wnick), repr(nextline))
+                self._log(
+                    "{:>{width}}".format(self.ELLIPSIS, width=wnick), repr(nextline)
+                )
                 continue
 
             nomatchprinted = False
