@@ -73,11 +73,11 @@ class TestGeneralUsage:
     def test_file_not_found(self, testdir: Testdir) -> None:
         result = testdir.runpytest("asd")
         assert result.ret == ExitCode.USAGE_ERROR
-        assert result.stderr.lines == ['ERROR: file not found: asd', '']
+        assert result.stderr.lines == ["ERROR: file not found: asd", ""]
 
         result = testdir.runpytest("with space")
         assert result.ret == ExitCode.USAGE_ERROR
-        assert result.stderr.lines == ["ERROR: file not found: 'with space'", '']
+        assert result.stderr.lines == ["ERROR: file not found: 'with space'", ""]
 
     def test_file_not_found_unconfigure_issue143(self, testdir):
         testdir.makeconftest(
