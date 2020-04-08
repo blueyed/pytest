@@ -1713,6 +1713,19 @@ class LineMatcher:
         started = False
         in_ellipsis = False
         for line in lines2:
+            if (complete or consecutive) and line == self.ELLIPSIS:
+                if in_ellipsis:
+                    raise ValueError("ellipsis following ellipsis")
+                in_ellipsis = True
+                # Has to match at least one line.
+                if not lines1:
+                    self._log("remains unmatched: {!r}".format(line))
+                    msg = "unmatched: {!r}".format(line)
+                    self._fail(msg)
+                nextline = lines1.pop(0)
+                self._log("{:>{width}}".format(self.ELLIPSIS, width=wnick), repr(nextline))
+                continue
+
             nomatchprinted = False
             while lines1:
                 nextline = lines1.pop(0)
@@ -1733,18 +1746,9 @@ class LineMatcher:
                         in_ellipsis = False
                     break
 
-                if complete or consecutive:
-                    if line == self.ELLIPSIS:
-                        if in_ellipsis:
-                            raise ValueError("ellipsis following ellipsis")
-                        self._log(self.ELLIPSIS)
-                        in_ellipsis = True
-                        break
-
                 if not nomatchprinted:
                     self._log("{:>{width}}".format("nomatch:", width=wnick), repr(line))
                     nomatchprinted = True
-
                 self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
 
                 if not in_ellipsis:
