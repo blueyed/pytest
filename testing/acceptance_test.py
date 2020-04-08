@@ -10,6 +10,7 @@ import pytest
 from _pytest.compat import importlib_metadata
 from _pytest.compat import MODULE_NOT_FOUND_ERROR
 from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
 
 pytestmark = pytest.mark.acceptance_tests
 
@@ -69,10 +70,14 @@ class TestGeneralUsage:
             ["*INTERNALERROR*File*conftest.py*line 2*", "*0 / 0*"]
         )
 
-    def test_file_not_found(self, testdir):
+    def test_file_not_found(self, testdir: Testdir) -> None:
         result = testdir.runpytest("asd")
-        assert result.ret != 0
-        result.stderr.fnmatch_lines(["ERROR: file not found*asd"])
+        assert result.ret == ExitCode.USAGE_ERROR
+        assert result.stderr.lines == ["ERROR: file not found: asd", ""]
+
+        result = testdir.runpytest("with space")
+        assert result.ret == ExitCode.USAGE_ERROR
+        assert result.stderr.lines == ["ERROR: file not found: 'with space'", ""]
 
     def test_file_not_found_unconfigure_issue143(self, testdir):
         testdir.makeconftest(
