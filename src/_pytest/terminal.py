@@ -1340,6 +1340,9 @@ def _get_rep_reprcrash(
     try:
         return rep.longrepr.reprcrash
     except AttributeError:
+        if hasattr(rep.longrepr, "path") and hasattr(rep.longrepr, "lineno"):
+            # e.g. ReprFailItem
+            return rep.longrepr
         return None
 
 
@@ -1390,7 +1393,10 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
     try:
         msg = rep.longrepr.reprcrash.message
     except AttributeError:
-        msg = None
+        try:
+            msg = rep.longrepr.message
+        except AttributeError:
+            msg = None
 
     if msg is not None:
         # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
