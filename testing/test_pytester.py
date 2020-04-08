@@ -604,13 +604,13 @@ def test_linematcher_complete():
 def test_linematcher_ellipsis() -> None:
     lm = LineMatcher([str(x) for x in range(5)])
 
-    # lm.fnmatch_lines(["0", "...", "4"], consecutive=True)
-    # lm.fnmatch_lines(["...", "3"], consecutive=True)
-    # lm.fnmatch_lines(["...", "4"], consecutive=True)
-    # lm.fnmatch_lines(["0", "..."], consecutive=True)
-    # lm.fnmatch_lines(["1", "..."], consecutive=True)
-    # with pytest.raises(ValueError, match="^ellipsis following ellipsis$"):
-    #     lm.fnmatch_lines(["1", "...", "...", "4"], consecutive=True)
+    lm.fnmatch_lines(["0", "...", "4"], consecutive=True)
+    lm.fnmatch_lines(["...", "3"], consecutive=True)
+    lm.fnmatch_lines(["...", "4"], consecutive=True)
+    lm.fnmatch_lines(["0", "..."], consecutive=True)
+    lm.fnmatch_lines(["1", "..."], consecutive=True)
+    with pytest.raises(ValueError, match="^ellipsis following ellipsis$"):
+        lm.fnmatch_lines(["1", "...", "...", "4"], consecutive=True)
 
     with pytest.raises(pytest.fail.Exception) as excinfo:
         lm.fnmatch_lines(["1", "...", "5"], consecutive=True)

@@ -1707,7 +1707,7 @@ class LineMatcher:
         __tracebackhide__ = True
         wnick = len(match_nickname) + 1
         started = False
-        in_ellipsis, ellipsis_count = False, 0
+        in_ellipsis = False
         for line in lines2:
             nomatchprinted = False
             while lines1:
@@ -1726,8 +1726,6 @@ class LineMatcher:
                 if matched:
                     started = True
                     if in_ellipsis:
-                        if ellipsis_count:
-                            self._log(self.ELLIPSIS)
                         in_ellipsis = False
                     break
 
