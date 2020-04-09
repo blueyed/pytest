@@ -4,6 +4,8 @@ import sys
 import warnings
 from contextlib import contextmanager
 from types import FunctionType
+from typing import Callable
+from typing import Dict
 from typing import Generator
 from typing import List
 from typing import Optional
@@ -123,6 +125,11 @@ class MonkeyPatch:
         self._setitem = []
         self._cwd = None
         self._savesyspath = None
+
+        self._mocked_imports = (
+            {}
+        )  # type: Dict[str, Union[FunctionType, "Type[BaseException]"]]
+        self._orig_import = None  # type: Optional[Callable]
 
     @contextmanager
     def context(self) -> Generator["MonkeyPatch", None, None]:
@@ -276,17 +283,14 @@ class MonkeyPatch:
         self,
         mocked_imports: Union[str, Sequence[str]],
         err: Union[FunctionType, "Type[BaseException]"] = ImportError,
-    ):
+    ) -> None:
         """Mock import with given error to be raised, or callable.
 
         The callable gets called instead of :func:`python:__import__`.
 
         This is considered to be **experimental**.
         """
-        import inspect
-
-        if not hasattr(self, "_mocked_imports"):
-            self._mocked_imports = {}
+        if not self._mocked_imports:
             self._orig_import = __import__
 
             def import_mock(*args, **kwargs):
@@ -302,9 +306,10 @@ class MonkeyPatch:
                 for _name in req_names:
                     if _name in self._mocked_imports:
                         err = self._mocked_imports[_name]
-                        if inspect.isfunction(err):
+                        if isinstance(err, FunctionType):
                             return err(*args, **kwargs)
                         raise err
+                assert self._orig_import
                 return self._orig_import(*args, **kwargs)
 
             self.setattr("builtins.__import__", import_mock)

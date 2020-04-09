@@ -1078,8 +1078,8 @@ class Testdir(Generic[AnyStr]):
         if isinstance(stdin, (bytes, str)):
 
             class EchoingInput(StringIO):
-                def readline(self, *args, **kwargs):
-                    ret = super().readline(*args, **kwargs)
+                def readline(self, size=None) -> str:
+                    ret = super().readline(size)
                     if ret:
                         sys.stdout.write(ret)
                     return ret
