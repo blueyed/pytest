@@ -272,7 +272,7 @@ class PyobjMixin(PyobjContext):
         _own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
 
     @property
-    def obj(self) -> object:
+    def obj(self):
         """Underlying Python object."""
         obj = getattr(self, "_obj", None)
         if obj is None:
@@ -280,12 +280,12 @@ class PyobjMixin(PyobjContext):
         return obj
 
     @obj.setter
-    def obj(self, value: object) -> None:
+    def obj(self, value) -> None:
         self._obj = value
         self._obj_markers = None
         self._keywords = None
 
-    def _getobj(self) -> object:
+    def _getobj(self):
         """Gets the underlying Python object. May be overwritten by subclasses."""
         return getattr(self.parent.obj, self.name)
 
