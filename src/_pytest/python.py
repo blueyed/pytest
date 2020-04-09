@@ -793,12 +793,13 @@ def hasnew(obj):
 class CallSpec2:
     def __init__(self, metafunc: "Metafunc") -> None:
         self.metafunc = metafunc
-        self.funcargs = {}
-        self._idlist = []
-        self.params = {}
-        self._arg2scopenum = {}  # used for sorting parametrized resources
+        self.funcargs = {}  # type: Dict[str, object]
+        self._idlist = []  # type: List[str]
+        self.params = {}  # type: Dict[str, object]
+        # Used for sorting parametrized resources.
+        self._arg2scopenum = {}  # type: Dict[str, int]
         self.marks = []  # type: List[Mark]
-        self.indices = {}
+        self.indices = {}  # type: Dict[str, int]
 
     def copy(self):
         cs = CallSpec2(self.metafunc)
