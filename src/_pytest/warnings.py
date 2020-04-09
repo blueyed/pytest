@@ -82,7 +82,7 @@ def catch_warnings_for_item(config, ihook, when, item):
             _setoption(warnings, arg)
 
         for arg in cmdline_filters:
-            warnings._setoption(arg)
+            warnings._setoption(arg)  # type: ignore[attr-defined]
 
         if item is not None:
             for mark in item.iter_markers(name="filterwarnings"):
