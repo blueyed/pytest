@@ -51,6 +51,7 @@ from _pytest.mark import ParameterSet
 from _pytest.mark.structures import get_unpacked_marks
 from _pytest.mark.structures import Mark
 from _pytest.mark.structures import normalize_mark_list
+from _pytest.nodes import NodeKeywords
 from _pytest.outcomes import fail
 from _pytest.outcomes import skip
 from _pytest.pathlib import parts
@@ -276,6 +277,8 @@ class PyobjMixin(PyobjContext, nodes.Node):
     @obj.setter
     def obj(self, value):
         self._obj = value
+        self._obj_markers = None
+        self._keywords = None
 
     def _getobj(self):
         """Gets the underlying Python object. May be overwritten by subclasses."""
@@ -1415,29 +1418,11 @@ class Function(PyobjMixin, nodes.Item):
         if callobj is not NOTSET:
             self.obj = callobj
 
-        self.keywords.update(self.obj.__dict__)
+        self._callspec = callspec
         if callspec:
-            self.callspec = callspec
-            # this is total hostile and a mess
-            # keywords are broken by design by now
-            # this will be redeemed later
-            for mark in callspec.marks:
-                # feel free to cry, this was broken for years before
-                # and keywords cant fix it per design
-                self.keywords[mark.name] = mark
-        if keywords:
-            self.keywords.update(keywords)
-
-        # todo: this is a hell of a hack
-        # https://github.com/pytest-dev/pytest/issues/4569
-
-        self.keywords.update(
-            {
-                mark.name: True
-                for mark in self.iter_markers()
-                if mark.name not in self.keywords
-            }
-        )
+            # XXX: only set for existing hasattr checks..!
+            self.callspec = self._callspec
+        self._keywords_arg = keywords
 
         if fixtureinfo is None:
             fixtureinfo = self.session._fixturemanager.getfixtureinfo(
@@ -1473,9 +1458,39 @@ class Function(PyobjMixin, nodes.Item):
     def own_markers(self) -> List[Mark]:
         if self._obj_markers is None:
             self._obj_markers = get_unpacked_marks(self.obj)
-            if hasattr(self, "callspec"):
-                self._obj_markers += normalize_mark_list(self.callspec.marks)
+            if self._callspec:
+                self._obj_markers += normalize_mark_list(self._callspec.marks)
         return self._own_markers[0] + self._obj_markers + self._own_markers[1]
+
+    @property
+    def keywords(self) -> NodeKeywords:
+        if self._keywords is not None:
+            return self._keywords
+
+        keywords = super().keywords
+        keywords.update(self.obj.__dict__)
+        if self._callspec:
+            # this is total hostile and a mess
+            # keywords are broken by design by now
+            # this will be redeemed later
+            for mark in self._callspec.marks:
+                # feel free to cry, this was broken for years before
+                # and keywords cant fix it per design
+                self.keywords[mark.name] = mark
+        if self._keywords_arg:
+            keywords.update(self._keywords_arg)
+
+        # todo: this is a hell of a hack
+        # https://github.com/pytest-dev/pytest/issues/4569
+        keywords.update(
+            {
+                mark.name: True
+                for mark in self.iter_markers()
+                if mark.name not in self.keywords
+            }
+        )
+        self._keywords = keywords
+        return self._keywords
 
     def _getobj(self):
         name = self.name

@@ -92,6 +92,8 @@ class Node(metaclass=NodeMeta):
     """ base class for Collector and Item the test collection tree.
     Collector subclasses have children, Items are terminal nodes."""
 
+    _keywords = None
+
     def __init__(
         self,
         name: str,
@@ -125,9 +127,6 @@ class Node(metaclass=NodeMeta):
 
         #: filesystem path where this node was collected from (can be None)
         self.fspath = fspath or getattr(parent, "fspath", None)  # type: py.path.local
-
-        #: keywords/markers collected from all scopes
-        self.keywords = NodeKeywords(self)
 
         #: The (manually added) marks belonging to this node (start, end).
         self._own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
@@ -177,6 +176,13 @@ class Node(metaclass=NodeMeta):
     def own_markers(self) -> List[Mark]:
         """The marker objects belonging to this node."""
         return self._own_markers[0] + self._own_markers[1]
+
+    @property
+    def keywords(self) -> NodeKeywords:
+        """keywords/markers collected from all scopes."""
+        if self._keywords is None:
+            self._keywords = NodeKeywords(self)
+        return self._keywords
 
     def __repr__(self):
         return "<{} nodeid={!r}>".format(
