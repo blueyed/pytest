@@ -263,8 +263,14 @@ class PyobjContext:
     instance = pyobj_property("Instance")
 
 
-class PyobjMixin(PyobjContext, nodes.Node):
-    _obj_markers = None
+class PyobjMixin(PyobjContext):
+    _obj_markers = None  # type: Optional[List[Mark]]
+
+    # Function and attributes that the mixin needs (for type-checking only).
+    if TYPE_CHECKING:
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
 
     @property
     def obj(self):
@@ -275,7 +281,7 @@ class PyobjMixin(PyobjContext, nodes.Node):
         return obj
 
     @obj.setter
-    def obj(self, value):
+    def obj(self, value) -> None:
         self._obj = value
         self._obj_markers = None
         self._keywords = None
