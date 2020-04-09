@@ -13,6 +13,7 @@ import sys
 import time
 import warnings
 from functools import partial
+from types import FrameType
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -20,6 +21,7 @@ from typing import Generator
 from typing import List
 from typing import Mapping
 from typing import Optional
+from typing import Sequence
 from typing import Tuple
 from typing import Union
 
@@ -44,6 +46,7 @@ from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
 if TYPE_CHECKING:
+    from typing_extensions import Literal
     from _pytest._code.code import _TracebackStyle
 
 REPORT_COLLECTING_RESOLUTION = 0.5
@@ -62,7 +65,7 @@ KNOWN_TYPES = (
 _REPORTCHARS_DEFAULT = "fE"
 
 
-def _getdimensions():
+def _getdimensions() -> Tuple[int, int]:
     # Improved version of shutil.get_terminal_size that looks at stdin,
     # stderr, stdout.  Ref: https://bugs.python.org/issue14841.
     fallback = (80, 24)
@@ -102,10 +105,12 @@ def _getdimensions():
 
 
 _cached_terminal_width = None
-_cached_terminal_width_sighandler = None
+_cached_terminal_width_sighandler = (
+    None
+)  # type: Optional[Union[Literal[False], Callable]]
 
 
-def get_terminal_width():
+def get_terminal_width() -> int:
     global _cached_terminal_width
     global _cached_terminal_width_sighandler
 
@@ -115,7 +120,7 @@ def get_terminal_width():
         _prev_sig_handler = None
         _in_sighandler = False
 
-        def _clear_cache_on_sigwinch(signum, frame):
+        def _clear_cache_on_sigwinch(signum: int, frame: FrameType) -> None:
             global _cached_terminal_width
             nonlocal _in_sighandler
 
@@ -409,6 +414,7 @@ class TerminalReporter:
         self._progress_items_reported = 0
         self._show_progress_info = self._determine_show_progress_info()
         self._collect_report_last_write = None  # type: Optional[float]
+        self._already_displayed_warnings = None  # type: Optional[int]
 
         self._collect_ignored = {}  # type: Dict[str, List[py.path.local]]
         """Information about ignored paths (for reporting)."""
@@ -460,9 +466,8 @@ class TerminalReporter:
             if self.currentfspath is not None and self._show_progress_info:
                 self._write_progress_information_filling_space()
             self.currentfspath = fspath
-            fspath = self.startdir.bestrelpath(fspath)
             self._tw.line()
-            self._tw.write(fspath + " ")
+            self._tw.write(self.startdir.bestrelpath(fspath) + " ")
         self._tw.write(res, **markup)
 
     def write_ensure_prefix(self, prefix, extra="", **kwargs):
@@ -739,7 +744,7 @@ class TerminalReporter:
         else:
             self.write_line(line)
 
-    def _verbose_collect_ignored(self) -> Optional[List[str]]:
+    def _verbose_collect_ignored(self) -> List[str]:
         """Get information about ignored files during collection."""
         verbosity = self.config.option.verbose
         if not self._collect_ignored or verbosity < 1:
@@ -890,7 +895,7 @@ class TerminalReporter:
                 for rep in failed:
                     rep.toterminal(self._tw)
 
-    def _printcollecteditems(self, items):
+    def _printcollecteditems(self, items: Sequence[nodes.Item]) -> None:
         # to print out items and their parent collectors
         # we take care to leave out Instances aka ()
         # because later versions are going to get rid of them anyway
@@ -906,7 +911,7 @@ class TerminalReporter:
                 for item in items:
                     self._tw.line(item.nodeid)
             return
-        stack = []
+        stack = []  # type: List[nodes.Node]
         indent = ""
         for item in items:
             needed_collectors = item.listchain()[1:]  # strip root node
@@ -1028,7 +1033,7 @@ class TerminalReporter:
                 values.append(x)
         return values
 
-    def summary_warnings(self):
+    def summary_warnings(self) -> None:
         if not self.hasopt("w"):
             return
 
@@ -1036,7 +1041,7 @@ class TerminalReporter:
         if not all_warnings:
             return
 
-        final = hasattr(self, "_already_displayed_warnings")
+        final = self._already_displayed_warnings is not None
         if final:
             warning_reports = all_warnings[self._already_displayed_warnings :]
         else:
@@ -1378,7 +1383,9 @@ def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
     return "%s (%s:%d)" % (desc, crash_path, crashloc.lineno)
 
 
-def _get_line_with_reprcrash_message(config, rep, termwidth):
+def _get_line_with_reprcrash_message(
+    config: Config, rep: Union[CollectReport, TestReport], termwidth: Optional[int]
+) -> str:
     """Get summary line for a report, trying to add reprcrash message."""
     verbose_word = rep._get_verbose_word(config)
     pos = _get_pos(config, rep)
@@ -1393,10 +1400,11 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             # No space for an additional message.
             return line
 
+    msg = None  # type: Optional[str]
     try:
-        msg = rep.longrepr.reprcrash.message
+        msg = rep.longrepr.reprcrash.message  # type: ignore[attr-defined]
     except AttributeError:
-        msg = None
+        pass
 
     if msg is not None:
         # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
@@ -1420,7 +1428,7 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             # Non-printable/escape characters (except for newlines).
             msg = repr(orig_msg)
             len_msg = wcswidth(msg)
-            assert len_msg != -1, repr(msg, orig_msg)
+            assert len_msg != -1, repr((msg, orig_msg))
 
         if max_len_msg >= len_ellipsis:
             if len_msg > max_len_msg:
