@@ -269,10 +269,7 @@ class PyobjMixin(PyobjContext):
     # Function and attributes that the mixin needs (for type-checking only).
     if TYPE_CHECKING:
         _keywords = None  # type: Optional[NodeKeywords]
-
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
+        _own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
 
     @property
     def obj(self):
