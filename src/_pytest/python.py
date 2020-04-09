@@ -262,8 +262,8 @@ class PyobjContext:
     instance = pyobj_property("Instance")
 
 
-class PyobjMixin(PyobjContext):
-    _ALLOW_MARKERS = True
+class PyobjMixin(PyobjContext, nodes.Node):
+    _obj_markers = None
 
     @property
     def obj(self):
@@ -271,10 +271,6 @@ class PyobjMixin(PyobjContext):
         obj = getattr(self, "_obj", None)
         if obj is None:
             self._obj = obj = self._getobj()
-            # XXX evil hack
-            # used to avoid Instance collector marker duplication
-            if self._ALLOW_MARKERS:
-                self.own_markers.extend(get_unpacked_marks(self.obj))
         return obj
 
     @obj.setter
@@ -284,6 +280,12 @@ class PyobjMixin(PyobjContext):
     def _getobj(self):
         """Gets the underlying Python object. May be overwritten by subclasses."""
         return getattr(self.parent.obj, self.name)
+
+    @property
+    def own_markers(self) -> List[Mark]:
+        if self._obj_markers is None:
+            self._obj_markers = get_unpacked_marks(self.obj)
+        return self._own_markers[0] + self._obj_markers + self._own_markers[1]
 
     def getmodpath(self, stopatmodule=True, includemodule=False):
         """ return python path relative to the containing module. """
@@ -751,13 +753,13 @@ class Class(PyCollector):
 
 
 class Instance(PyCollector):
-    _ALLOW_MARKERS = False  # hack, destroy later
-    # instances share the object with their parents in a way
-    # that duplicates markers instances if not taken out
-    # can be removed at node structure reorganization time
-
     def _getobj(self):
         return self.parent.obj()
+
+    @property
+    def own_markers(self) -> List[Mark]:
+        # Do not include markers from obj, coming from Class already.
+        return self._own_markers[0] + self._own_markers[1]
 
     def collect(self):
         self.session._fixturemanager.parsefactories(self)
@@ -1395,9 +1397,6 @@ class Function(PyobjMixin, nodes.Item):
     Python test function.
     """
 
-    # disable since functions handle it themselves
-    _ALLOW_MARKERS = False
-
     def __init__(
         self,
         name,
@@ -1417,7 +1416,6 @@ class Function(PyobjMixin, nodes.Item):
             self.obj = callobj
 
         self.keywords.update(self.obj.__dict__)
-        self.own_markers.extend(get_unpacked_marks(self.obj))
         if callspec:
             self.callspec = callspec
             # this is total hostile and a mess
@@ -1427,7 +1425,6 @@ class Function(PyobjMixin, nodes.Item):
                 # feel free to cry, this was broken for years before
                 # and keywords cant fix it per design
                 self.keywords[mark.name] = mark
-            self.own_markers.extend(normalize_mark_list(callspec.marks))
         if keywords:
             self.keywords.update(keywords)
 
@@ -1471,6 +1468,14 @@ class Function(PyobjMixin, nodes.Item):
     def function(self):
         "underlying python 'function' object"
         return getimfunc(self.obj)
+
+    @property
+    def own_markers(self) -> List[Mark]:
+        if self._obj_markers is None:
+            self._obj_markers = get_unpacked_marks(self.obj)
+            if hasattr(self, "callspec"):
+                self._obj_markers += normalize_mark_list(self.callspec.marks)
+        return self._own_markers[0] + self._obj_markers + self._own_markers[1]
 
     def _getobj(self):
         name = self.name

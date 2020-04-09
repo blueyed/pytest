@@ -272,7 +272,7 @@ class MarkDecorator:
         return self.with_args(*args, **kwargs)
 
 
-def get_unpacked_marks(obj):
+def get_unpacked_marks(obj) -> List[Mark]:
     """
     obtain the unpacked marks that are stored on an object
     """
