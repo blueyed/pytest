@@ -92,7 +92,7 @@ class Node(metaclass=NodeMeta):
     """ base class for Collector and Item the test collection tree.
     Collector subclasses have children, Items are terminal nodes."""
 
-    _keywords = None
+    _keywords = None  # type: Optional[NodeKeywords]
 
     def __init__(
         self,
