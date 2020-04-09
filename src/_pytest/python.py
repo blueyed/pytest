@@ -272,7 +272,7 @@ class PyobjMixin(PyobjContext):
         _own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
 
     @property
-    def obj(self):
+    def obj(self) -> object:
         """Underlying Python object."""
         obj = getattr(self, "_obj", None)
         if obj is None:
@@ -280,12 +280,12 @@ class PyobjMixin(PyobjContext):
         return obj
 
     @obj.setter
-    def obj(self, value) -> None:
+    def obj(self, value: object) -> None:
         self._obj = value
         self._obj_markers = None
         self._keywords = None
 
-    def _getobj(self):
+    def _getobj(self) -> object:
         """Gets the underlying Python object. May be overwritten by subclasses."""
         return getattr(self.parent.obj, self.name)
 
@@ -791,13 +791,13 @@ def hasnew(obj):
 
 
 class CallSpec2:
-    def __init__(self, metafunc):
+    def __init__(self, metafunc: "Metafunc") -> None:
         self.metafunc = metafunc
         self.funcargs = {}
         self._idlist = []
         self.params = {}
         self._arg2scopenum = {}  # used for sorting parametrized resources
-        self.marks = []
+        self.marks = []  # type: List[Mark]
         self.indices = {}
 
     def copy(self):
@@ -1413,7 +1413,7 @@ class Function(PyobjMixin, nodes.Item):
         config=None,
         callspec: Optional[CallSpec2] = None,
         callobj=NOTSET,
-        keywords=None,
+        keywords: Optional[Iterable[str]] = None,
         session=None,
         fixtureinfo: Optional[FuncFixtureInfo] = None,
         originalname=None,
