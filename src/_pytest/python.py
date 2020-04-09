@@ -380,9 +380,10 @@ class PyCollector(PyobjMixin, nodes.Collector):
         values = []
         for dic in dicts:
             for name, obj in list(dic.items()):
-                if name in seen:
+                if name[:2] == "__" or name[:3] == "@py":
+                    # Skip dunders, and "@py_*"/"@pytest_*" from assertrewrite.
                     continue
-                if name.startswith("__"):
+                if name in seen:
                     continue
                 seen[name] = True
                 res = self._makeitem(name, obj)
