@@ -662,11 +662,9 @@ class Class(PyCollector):
     """ Collector for test methods. """
 
     @classmethod
-    def from_parent(cls, parent, *, name, obj=None):
-        """
-        The public constructor
-        """
-        return super().from_parent(name=name, parent=parent)
+    def from_parent(cls, parent, *, name, obj=None) -> "Class":  # type: ignore
+        """The public constructor."""
+        return super().from_parent(name=name, parent=parent)  # type: ignore
 
     def collect(self):
         if not safe_getattr(self.obj, "__test__", True):
@@ -1452,11 +1450,10 @@ class Function(PyobjMixin, nodes.Item):
         self.originalname = originalname
 
     @classmethod
-    def from_parent(cls, parent, **kw):  # todo: determine sound type limitations
-        """
-        The public  constructor
-        """
-        return super().from_parent(parent=parent, **kw)
+    def from_parent(cls, parent, **kw) -> "Function":
+        """The public constructor"""
+        # todo(RonnyPfannschmidt): determine sound type limitations
+        return super().from_parent(parent=parent, **kw)  # type: ignore
 
     def _initrequest(self):
         self.funcargs = {}

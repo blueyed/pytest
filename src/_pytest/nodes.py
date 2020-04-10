@@ -151,22 +151,22 @@ class Node(metaclass=NodeMeta):
         self._chain = self.listchain()
 
     @classmethod
-    def from_parent(cls, parent: "Node", **kw):
+    def from_parent(cls, parent: "Node", **kw) -> "Node":
         """
-        Public Constructor for Nodes
+        Public Constructor for Nodes.
 
         This indirection got introduced in order to enable removing
         the fragile logic from the node constructors.
 
-        Subclasses can use ``super().from_parent(...)`` when overriding the construction
+        Subclasses can use ``super().from_parent(...)`` when overriding the construction.
 
-        :param parent: the parent node of this test Node
+        :param Node parent: the parent node of this Node
         """
         if "config" in kw:
             raise TypeError("config is not a valid argument for from_parent")
         if "session" in kw:
             raise TypeError("session is not a valid argument for from_parent")
-        return cls._create(parent=parent, **kw)
+        return cls._create(parent=parent, **kw)  # type: ignore
 
     @property
     def ihook(self):
@@ -472,11 +472,9 @@ class FSCollector(Collector):
         self._norecursepatterns = self.config.getini("norecursedirs")
 
     @classmethod
-    def from_parent(cls, parent, *, fspath):
-        """
-        The public constructor
-        """
-        return super().from_parent(parent=parent, fspath=fspath)
+    def from_parent(cls, parent, *, fspath) -> "FSCollector":  # type: ignore
+        """The public constructor."""
+        return super().from_parent(parent=parent, fspath=fspath)  # type: ignore
 
     def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running

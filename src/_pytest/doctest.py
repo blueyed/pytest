@@ -221,14 +221,11 @@ class DoctestItem(pytest.Item):
         self.fixture_request = None
 
     @classmethod
-    def from_parent(  # type: ignore
+    def from_parent(  # type: ignore  # incompatible signature due to imposed limits on subclass
         cls, parent: "Union[DoctestTextfile, DoctestModule]", *, name, runner, dtest
-    ):
-        # incompatible signature due to to imposed limits on sublcass
-        """
-        the public named constructor
-        """
-        return super().from_parent(name=name, parent=parent, runner=runner, dtest=dtest)
+    ) -> "DoctestItem":
+        """The public constructor."""
+        return super().from_parent(name=name, parent=parent, runner=runner, dtest=dtest)  # type: ignore
 
     def setup(self):
         if self.dtest is not None:
