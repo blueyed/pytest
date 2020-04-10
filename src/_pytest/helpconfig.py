@@ -232,14 +232,18 @@ conftest_options = [("pytest_plugins", "list of plugin names to load")]
 
 def get_plugin_info(
     config: Config, include_non_eps: bool = False, verbose: bool = False
-) -> Tuple[List[str], List[str]]:
+) -> Tuple[List[str], List[str], List[str]]:
     distnames = []  # type: List[str]
     othernames = []  # type: List[str]
 
     pm = config.pluginmanager
     distplugins = {plugin: dist for plugin, dist in pm.list_plugin_distinfo()}
     prev_dist = None
+    blocked = []
     for name, plugin in pm.list_name_plugin():
+        if plugin is None:
+            blocked.append(name)
+            continue
         if plugin in distplugins:
             dist = distplugins[plugin]
             if verbose:
@@ -286,22 +290,32 @@ def get_plugin_info(
                     loc = getattr(sys.modules[modname], "__file__", repr(plugin))
                     name += " at {}".format(loc)
             othernames.append(name)
-    return distnames, othernames
+    return distnames, othernames, blocked
 
 
 def getpluginversioninfo(config: Config) -> List[str]:
     lines = []
-    distplugins, otherplugins = get_plugin_info(
+    dist, other, blocked = get_plugin_info(
         config, include_non_eps=True, verbose=True
     )
-    if distplugins:
+    if dist:
         lines.append("setuptools registered plugins:")
-        for distplugin in distplugins:
+        for distplugin in dist:
             lines.append("  " + distplugin)
-    if otherplugins:
+    if other:
         lines.append("other plugins:")
-        for otherplugin in otherplugins:
+        for otherplugin in other:
             lines.append("  " + otherplugin)
+    if blocked:
+        auto_prefix = "pytest_"
+        for x in blocked:
+            if x.startswith(auto_prefix) and x[len(auto_prefix):] in blocked:
+                lines.append('blocked plugins (NOTE: "pytest_" prefix gets added automatically):')
+                break
+        else:
+            lines.append('blocked plugins:')
+        for blockedplugin in blocked:
+            lines.append("  " + blockedplugin)
     return lines
 
 

@@ -83,14 +83,14 @@ def test__plugin_info(input: List[DistInfo], expected: List[str]):
         class pluginmanager:
             @staticmethod
             def list_plugin_distinfo():
-                return [(None, x) for x in input]
+                return [(str(x), x) for x in input]
 
             @staticmethod
             def list_name_plugin():
-                return [(None, None) for x in input]
+                return [("ignored name", str(x)) for x in input]
 
     result = get_plugin_info(config)  # type: ignore[arg-type]
-    assert result == (expected, [])
+    assert result == (expected, [], [])
 
 
 class TestTerminal:

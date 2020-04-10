@@ -90,6 +90,34 @@ def test_version(testdir: Testdir) -> None:
         ]
     )
 
+    # Does report blocked plugins.
+    result = testdir.runpytest("--version", "-p", "no:EP MyPlugin")
+    expected_stderr = [
+        "*pytest*{}*imported from*".format(pytest.__version__),
+        "setuptools registered plugins:",
+        "  myproject-1.0.0:",
+        "    EP module at {}".format(ep_plugin),
+        "other plugins:",
+        "  {}".format(conftest),
+        "  {}".format(tests_conftest),
+        "  conftest-name-object",
+        "  [0-9]*[0-9] at {}".format(tests_conftest),
+        'blocked plugins (NOTE: "pytest_" prefix gets added automatically):',
+        "  EP MyPlugin",
+        "  pytest_EP MyPlugin",
+    ]
+    result.stderr.fnmatch_lines(expected_stderr, consecutive=True)
+    assert len(result.stderr.lines) == len(expected_stderr)
+    assert result.ret == 0
+
+    # Does not add note unnecessarily.
+    result = testdir.runpytest("--version", "-p", "no:pytest_foo")
+    assert result.stderr.lines[-2:] == [
+        "blocked plugins:",
+        "  pytest_foo",
+    ]
+    assert result.ret == 0
+
 
 def test_help(testdir: Testdir) -> None:
     result = testdir.runpytest("--help", "-p", "no:[defaults]")

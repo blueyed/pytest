@@ -837,7 +837,7 @@ class TerminalReporter:
         result = [line]
 
         plugins = []
-        distplugins, otherplugins = get_plugin_info(
+        distplugins, otherplugins, _ = get_plugin_info(
             config, include_non_eps=config.option.verbose > 0
         )
         if distplugins:
