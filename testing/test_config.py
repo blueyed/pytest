@@ -8,6 +8,7 @@ import py.path
 import _pytest._code
 import pytest
 from _pytest.compat import importlib_metadata
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import _iter_rewritable_modules
 from _pytest.config import Config
 from _pytest.config import ExitCode
@@ -16,6 +17,9 @@ from _pytest.config.findpaths import determine_setup
 from _pytest.config.findpaths import get_common_ancestor
 from _pytest.config.findpaths import getcfg
 from _pytest.pathlib import Path
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 class TestParseIni:
@@ -1296,6 +1300,19 @@ def test_help_and_version_after_argument_error(testdir):
         ["*pytest*{}*imported from*".format(pytest.__version__)]
     )
     assert result.ret == ExitCode.USAGE_ERROR
+
+
+def test_version_with_exception(testdir: "Testdir") -> None:
+    testdir.makepyfile(plugin="assert 0")
+    testdir.syspathinsert()
+    result = testdir.runpytest("-p", "plugin", "--version")
+    result.stderr.fnmatch_lines(
+        [
+            "This is *, imported from *",
+            "Traceback (most recent call last):",
+            "    assert 0",
+        ]
+    )
 
 
 def test_help_formatter_uses_py_get_terminal_width(monkeypatch):
