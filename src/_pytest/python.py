@@ -53,7 +53,6 @@ from _pytest.mark import ParameterSet
 from _pytest.mark.structures import get_unpacked_marks
 from _pytest.mark.structures import Mark
 from _pytest.mark.structures import normalize_mark_list
-from _pytest.nodes import NodeKeywords
 from _pytest.outcomes import fail
 from _pytest.outcomes import skip
 from _pytest.pathlib import parts
@@ -272,7 +271,7 @@ class PyobjMixin(PyobjContext):
 
     # Function and attributes that the mixin needs (for type-checking only).
     if TYPE_CHECKING:
-        _keywords = None  # type: Optional[NodeKeywords]
+        _keywords = None  # type: Optional[nodes.NodeKeywords]
         _own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
 
     @property
@@ -1473,7 +1472,7 @@ class Function(PyobjMixin, nodes.Item):
         return self._own_markers[0] + self._obj_markers + self._own_markers[1]
 
     @property
-    def keywords(self) -> NodeKeywords:
+    def keywords(self) -> "nodes.NodeKeywords":
         if self._keywords is not None:
             return self._keywords
 
