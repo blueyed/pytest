@@ -61,6 +61,8 @@ from _pytest.warning_types import PytestCollectionWarning
 from _pytest.warning_types import PytestUnhandledCoroutineWarning
 
 if TYPE_CHECKING:
+    from typing_extensions import Literal
+
     from _pytest._io import TerminalWriter
 
 
@@ -183,7 +185,7 @@ def async_warn(pyfuncitem: "Function") -> None:
 
 
 @hookimpl(trylast=True)
-def pytest_pyfunc_call(pyfuncitem: "Function"):
+def pytest_pyfunc_call(pyfuncitem: "Function") -> "Literal[True]":
     testfunction = pyfuncitem.obj
     if iscoroutinefunction(testfunction) or (
         sys.version_info >= (3, 6) and inspect.isasyncgenfunction(testfunction)
