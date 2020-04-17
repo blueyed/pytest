@@ -1328,7 +1328,25 @@ def test_usageerror_with_fulltrace(testdir: "Testdir") -> None:
     assert result.stdout.lines == []
     assert result.ret == ExitCode.USAGE_ERROR
 
-    result = testdir.runpytest_subprocess("--fulltrace")  # subprocess for sys.argv
+    # Via sys.argv (subprocess).
+    result = testdir.runpytest_subprocess("--fulltrace")
+    assert result.stderr.lines[0:3] == [
+        "ERROR: my_usageerror",
+        "",
+        "Traceback (most recent call last):",
+    ]
+    result.stderr.fnmatch_lines(
+        [
+            "ERROR: my_usageerror",
+            "During handling of the above exception, another exception occurred:",
+            "_pytest.config.exceptions.UsageError: my_usageerror",
+        ]
+    )
+    assert result.stdout.lines == []
+    assert result.ret == ExitCode.USAGE_ERROR
+
+    # In-process (args to pytest.main).
+    result = testdir.runpytest_inprocess("--fulltrace")
     assert result.stderr.lines[0:3] == [
         "ERROR: my_usageerror",
         "",

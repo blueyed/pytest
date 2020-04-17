@@ -131,7 +131,8 @@ def main(args=None, plugins=None) -> Union[int, ExitCode]:
         tw = TerminalWriter(sys.stderr)
         for msg in e.args:
             tw.line("ERROR: {}\n".format(msg), red=True)
-        if "--fulltrace" in sys.argv or "--full-trace" in sys.argv:
+        args = sys.argv[1:] if args is None else args
+        if "--fulltrace" in args or "--full-trace" in args:
             import traceback
 
             traceback.print_exc(file=sys.stderr)
