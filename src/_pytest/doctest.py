@@ -31,6 +31,8 @@ if TYPE_CHECKING:
     import doctest
     from typing import Type
 
+    from _pytest import nodes
+
 DOCTEST_REPORT_CHOICE_NONE = "none"
 DOCTEST_REPORT_CHOICE_CDIFF = "cdiff"
 DOCTEST_REPORT_CHOICE_NDIFF = "ndiff"
@@ -221,11 +223,18 @@ class DoctestItem(pytest.Item):
         self.fixture_request = None
 
     @classmethod
-    def from_parent(  # type: ignore  # incompatible signature due to imposed limits on subclass
-        cls, parent: "Union[DoctestTextfile, DoctestModule]", *, name, runner, dtest
-    ) -> "DoctestItem":
+    def from_parent(  # type: ignore[override]  # incompatible signature due to imposed limits on subclass
+        cls: "Type[nodes._N]",
+        parent: "Union[DoctestTextfile, DoctestModule]",
+        *,
+        name,
+        runner,
+        dtest
+    ) -> "nodes._N":
         """The public constructor."""
-        return super().from_parent(name=name, parent=parent, runner=runner, dtest=dtest)  # type: ignore
+        return super().from_parent(  # type: ignore[misc,no-any-return]
+            name=name, parent=parent, runner=runner, dtest=dtest
+        )
 
     def setup(self):
         if self.dtest is not None:

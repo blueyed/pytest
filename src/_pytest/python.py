@@ -18,6 +18,7 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Type
 from typing import Union
 
 import py
@@ -208,7 +209,9 @@ def path_matches_patterns(path, patterns):
     return any(path.fnmatch(pattern) for pattern in patterns)
 
 
-def pytest_pycollect_makemodule(path, parent):
+def pytest_pycollect_makemodule(
+    path: py.path.local, parent: "nodes.Node"
+) -> "Union[Module, Package]":
     if path.basename == "__init__.py":
         return Package.from_parent(parent, fspath=path)
     return Module.from_parent(parent, fspath=path)
@@ -662,9 +665,11 @@ class Class(PyCollector):
     """ Collector for test methods. """
 
     @classmethod
-    def from_parent(cls, parent, *, name, obj=None) -> "Class":  # type: ignore
+    def from_parent(  # type: ignore[override]
+        cls: "Type[nodes._N]", parent: nodes.Node, *, name, obj=None
+    ) -> "nodes._N":
         """The public constructor."""
-        return super().from_parent(name=name, parent=parent)  # type: ignore
+        return super().from_parent(name=name, parent=parent)  # type: ignore[misc,no-any-return]
 
     def collect(self):
         if not safe_getattr(self.obj, "__test__", True):
@@ -1450,10 +1455,10 @@ class Function(PyobjMixin, nodes.Item):
         self.originalname = originalname
 
     @classmethod
-    def from_parent(cls, parent, **kw) -> "Function":
+    def from_parent(cls: "Type[nodes._N]", parent, **kw) -> "nodes._N":
         """The public constructor"""
         # todo(RonnyPfannschmidt): determine sound type limitations
-        return super().from_parent(parent=parent, **kw)  # type: ignore
+        return super().from_parent(parent=parent, **kw)  # type: ignore[misc,no-any-return]
 
     def _initrequest(self):
         self.funcargs = {}

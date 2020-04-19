@@ -36,6 +36,11 @@ if TYPE_CHECKING:
 
     from _pytest._code.code import _TracebackStyle  # noqa: F401
 
+    from typing import Type
+    from typing import TypeVar
+
+    _N = TypeVar("_N", bound="Node")
+
 SEP = "/"
 
 tracebackcutdir = py.path.local(_pytest.__file__).dirpath()
@@ -151,7 +156,7 @@ class Node(metaclass=NodeMeta):
         self._chain = self.listchain()
 
     @classmethod
-    def from_parent(cls, parent: "Node", **kw) -> "Node":
+    def from_parent(cls: "Type[_N]", parent: "Node", **kw) -> "_N":
         """
         Public Constructor for Nodes.
 
@@ -166,7 +171,7 @@ class Node(metaclass=NodeMeta):
             raise TypeError("config is not a valid argument for from_parent")
         if "session" in kw:
             raise TypeError("session is not a valid argument for from_parent")
-        return cls._create(parent=parent, **kw)  # type: ignore
+        return cls._create(parent=parent, **kw)  # type: ignore[no-any-return]
 
     @property
     def ihook(self):
@@ -472,9 +477,9 @@ class FSCollector(Collector):
         self._norecursepatterns = self.config.getini("norecursedirs")
 
     @classmethod
-    def from_parent(cls, parent, *, fspath) -> "FSCollector":  # type: ignore
+    def from_parent(cls: "Type[_N]", parent, *, fspath) -> "_N":  # type: ignore[override]
         """The public constructor."""
-        return super().from_parent(parent=parent, fspath=fspath)  # type: ignore
+        return super().from_parent(parent=parent, fspath=fspath)  # type: ignore[misc,no-any-return]
 
     def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running
