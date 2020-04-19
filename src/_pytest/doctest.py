@@ -5,6 +5,7 @@ import sys
 import traceback
 import warnings
 from contextlib import contextmanager
+from typing import cast
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -227,13 +228,16 @@ class DoctestItem(pytest.Item):
         cls: "Type[nodes._N]",
         parent: "Union[DoctestTextfile, DoctestModule]",
         *,
-        name,
+        name: str,
         runner,
         dtest
     ) -> "nodes._N":
         """The public constructor."""
-        return super().from_parent(  # type: ignore[misc,no-any-return]
-            name=name, parent=parent, runner=runner, dtest=dtest
+        return cast(
+            nodes._N,
+            super().from_parent(  # type: ignore[misc]
+                name=name, parent=parent, runner=runner, dtest=dtest
+            ),
         )
 
     def setup(self):

@@ -2,6 +2,7 @@ import os
 import warnings
 from functools import lru_cache
 from typing import Any
+from typing import cast
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     _N = TypeVar("_N", bound="Node")
+    _NM = TypeVar("_NM")
 
 SEP = "/"
 
@@ -85,12 +87,12 @@ def ischildnode(baseid, nodeid):
 
 
 class NodeMeta(type):
-    def __call__(self, *k, **kw):
-        warnings.warn(NODE_USE_FROM_PARENT.format(name=self.__name__), stacklevel=2)
-        return super().__call__(*k, **kw)
+    def __call__(cls: "Type[_NM]", *k, **kw) -> "_NM":
+        warnings.warn(NODE_USE_FROM_PARENT.format(name=cls.__name__), stacklevel=2)
+        return super().__call__(*k, **kw)  # type: ignore[misc,no-any-return]
 
-    def _create(self, *k, **kw):
-        return super().__call__(*k, **kw)
+    def _create(cls: "Type[_NM]", *k, **kw) -> "_NM":
+        return super().__call__(*k, **kw)  # type: ignore[misc,no-any-return]
 
 
 class Node(metaclass=NodeMeta):
@@ -171,7 +173,7 @@ class Node(metaclass=NodeMeta):
             raise TypeError("config is not a valid argument for from_parent")
         if "session" in kw:
             raise TypeError("session is not a valid argument for from_parent")
-        return cls._create(parent=parent, **kw)  # type: ignore[no-any-return]
+        return cls._create(parent=parent, **kw)
 
     @property
     def ihook(self):
@@ -477,9 +479,11 @@ class FSCollector(Collector):
         self._norecursepatterns = self.config.getini("norecursedirs")
 
     @classmethod
-    def from_parent(cls: "Type[_N]", parent, *, fspath) -> "_N":  # type: ignore[override]
+    def from_parent(cls: "Type[_N]", parent: "Node", *, fspath: py.path.local) -> "_N":  # type: ignore[override]
         """The public constructor."""
-        return super().from_parent(parent=parent, fspath=fspath)  # type: ignore[misc,no-any-return]
+        return cast(_N, super().from_parent(  # type: ignore[misc]
+            parent=parent, fspath=fspath
+        ))
 
     def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running

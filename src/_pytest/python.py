@@ -13,6 +13,7 @@ from collections.abc import Sequence
 from functools import partial
 from types import ModuleType
 from typing import Callable
+from typing import cast
 from typing import Dict
 from typing import Iterable
 from typing import List
@@ -666,10 +667,10 @@ class Class(PyCollector):
 
     @classmethod
     def from_parent(  # type: ignore[override]
-        cls: "Type[nodes._N]", parent: nodes.Node, *, name, obj=None
+        cls: "Type[nodes._N]", parent: nodes.Node, *, name: str, obj=None
     ) -> "nodes._N":
         """The public constructor."""
-        return super().from_parent(name=name, parent=parent)  # type: ignore[misc,no-any-return]
+        return cast(nodes._N, super().from_parent(name=name, parent=parent))  # type: ignore[misc]
 
     def collect(self):
         if not safe_getattr(self.obj, "__test__", True):
@@ -1458,7 +1459,7 @@ class Function(PyobjMixin, nodes.Item):
     def from_parent(cls: "Type[nodes._N]", parent, **kw) -> "nodes._N":
         """The public constructor"""
         # todo(RonnyPfannschmidt): determine sound type limitations
-        return super().from_parent(parent=parent, **kw)  # type: ignore[misc,no-any-return]
+        return cast(nodes._N, super().from_parent(parent=parent, **kw))  # type: ignore[misc]
 
     def _initrequest(self):
         self.funcargs = {}
