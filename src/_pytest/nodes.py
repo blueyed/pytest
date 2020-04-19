@@ -481,9 +481,12 @@ class FSCollector(Collector):
     @classmethod
     def from_parent(cls: "Type[_N]", parent: "Node", *, fspath: py.path.local) -> "_N":  # type: ignore[override]
         """The public constructor."""
-        return cast(_N, super().from_parent(  # type: ignore[misc]
-            parent=parent, fspath=fspath
-        ))
+        return cast(
+            "_N",
+            super(FSCollector, cast(FSCollector, cls)).from_parent(
+                parent=parent, fspath=fspath
+            ),
+        )
 
     def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running

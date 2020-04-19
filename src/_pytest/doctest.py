@@ -235,7 +235,7 @@ class DoctestItem(pytest.Item):
         """The public constructor."""
         return cast(
             nodes._N,
-            super().from_parent(  # type: ignore[misc]
+            super(DoctestItem, cast(DoctestItem, cls)).from_parent(
                 name=name, parent=parent, runner=runner, dtest=dtest
             ),
         )

@@ -670,7 +670,10 @@ class Class(PyCollector):
         cls: "Type[nodes._N]", parent: nodes.Node, *, name: str, obj=None
     ) -> "nodes._N":
         """The public constructor."""
-        return cast(nodes._N, super().from_parent(name=name, parent=parent))  # type: ignore[misc]
+        return cast(
+            "nodes._N",
+            super(Class, cast(Class, cls)).from_parent(name=name, parent=parent),
+        )
 
     def collect(self):
         if not safe_getattr(self.obj, "__test__", True):
@@ -1456,10 +1459,10 @@ class Function(PyobjMixin, nodes.Item):
         self.originalname = originalname
 
     @classmethod
-    def from_parent(cls: "Type[nodes._N]", parent, **kw) -> "nodes._N":
+    def from_parent(cls: "Type[nodes._N]", parent: nodes.Node, **kw) -> "nodes._N":
         """The public constructor"""
         # todo(RonnyPfannschmidt): determine sound type limitations
-        return cast(nodes._N, super().from_parent(parent=parent, **kw))  # type: ignore[misc]
+        return cast("nodes._N", super(Function, cast(Function, cls)).from_parent(parent=parent, **kw))
 
     def _initrequest(self):
         self.funcargs = {}
