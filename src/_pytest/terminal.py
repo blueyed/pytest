@@ -3,7 +3,6 @@
 This is a good source for looking at the various reporting hooks.
 """
 import argparse
-import collections
 import datetime
 import inspect
 import linecache
@@ -36,6 +35,7 @@ from _pytest import nodes
 from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprFileLocation
 from _pytest.assertion.util import _running_on_ci
+from _pytest.compat import order_preserving_dict
 from _pytest.compat import shell_quote
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
@@ -1051,11 +1051,11 @@ class TerminalReporter:
             return
 
         grouped = (
-            collections.OrderedDict()
-        )  # type: collections.OrderedDict[str, collections.OrderedDict[str, List[WarningReport]]]
+            order_preserving_dict()
+        )  # type: Dict[str, Dict[str, List[WarningReport]]]
         for wr in warning_reports:
             if wr.when not in grouped:
-                grouped[wr.when] = collections.OrderedDict()
+                grouped[wr.when] = order_preserving_dict()
             wmsg = "{}: {}".format(wr.warning.category.__name__, wr.warning.message)
             grouped[wr.when].setdefault(wmsg, []).append(wr)
 
