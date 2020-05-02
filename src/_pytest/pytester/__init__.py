@@ -48,12 +48,12 @@ from _pytest.nodes import Collector
 from _pytest.nodes import Item
 from _pytest.outcomes import Failed
 from _pytest.pathlib import _shorten_path
+from _pytest.pathlib import make_numbered_dir
 from _pytest.pathlib import Path
 from _pytest.python import Function
 from _pytest.python import Module
 from _pytest.reports import TestReport
 from _pytest.tmpdir import TempdirFactory
-
 
 if TYPE_CHECKING:
     from typing import Type
@@ -1468,9 +1468,7 @@ class Testdir(Generic[AnyStr]):
         Returns a :py:class:`RunResult`.
         """
         __tracebackhide__ = True
-        p = py.path.local.make_numbered_dir(
-            prefix="runpytest-", keep=None, rootdir=self.tmpdir
-        )
+        p = make_numbered_dir(root=Path(self.tmpdir), prefix="runpytest-")
         args = ("--basetemp=%s" % p,) + args
         plugins = [x for x in self.plugins if isinstance(x, str)]
         if plugins:
