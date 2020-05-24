@@ -347,7 +347,7 @@ def pytest_report_teststatus(report: TestReport) -> Tuple[str, str, str]:
 @attr.s
 class WarningReport:
     """Holds information for warnings captured by
-    :func:`TerminalReporter.pytest_warning_captured`."""
+    :func:`TerminalReporter.pytest_warning_recorded`."""
 
     warning = attr.ib(type=warnings.WarningMessage)
     """The original warning."""
@@ -533,11 +533,10 @@ class TerminalReporter:
             self.write_line("INTERNALERROR> " + line)
         return 1
 
-    def pytest_warning_captured(
-        self, when: str, warning_message: "warnings.WarningMessage", item: "nodes.Item"
+    def pytest_warning_recorded(
+        self, when: str, warning_message: "warnings.WarningMessage", nodeid: str
     ) -> None:
         fslocation = warning_message.filename, warning_message.lineno
-        nodeid = item.nodeid if item is not None else ""
         warning_report = WarningReport(
             warning=warning_message, fslocation=fslocation, nodeid=nodeid, when=when
         )

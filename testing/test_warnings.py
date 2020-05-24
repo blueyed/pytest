@@ -284,15 +284,14 @@ def test_warning_captured_hook(testdir):
     collected = []
 
     class WarningCollector:
-        def pytest_warning_captured(self, warning_message, when, item):
-            item_name = item.name if item is not None else ""
-            col = (
+        def pytest_warning_recorded(self, warning_message, when, nodeid, location):
+            collected.append((
                 str(warning_message.message),
                 when,
-                item_name,
+                nodeid,
                 warning_message.line,
-            )
-            collected.append(col)
+                location,
+            ))
 
     result = testdir.runpytest(plugins=[WarningCollector()])
     result.stdout.fnmatch_lines(
@@ -337,11 +336,33 @@ def test_warning_captured_hook(testdir):
         ("collect warning", "collect", "", None),
         ("msgwithline", "collect", "", "custom line"),
         ("msgwithnoline", "collect", "", ""),
-        ("setup warning", "runtest", "test_func", None),
-        ("call warning", "runtest", "test_func", None),
-        ("teardown warning", "runtest", "test_func", None),
+        ("setup warning", "runtest", "test_warning_captured_hook.py::test_func", None),
+        ("call warning", "runtest", "test_warning_captured_hook.py::test_func", None),
+        (
+            "teardown warning",
+            "runtest",
+            "test_warning_captured_hook.py::test_func",
+            None,
+        ),
     ]
-    assert collected == expected
+    for index in range(len(expected)):
+        collected_result = collected[index]
+        expected_result = expected[index]
+
+        assert collected_result[0] == expected_result[0], str(collected)
+        assert collected_result[1] == expected_result[1], str(collected)
+        assert collected_result[2] == expected_result[2], str(collected)
+        assert collected_result[3] == expected_result[3], str(collected)
+
+        # NOTE: collected_result[4] is location, which differs based on the platform you are on
+        #       thus, the best we can do here is assert the types of the paremeters match what we expect
+        #       and not try and preload it in the expected array
+        if collected_result[4] is None:
+            assert collected_result[4] is None, str(collected)
+        else:
+            assert type(collected_result[4][0]) is str, str(collected)
+            assert type(collected_result[4][1]) is int, str(collected)
+            assert type(collected_result[4][2]) is str, str(collected)
 
 
 @pytest.mark.filterwarnings("always")
@@ -698,7 +719,7 @@ class TestStackLevel:
             captured = []
 
             @classmethod
-            def pytest_warning_captured(cls, warning_message, when, item, location):
+            def pytest_warning_recorded(cls, warning_message, when, nodeid, location):
                 cls.captured.append((warning_message, location))
 
         testdir.plugins = [CapturedWarnings()]

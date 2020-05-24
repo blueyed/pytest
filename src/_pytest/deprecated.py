@@ -49,3 +49,8 @@ NO_PRINT_LOGS = PytestDeprecationWarning(
     "--no-print-logs is deprecated and scheduled for removal in pytest 6.0.\n"
     "Please use --show-capture instead."
 )
+
+WARNING_CAPTURED_HOOK = PytestDeprecationWarning(
+    "The pytest_warning_captured is deprecated and will be removed in a future release.\n"
+    "Please use pytest_warning_recorded instead."
+)
