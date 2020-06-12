@@ -344,7 +344,7 @@ class LFPlugin:
 
     def pytest_sessionfinish(self, session):
         config = self.config
-        if config.getoption("cacheshow") or hasattr(config, "slaveinput"):
+        if config.getoption("cacheshow") or hasattr(config, "workerinput"):
             return
 
         saved_lastfailed = config.cache.get("cache/lastfailed", {})
@@ -390,7 +390,7 @@ class NFPlugin:
 
     def pytest_sessionfinish(self) -> None:
         config = self.config
-        if config.getoption("cacheshow") or hasattr(config, "slaveinput"):
+        if config.getoption("cacheshow") or hasattr(config, "workerinput"):
             return
         if config.getoption("collectonly"):
             return
