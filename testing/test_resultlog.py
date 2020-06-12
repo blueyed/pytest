@@ -176,7 +176,7 @@ def test_makedir_for_resultlog(testdir, LineMatcher):
     LineMatcher(lines).fnmatch_lines([". *:test_pass"])
 
 
-def test_no_resultlog_on_slaves(testdir):
+def test_no_resultlog_on_workers(testdir):
     config = testdir.parseconfig("-p", "resultlog", "--resultlog=resultlog")
 
     assert not hasattr(config, "_resultlog")
@@ -185,7 +185,7 @@ def test_no_resultlog_on_slaves(testdir):
     pytest_unconfigure(config)
     assert not hasattr(config, "_resultlog")
 
-    config.slaveinput = {}
+    config.workerinput = {}
     pytest_configure(config)
     assert not hasattr(config, "_resultlog")
     pytest_unconfigure(config)

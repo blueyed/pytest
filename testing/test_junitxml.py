@@ -6,9 +6,13 @@ from xml.dom import minidom
 import py
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.junitxml import LogXML
 from _pytest.pathlib import Path
 from _pytest.reports import BaseReport
+
+if TYPE_CHECKING:
+    from typing import List
 
 
 @pytest.fixture(scope="session")
@@ -858,10 +862,13 @@ def test_mangle_test_address():
     assert newnames == ["a.my.py.thing", "Class", "method", "[a-1-::]"]
 
 
-def test_dont_configure_on_slaves(tmpdir):
-    gotten = []
+def test_dont_configure_on_workers(tmpdir) -> None:
+    gotten = []  # type: List[object]
 
     class FakeConfig:
+        if TYPE_CHECKING:
+            workerinput = None
+
         def __init__(self):
             self.pluginmanager = self
             self.option = self
@@ -879,7 +886,7 @@ def test_dont_configure_on_slaves(tmpdir):
 
     junitxml.pytest_configure(fake_config)
     assert len(gotten) == 1
-    FakeConfig.slaveinput = None
+    FakeConfig.workerinput = None
     junitxml.pytest_configure(fake_config)
     assert len(gotten) == 1
 
@@ -1249,7 +1256,7 @@ def test_record_fixtures_xunit2(testdir, fixture_name, run_and_parse):
 
 @pytest.mark.xdist_specific
 def test_random_report_log_xdist(testdir, monkeypatch, run_and_parse):
-    """xdist calls pytest_runtest_logreport as they are executed by the slaves,
+    """xdist calls pytest_runtest_logreport as they are executed by the workers,
     with nodes from several nodes overlapping, so junitxml must cope with that
     to produce correct reports. #1064
     """

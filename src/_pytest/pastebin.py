@@ -22,7 +22,7 @@ def pytest_configure(config):
     if config.option.pastebin == "all":
         tr = config.pluginmanager.getplugin("terminalreporter")
         # if no terminal reporter plugin is present, nothing we can do here;
-        # this can happen when this function executes in a slave node
+        # this can happen when this function executes in a worker node
         # when using pytest-xdist, for example
         if tr is not None:
             # pastebin file will be utf-8 encoded binary file
