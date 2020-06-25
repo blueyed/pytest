@@ -822,9 +822,7 @@ def _teardown_yield_fixture(fixturefunc, it):
     except StopIteration:
         pass
     else:
-        fail_fixturefunc(
-            fixturefunc, "yield_fixture function has more than one 'yield'"
-        )
+        fail_fixturefunc(fixturefunc, "fixture function has more than one 'yield'")
 
 
 def _eval_scope_callable(scope_callable, fixture_name, config):
