@@ -322,25 +322,27 @@ def test_setup_class(testdir):
     reprec.assertoutcome(passed=3)
 
 
-@pytest.mark.parametrize("type", ["Error", "Failure"])
-def test_testcase_adderrorandfailure_defers(testdir, type):
+@pytest.mark.parametrize("method", ["addError", "addFailure"])
+def test_testcase_adderrorandfailure_defers(method: str, testdir: "Testdir") -> None:
     testdir.makepyfile(
         """
         from unittest import TestCase
         import pytest
+
         class MyTestCase(TestCase):
             def run(self, result):
                 excinfo = pytest.raises(ZeroDivisionError, lambda: 0/0)
                 try:
-                    result.add%s(self, excinfo._excinfo)
+                    result.{method}(self, excinfo._excinfo)
                 except KeyboardInterrupt:
                     raise
                 except:
-                    pytest.fail("add%s should not raise")
+                    pytest.fail("{method} should not raise")
             def test_hello(self):
                 pass
-    """
-        % (type, type)
+    """.format(
+            method=method,
+        )
     )
     result = testdir.runpytest()
     result.stdout.no_fnmatch_line("*should not raise*")
