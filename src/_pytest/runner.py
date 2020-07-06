@@ -25,6 +25,8 @@ from _pytest.outcomes import TEST_OUTCOME
 if TYPE_CHECKING:
     from typing_extensions import Literal
 
+    from _pytest.nodes import Item
+
     _RuntestPhase = Literal["setup", "call", "teardown"]
 
 #
@@ -184,15 +186,18 @@ def pytest_report_teststatus(report):
 
 
 def call_and_report(
-    item, when: "Literal['setup', 'call', 'teardown']", log=True, **kwds
+    item: "Item",
+    when: "Literal['setup', 'call', 'teardown']",
+    log: bool = True,
+    **kwds
 ):
-    call = call_runtest_hook(item, when, **kwds)
-    hook = item.ihook
-    report = hook.pytest_runtest_makereport(item=item, call=call)
+    ihook = item.ihook
+    call = call_runtest_hook(item, when, ihook, **kwds)
+    report = ihook.pytest_runtest_makereport(item=item, call=call)
     if log:
-        hook.pytest_runtest_logreport(report=report)
+        ihook.pytest_runtest_logreport(report=report)
     if check_interactive_exception(call, report):
-        hook.pytest_exception_interact(node=item, call=call, report=report)
+        ihook.pytest_exception_interact(node=item, call=call, report=report)
     return report
 
 
@@ -204,20 +209,20 @@ def check_interactive_exception(call, report):
     )
 
 
-def call_runtest_hook(item, when: "_RuntestPhase", **kwds):
-    if when == "setup":
-        ihook = item.ihook.pytest_runtest_setup
-    elif when == "call":
-        ihook = item.ihook.pytest_runtest_call
-    elif when == "teardown":
-        ihook = item.ihook.pytest_runtest_teardown
-    else:
-        assert False, "Unhandled runtest hook case: {}".format(when)
+def call_runtest_hook(item: "Item", when: "_RuntestPhase", ihook, **kwds):
     try:
-        item._request._phase = when
+        item._request._phase = when  # type: ignore[attr-defined]
     except AttributeError:
         pass
-    return CallInfo.from_call(lambda: ihook(item=item, **kwds), when=when)
+
+    if when == "setup":
+        hookfunc = ihook.pytest_runtest_setup  # type: Callable[..., None]
+    elif when == "call":
+        hookfunc = ihook.pytest_runtest_call
+    else:
+        assert when == "teardown", "Unhandled runtest hook case: {}".format(when)
+        hookfunc = ihook.pytest_runtest_teardown
+    return CallInfo.from_call(lambda: hookfunc(item=item, **kwds), when=when)
 
 
 @attr.s(repr=False)
