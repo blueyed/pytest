@@ -5,7 +5,6 @@ from typing import List
 
 import pytest
 from _pytest.pytester import RunResult
-from _pytest.pytester import Testdir
 
 
 def pytest_addoption(parser):
@@ -164,10 +163,9 @@ def dummy_yaml_custom_test(testdir):
     testdir.makefile(".yaml", test1="")
 
 
-@pytest.fixture
-def testdir(testdir: Testdir) -> Testdir:
-    testdir.monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
-    return testdir
+@pytest.fixture(scope="session", autouse=True)
+def set_env(monkeypatch_session) -> None:
+    monkeypatch_session.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
 
 
 @pytest.fixture
