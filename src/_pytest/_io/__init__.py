@@ -1,10 +1,61 @@
+import os
+import sys
 from typing import List
 from typing import Sequence
 
 import py.io
 
+from _pytest.compat import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import TextIO
+
+
+def use_markup(file: "TextIO") -> bool:
+    val = os.getenv("PY_COLORS")
+    if val is not None:
+        from _pytest.config import _strtobool
+
+        return _strtobool(val)
+
+    from _pytest.assertion.util import _running_on_ci
+
+    if _running_on_ci():
+        return True
+
+    return file.isatty() if hasattr(file, "isatty") else False
+
 
 class TerminalWriter(py.io.TerminalWriter):  # noqa: pygrep-py
+    def __init__(self, file: "TextIO" = None) -> None:
+        if file is None:
+            file = sys.stdout
+        if hasattr(file, "isatty") and file.isatty() and sys.platform == "win32":
+            try:
+                import colorama
+            except ImportError:
+                pass
+            else:
+                file = colorama.AnsiToWin32(file).stream
+                assert file is not None
+        self._file = file
+        self._lastlen = 0
+        self._chars_on_current_line = 0
+        self._width_of_current_line = 0
+        self.hasmarkup = use_markup(self._file)
+
+    def write(self, msg: str, **markup: bool) -> int:  # type: ignore[override]
+        if not msg:
+            return 0
+        self._update_chars_on_current_line(msg)  # type: ignore[attr-defined]
+        if self.hasmarkup and markup:
+            markupmsg = self.markup(msg, **markup)
+        else:
+            markupmsg = msg
+        ret = self._file.write(markupmsg)
+        self._file.flush()
+        return ret
+
     @property
     def fullwidth(self):
         if hasattr(self, "_terminal_width"):
