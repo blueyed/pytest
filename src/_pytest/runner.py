@@ -82,7 +82,7 @@ def pytest_sessionfinish(session):
     session._setupstate.teardown_all()
 
 
-def pytest_runtest_protocol(item, nextitem):
+def pytest_runtest_protocol(item: "Item", nextitem: "Optional[Item]") -> bool:
     ihook = item.ihook
     ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     runtestprotocol(item, nextitem=nextitem)
@@ -90,10 +90,12 @@ def pytest_runtest_protocol(item, nextitem):
     return True
 
 
-def runtestprotocol(item, log=True, nextitem=None):
+def runtestprotocol(
+    item: "Item", log: bool = True, nextitem: "Optional[Item]" = None
+) -> List[TestReport]:
     hasrequest = hasattr(item, "_request")
-    if hasrequest and not item._request:
-        item._initrequest()
+    if hasrequest and not item._request:  # type: ignore[attr-defined]
+        item._initrequest()  # type: ignore[attr-defined]
     rep = call_and_report(item, "setup", log)
     reports = [rep]
     if rep.passed:
@@ -105,8 +107,8 @@ def runtestprotocol(item, log=True, nextitem=None):
     # after all teardown hooks have been called
     # want funcargs and request info to go away
     if hasrequest:
-        item._request = False
-        item.funcargs = None
+        item._request = False  # type: ignore[attr-defined]
+        item.funcargs = None  # type: ignore[attr-defined]
     return reports
 
 
