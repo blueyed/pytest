@@ -166,6 +166,7 @@ def dummy_yaml_custom_test(testdir):
 @pytest.fixture(scope="session", autouse=True)
 def set_env(monkeypatch_session) -> None:
     monkeypatch_session.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
+    monkeypatch_session.delenv("PYTEST_ADDOPTS", raising=False)
 
 
 @pytest.fixture
