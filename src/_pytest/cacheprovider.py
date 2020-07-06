@@ -6,7 +6,6 @@ ignores the external pytest-cache
 """
 import json
 import os
-from collections import OrderedDict
 from typing import Dict
 from typing import Generator
 from typing import List
@@ -23,6 +22,7 @@ from .pathlib import rm_rf
 from .reports import CollectReport
 from _pytest import nodes
 from _pytest._io import TerminalWriter
+from _pytest.compat import order_preserving_dict
 from _pytest.config import Config
 from _pytest.main import Session
 from _pytest.python import Module
@@ -367,9 +367,9 @@ class NFPlugin:
         yield
 
         known_nodeids = set(self.cached_nodeids)
-        new_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
+        new_items = order_preserving_dict()  # type: Dict[str, nodes.Item]
         if self.active:
-            other_items = OrderedDict()  # type: OrderedDict[str, nodes.Item]
+            other_items = order_preserving_dict()  # type: Dict[str, nodes.Item]
             for item in items:
                 if item.nodeid not in known_nodeids:
                     new_items[item.nodeid] = item
