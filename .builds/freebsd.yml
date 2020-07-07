@@ -1,4 +1,6 @@
 image: freebsd/12.x
+packages:
+  - py37-sqlite3
 
 sources:
   - https://github.com/blueyed/pytest
