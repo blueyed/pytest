@@ -18,8 +18,6 @@ environment:
 tasks:
   - install: |
       python3.7 -m venv .venv
-      .venv/bin/python -m pip list
-      .venv/bin/python -m pip uninstall wheel
       .venv/bin/python -m pip install --progress-bar=off git+https://github.com/blueyed/tox@master
       .venv/bin/tox --version
       cd pytest
