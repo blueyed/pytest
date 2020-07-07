@@ -211,7 +211,10 @@ def check_interactive_exception(call, report):
     )
 
 
-def call_runtest_hook(item: "Item", when: "_RuntestPhase", ihook, **kwds):
+def call_runtest_hook(item: "Item", when: "_RuntestPhase", ihook=None, **kwds):
+    if ihook is None:
+        ihook = item.ihook
+
     try:
         item._request._phase = when  # type: ignore[attr-defined]
     except AttributeError:
