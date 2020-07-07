@@ -13,7 +13,7 @@ environment:
   PYTEST_REORDER_TESTS: 0
   PIP_DISABLE_PIP_VERSION_CHECK: 1
   CODECOV_FLAGS: SourceHut
-  CODECOV_NAME: "$TOXENV-freebsd"
+  CODECOV_NAME: freebsd-py37-xdist
 
 tasks:
   - install: |
