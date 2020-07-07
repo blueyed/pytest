@@ -1832,7 +1832,7 @@ def test_summary_stats(
     class fake_session:
         testscollected = 0
 
-    tr._session = fake_session  # type: ignore[assignment]  # noqa: F821
+    tr._session = fake_session  # type: ignore[assignment]
     assert tr._is_last_item
 
     # Reset cache.
@@ -2394,7 +2394,7 @@ def test__get_pos() -> None:
             return nodeid
 
     def check(config: object, rep: object) -> str:
-        return _get_pos(config, rep)  # type: ignore[arg-type]  # noqa: F821
+        return _get_pos(config, rep)  # type: ignore[arg-type]
 
     assert check(config, rep) == "nodeid_without_testname"
     rep.nodeid = "path::testname"
@@ -2404,8 +2404,8 @@ def test__get_pos() -> None:
     class longrepr:
         reprcrash = ReprFileLocation(path="path", lineno=2, message="msg")
 
-    rep.longrepr = longrepr  # type: ignore[assignment]  # noqa: F821
-    config.invocation_dir = py.path.local()  # type: ignore[attr-defined]  # noqa: F821
+    rep.longrepr = longrepr  # type: ignore[assignment]
+    config.invocation_dir = py.path.local()  # type: ignore[attr-defined]
     assert check(config, rep) == "path:2::testname"
 
     # Windows path with different path as in nodeid.

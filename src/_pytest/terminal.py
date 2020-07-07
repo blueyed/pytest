@@ -349,7 +349,7 @@ class WarningReport:
     """Holds information for warnings captured by
     :func:`TerminalReporter.pytest_warning_captured`."""
 
-    warning = attr.ib(type=warnings.WarningMessage)  # type: ignore
+    warning = attr.ib(type=warnings.WarningMessage)
     """The original warning."""
     when = attr.ib(type=str)
     """When the warning was captured, e.g. "config", "collect", or
@@ -534,7 +534,7 @@ class TerminalReporter:
         return 1
 
     def pytest_warning_captured(
-        self, when: str, warning_message: warnings.WarningMessage, item  # type: ignore[name-defined]
+        self, when: str, warning_message: "warnings.WarningMessage", item: "nodes.Item"
     ) -> None:
         fslocation = warning_message.filename, warning_message.lineno
         nodeid = item.nodeid if item is not None else ""
