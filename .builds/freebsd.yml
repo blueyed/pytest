@@ -1,15 +1,19 @@
 image: freebsd/12.x
+packages:
+  - py37-sqlite3
 
 sources:
   - https://github.com/blueyed/pytest
 
 environment:
   CI: "true"
-  TOXENV: py37-xdist
-  PYTEST_ADDOPTS: -ra -vv --durations=100
+  TOXENV: py37-coverage-xdist
+  PYTEST_ADDOPTS: -ra --durations=50
   # XXX: makes testing/test_pdb.py hang (with pexpect).
   PYTEST_REORDER_TESTS: 0
   PIP_DISABLE_PIP_VERSION_CHECK: 1
+  CODECOV_FLAGS: SourceHut,FreeBSD
+  CODECOV_NAME: freebsd-py37-xdist
 
 tasks:
   - install: |
@@ -18,6 +22,7 @@ tasks:
       .venv/bin/tox --version
       cd pytest
       ../.venv/bin/tox --notest -v
+      ../.venv/bin/python scripts/append_codecov_token.py
 
   - test: |
       cd pytest

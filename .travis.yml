@@ -5,8 +5,9 @@ cache: false
 
 env:
   global:
-    - PYTEST_ADDOPTS="-ra -vv --durations=50"
     - PIP_DISABLE_PIP_VERSION_CHECK=1
+    - CODECOV_FLAGS=Travis,Linux
+    - COLUMNS=130
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
@@ -20,7 +21,7 @@ jobs:
     # Coverage for Python 3.5.{0,1} specific code, mostly typing related.
     - env:
         - TOXENV=py35-coverage
-        - PYTEST_ADDOPTS="-m 'py35_specific or acceptance_tests'"
+        - PYTEST_ADDOPTS="-ra --durations=50 -m 'py35_specific or acceptance_tests'"
       before_install:
         - python -m pip install -U pip==19.3.1
         # Work around https://github.com/jaraco/zipp/issues/40.
@@ -30,8 +31,7 @@ before_script:
   - python -m tox --notest -v --durations
 
 script:
-  - env COLUMNS=130 python -m tox -v --durations
-  - env CODECOV_NAME="$TOXENV-$TRAVIS_OS_NAME" scripts/report-coverage.sh -F Travis
+  - env CODECOV_NAME="$TRAVIS_OS_NAME-$TOXENV" python -m tox -v --durations
 
 branches:
   only:

@@ -146,22 +146,18 @@ jobs:
     - name: Setup tox environment
       run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}
 
-    - name: Test
-      env:
-        PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
-        COLUMNS: "120"
-      run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
-
     - name: Prepare coverage token
       if: (contains(matrix.tox_env, '-coverage') && ( github.repository == 'blueyed/pytest' || github.event_name == 'pull_request' ))
       run: |
         python scripts/append_codecov_token.py
 
-    - name: Report coverage
-      if: (contains(matrix.tox_env, '-coverage'))
+    - name: Test
       env:
+        PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
+        CODECOV_FLAGS: GHA,${{ runner.os }}
         CODECOV_NAME: ${{ matrix.name }}
-      run: bash scripts/report-coverage.sh -F GHA,${{ runner.os }}
+        COLUMNS: "120"
+      run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
   deploy:
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && github.repository == 'pytest-dev/pytest'
