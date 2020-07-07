@@ -6,7 +6,8 @@ cache: false
 env:
   global:
     - PIP_DISABLE_PIP_VERSION_CHECK=1
-    - CODECOV_FLAGS=Travis
+    - CODECOV_FLAGS=Travis,Linux
+    - COLUMNS=130
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
@@ -30,7 +31,7 @@ before_script:
   - python -m tox --notest -v --durations
 
 script:
-  - env CODECOV_FLAGS=Travis CODECOV_NAME"$TRAVIS_OS_NAME-$TOXENV" COLUMNS=130 python -m tox -v --durations
+  - env CODECOV_NAME"$TRAVIS_OS_NAME-$TOXENV" python -m tox -v --durations
 
 branches:
   only:
