@@ -25,12 +25,13 @@ jobs:
           "ubuntu-py38",
           "ubuntu-py38 (pexpect, integration)",
           "ubuntu-pypy3",
-          "ubuntu-xdist",
 
           "macos-py36",
 
           "windows-py37 (1)",
           "windows-py37 (2)",
+
+          "xdist",
 
           "linting",
           "docs",
@@ -86,7 +87,7 @@ jobs:
             # - verbosity=2
             pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
 
-          - name: "ubuntu-xdist"
+          - name: "xdist"
             python: "3.8"
             os: ubuntu-latest
             tox_env: "py38-xdist-coverage"
