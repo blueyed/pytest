@@ -836,10 +836,10 @@ class Config:
     def get_terminal_writer(self):
         return self.pluginmanager.get_plugin("terminalreporter")._tw
 
-    def pytest_cmdline_parse(self, pluginmanager, args):
+    def pytest_cmdline_parse(self, args: "List[str]") -> "Config":
         try:
             self.parse(args)
-        except UsageError:
+        except Exception:
 
             # Handle --version and --help here in a minimal fashion.
             # This gets done via helpconfig normally, but its
