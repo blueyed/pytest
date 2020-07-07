@@ -25,6 +25,8 @@ from _pytest.outcomes import TEST_OUTCOME
 if TYPE_CHECKING:
     from typing_extensions import Literal
 
+    from _pytest.nodes import Item
+
     _RuntestPhase = Literal["setup", "call", "teardown"]
 
 #
@@ -80,17 +82,20 @@ def pytest_sessionfinish(session):
     session._setupstate.teardown_all()
 
 
-def pytest_runtest_protocol(item, nextitem):
-    item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
+def pytest_runtest_protocol(item: "Item", nextitem: "Optional[Item]") -> bool:
+    ihook = item.ihook
+    ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
     runtestprotocol(item, nextitem=nextitem)
-    item.ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
+    ihook.pytest_runtest_logfinish(nodeid=item.nodeid, location=item.location)
     return True
 
 
-def runtestprotocol(item, log=True, nextitem=None):
+def runtestprotocol(
+    item: "Item", log: bool = True, nextitem: "Optional[Item]" = None
+) -> List[TestReport]:
     hasrequest = hasattr(item, "_request")
-    if hasrequest and not item._request:
-        item._initrequest()
+    if hasrequest and not item._request:  # type: ignore[attr-defined]
+        item._initrequest()  # type: ignore[attr-defined]
     rep = call_and_report(item, "setup", log)
     reports = [rep]
     if rep.passed:
@@ -102,8 +107,8 @@ def runtestprotocol(item, log=True, nextitem=None):
     # after all teardown hooks have been called
     # want funcargs and request info to go away
     if hasrequest:
-        item._request = False
-        item.funcargs = None
+        item._request = False  # type: ignore[attr-defined]
+        item.funcargs = None  # type: ignore[attr-defined]
     return reports
 
 
@@ -183,15 +188,18 @@ def pytest_report_teststatus(report):
 
 
 def call_and_report(
-    item, when: "Literal['setup', 'call', 'teardown']", log=True, **kwds
+    item: "Item",
+    when: "Literal['setup', 'call', 'teardown']",
+    log: bool = True,
+    **kwds
 ):
-    call = call_runtest_hook(item, when, **kwds)
-    hook = item.ihook
-    report = hook.pytest_runtest_makereport(item=item, call=call)
+    ihook = item.ihook
+    call = call_runtest_hook(item, when, ihook, **kwds)
+    report = ihook.pytest_runtest_makereport(item=item, call=call)
     if log:
-        hook.pytest_runtest_logreport(report=report)
+        ihook.pytest_runtest_logreport(report=report)
     if check_interactive_exception(call, report):
-        hook.pytest_exception_interact(node=item, call=call, report=report)
+        ihook.pytest_exception_interact(node=item, call=call, report=report)
     return report
 
 
@@ -203,20 +211,20 @@ def check_interactive_exception(call, report):
     )
 
 
-def call_runtest_hook(item, when: "_RuntestPhase", **kwds):
-    if when == "setup":
-        ihook = item.ihook.pytest_runtest_setup
-    elif when == "call":
-        ihook = item.ihook.pytest_runtest_call
-    elif when == "teardown":
-        ihook = item.ihook.pytest_runtest_teardown
-    else:
-        assert False, "Unhandled runtest hook case: {}".format(when)
+def call_runtest_hook(item: "Item", when: "_RuntestPhase", ihook, **kwds):
     try:
-        item._request._phase = when
+        item._request._phase = when  # type: ignore[attr-defined]
     except AttributeError:
         pass
-    return CallInfo.from_call(lambda: ihook(item=item, **kwds), when=when)
+
+    if when == "setup":
+        hookfunc = ihook.pytest_runtest_setup  # type: Callable[..., None]
+    elif when == "call":
+        hookfunc = ihook.pytest_runtest_call
+    else:
+        assert when == "teardown", "Unhandled runtest hook case: {}".format(when)
+        hookfunc = ihook.pytest_runtest_teardown
+    return CallInfo.from_call(lambda: hookfunc(item=item, **kwds), when=when)
 
 
 @attr.s(repr=False)

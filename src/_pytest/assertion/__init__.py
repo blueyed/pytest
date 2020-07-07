@@ -120,6 +120,8 @@ def pytest_runtest_protocol(item):
     comparison for the test.
     """
 
+    ihook = item.ihook
+
     def callbinrepr(op, left, right):
         # type: (str, object, object) -> Optional[str]
         """Call the pytest_assertrepr_compare hook and prepare the result
@@ -136,7 +138,7 @@ def pytest_runtest_protocol(item):
         The result can be formatted by util.format_explanation() for
         pretty printing.
         """
-        hook_result = item.ihook.pytest_assertrepr_compare(
+        hook_result = ihook.pytest_assertrepr_compare(
             config=item.config, op=op, left=left, right=right
         )
         for new_expl in hook_result:
@@ -152,12 +154,10 @@ def pytest_runtest_protocol(item):
     saved_assert_hooks = util._reprcompare, util._assertion_pass
     util._reprcompare = callbinrepr
 
-    if item.ihook.pytest_assertion_pass.get_hookimpls():
+    if ihook.pytest_assertion_pass.get_hookimpls():
 
         def call_assertion_pass_hook(lineno, orig, expl):
-            item.ihook.pytest_assertion_pass(
-                item=item, lineno=lineno, orig=orig, expl=expl
-            )
+            ihook.pytest_assertion_pass(item=item, lineno=lineno, orig=orig, expl=expl)
 
         util._assertion_pass = call_assertion_pass_hook
 
