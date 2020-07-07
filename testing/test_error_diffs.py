@@ -7,6 +7,10 @@ See https://github.com/pytest-dev/pytest/issues/3333 for details.
 import sys
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 TESTCASES = [
@@ -266,9 +270,8 @@ if sys.version_info[:2] >= (3, 7):
 
 
 @pytest.mark.parametrize("code, expected", TESTCASES)
-def test_error_diff(code, expected, testdir):
-    expected = [l.lstrip() for l in expected.splitlines()]
+def test_error_diff(code: str, expected: str, testdir: "Testdir") -> None:
     p = testdir.makepyfile(code)
     result = testdir.runpytest(p, "-vv")
-    result.stdout.fnmatch_lines(expected)
+    result.stdout.fnmatch_lines([line.lstrip() for line in expected.splitlines()])
     assert result.ret == 1
