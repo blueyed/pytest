@@ -6,6 +6,7 @@ import traceback
 import _pytest._code
 import pytest
 from _pytest.compat import getimfunc
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import hookimpl
 from _pytest.outcomes import exit
 from _pytest.outcomes import fail
@@ -15,16 +16,33 @@ from _pytest.python import Class
 from _pytest.python import Function
 from _pytest.runner import CallInfo
 
+if TYPE_CHECKING:
+    from typing import List
+    from typing import Optional
+    from typing import Union
 
-def pytest_pycollect_makeitem(collector, name, obj):
-    # has unittest been imported and is obj a subclass of its TestCase?
+    from .python import PyCollector
+
+
+def pytest_pycollect_makeitem(
+    collector: "PyCollector", name: str, obj: object
+) -> "Optional[Union[UnitTestCase, List]]":
     try:
-        if not issubclass(obj, sys.modules["unittest"].TestCase):
-            return
+        ut = sys.modules["unittest"]
+    except KeyError:
+        return None
+    try:
+        TestCase = ut.TestCase  # type: ignore[attr-defined]
+    except AttributeError:
+        return None
+    try:
+        if obj is TestCase:  # type: ignore[attr-defined]
+            return []
+        if not isinstance(obj, type) or not issubclass(obj, TestCase):
+            return None
     except Exception:
-        return
-    # yes, so let's collect it
-    return UnitTestCase.from_parent(collector, name=name, obj=obj)
+        return None
+    return UnitTestCase.from_parent(collector, name=name, obj=obj)  # type: ignore[no-any-return]
 
 
 class UnitTestCase(Class):
