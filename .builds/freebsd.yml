@@ -22,6 +22,7 @@ tasks:
       .venv/bin/tox --version
       cd pytest
       ../.venv/bin/tox --notest -v
+      ../.venv/bin/python scripts/append_codecov_token.py
 
   - test: |
       cd pytest
