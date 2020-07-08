@@ -6,6 +6,7 @@ import traceback
 import _pytest._code
 import pytest
 from _pytest.compat import getimfunc
+from _pytest.compat import safe_isclass
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import hookimpl
 from _pytest.outcomes import exit
@@ -29,18 +30,12 @@ def pytest_pycollect_makeitem(
 ) -> "Optional[Union[UnitTestCase, List]]":
     try:
         ut = sys.modules["unittest"]
-    except KeyError:
-        return None
-    try:
         TestCase = ut.TestCase  # type: ignore[attr-defined]
-    except AttributeError:
+    except (AttributeError, KeyError):
         return None
-    try:
-        if obj is TestCase:  # type: ignore[attr-defined]
-            return []
-        if not isinstance(obj, type) or not issubclass(obj, TestCase):
-            return None
-    except Exception:
+    if obj is TestCase:  # type: ignore[attr-defined]
+        return []
+    if not safe_isclass(obj) or not issubclass(obj, TestCase):
         return None
     return UnitTestCase.from_parent(collector, name=name, obj=obj)  # type: ignore[no-any-return]
 
