@@ -1245,7 +1245,7 @@ class TestEarlyRewriteBailout:
 
         hook = AssertionRewritingHook(pytestconfig)
         # use default patterns, otherwise we inherit pytest's testing config
-        hook.fnpats[:] = ["test_*.py", "*_test.py"]
+        hook.fnpats = ["test_*.py", "*_test.py"]
         monkeypatch.setattr(hook, "_find_spec", spy_find_spec)
         hook.set_session(StubSession())
         testdir.syspathinsert()
@@ -1297,7 +1297,7 @@ class TestEarlyRewriteBailout:
             }
         )
         testdir.syspathinsert(p.dirpath())
-        hook.fnpats[:] = ["tests/**.py"]
+        hook.fnpats = ["tests/**.py"]
         assert hook.find_spec("file") is not None
         assert self.find_spec_calls == ["file"]
 
