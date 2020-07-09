@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Appends the codecov token to the 'codecov.yml' file at the root of the repository.
 

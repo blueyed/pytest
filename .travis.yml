@@ -31,7 +31,8 @@ before_script:
   - python -m tox --notest -v --durations
 
 script:
-  - env CODECOV_NAME="$TRAVIS_OS_NAME-$TOXENV" python -m tox -v --durations
+  - python -m tox -v --durations
+  - .ci/report-coverage.sh -n "$TOXENV-$TRAVIS_OS_NAME" -F Travis,Linux
 
 branches:
   only:
