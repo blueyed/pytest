@@ -2203,6 +2203,7 @@ class TestProgressWithTeardown:
         output = testdir.runpytest()
         output.stdout.re_match_lines([r"test_teardown_simple.py \.E\s+\[100%\]"])
 
+    @pytest.mark.pypy_specific
     def test_teardown_with_test_also_failing(
         self, testdir, contest_with_teardown_fixture
     ):

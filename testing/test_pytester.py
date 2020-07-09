@@ -787,6 +787,7 @@ def test_run_stdin(testdir) -> None:
     assert result.ret == 0
 
 
+@pytest.mark.pypy_specific
 def test_runpytest_subprocess_stdin(testdir) -> None:
     p1 = testdir.makepyfile(r"def test(): print('\ninput=%r' % input())")
 
