@@ -62,11 +62,12 @@ jobs:
 
           # Coverage for:
           # - osx
+          # - pygments
           # - verbosity=1
           - name: "macos-py36"
             python: "3.6"
             os: macos-latest
-            tox_env: "py36-nopygments-coverage"
+            tox_env: "py36-pygments-coverage"
             pytest_addopts: "--verbosity=1"
 
           - name: "windows-py37 (1)"
