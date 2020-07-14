@@ -167,7 +167,7 @@ class TestImportHookInstallation:
 
     @pytest.mark.parametrize("mode", ["plain", "rewrite"])
     def test_installed_plugin_rewrite(self, testdir, mode, monkeypatch):
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
+        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
         # Make sure the hook is installed early enough so that plugins
         # installed via setuptools are rewritten.
         contents = {

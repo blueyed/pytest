@@ -1254,7 +1254,6 @@ def test_random_report_log_xdist(testdir, monkeypatch, run_and_parse):
     to produce correct reports. #1064
     """
     pytest.importorskip("xdist")
-    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
     testdir.makepyfile(
         """
         import pytest, time
@@ -1263,7 +1262,7 @@ def test_random_report_log_xdist(testdir, monkeypatch, run_and_parse):
             assert i != 22
     """
     )
-    _, dom = run_and_parse("-n2")
+    _, dom = run_and_parse("-pxdist", "-n2")
     suite_node = dom.find_first_by_tag("testsuite")
     failed = []
     for case_node in suite_node.find_by_tag("testcase"):
@@ -1305,15 +1304,14 @@ def test_runs_twice(testdir, run_and_parse):
 @pytest.mark.xdist_specific
 def test_runs_twice_xdist(testdir, run_and_parse):
     pytest.importorskip("xdist")
-    testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
-    f = testdir.makepyfile(
+    p1 = testdir.makepyfile(
         """
         def test_pass():
             pass
     """
     )
 
-    result, dom = run_and_parse(f, "--dist", "each", "--tx", "2*popen")
+    result, dom = run_and_parse(p1, "-pxdist", "--dist", "each", "--tx", "2*popen")
     result.stdout.no_fnmatch_line("*INTERNALERROR*")
     first, second = [x["classname"] for x in dom.find_by_tag("testcase")]
     assert first == second

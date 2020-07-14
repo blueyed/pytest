@@ -705,15 +705,13 @@ class TestTerminalFunctional:
         assert result.ret == 0
 
     @pytest.mark.xdist_specific  # to have some entrypoint plugin.
-    def test_header_trailer_info(self, testdir, request):
-        testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
-        testdir.makepyfile(
-            """
-            def test_passes():
-                pass
-        """
-        )
-        result = testdir.runpytest()
+    def test_header_trailer_info(self, testdir: "Testdir", request) -> None:
+        testdir.makepyfile("def test_pass(): pass")
+        has_xdist = request.config.pluginmanager.get_plugin("xdist")
+        if has_xdist:
+            result = testdir.runpytest("-pxdist")
+        else:
+            result = testdir.runpytest()
         verinfo = ".".join(map(str, sys.version_info[:3]))
         result.stdout.fnmatch_lines(
             [
@@ -730,7 +728,7 @@ class TestTerminalFunctional:
                 "=* 1 passed*in *.[0-9][0-9]s *=",
             ]
         )
-        if request.config.pluginmanager.list_plugin_distinfo():
+        if has_xdist:
             result.stdout.fnmatch_lines(["plugins: *"])
 
     def test_header(self, testdir: Testdir) -> None:
@@ -861,13 +859,12 @@ class TestTerminalFunctional:
         assert result.ret == 1
 
     @pytest.mark.xdist_specific
-    def test_verbose_reporting_xdist(self, verbose_testfile, testdir, pytestconfig):
-        if not pytestconfig.pluginmanager.get_plugin("xdist"):
-            pytest.skip("xdist plugin not installed")
-
-        testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
+    def test_verbose_reporting_xdist(
+        self, verbose_testfile: "py.path.local", testdir: "Testdir"
+    ) -> None:
+        pytest.importorskip("xdist")
         result = testdir.runpytest(
-            verbose_testfile, "-v", "-n 1", "-Walways::pytest.PytestWarning"
+            verbose_testfile, "-v", "-pxdist", "-n1", "-Walways::pytest.PytestWarning"
         )
         result.stdout.fnmatch_lines(
             ["*FAIL*test_verbose_reporting_xdist.py::test_fail*"]
@@ -2108,30 +2105,27 @@ class TestProgressOutputStyle:
         )
 
     @pytest.mark.xdist_specific
-    def test_xdist_normal(self, many_tests_files, testdir, monkeypatch):
+    def test_xdist_normal(self, many_tests_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
-        output = testdir.runpytest("-n2")
+        output = testdir.runpytest("-pxdist", "-n2")
         output.stdout.re_match_lines([r"\.{20} \s+ \[100%\]"])
 
     @pytest.mark.xdist_specific
-    def test_xdist_normal_count(self, many_tests_files, testdir, monkeypatch):
+    def test_xdist_normal_count(self, many_tests_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
         testdir.makeini(
             """
             [pytest]
             console_output_style = count
         """
         )
-        output = testdir.runpytest("-n2")
+        output = testdir.runpytest("-pxdist", "-n2")
         output.stdout.re_match_lines([r"\.{20} \s+ \[20/20\]"])
 
     @pytest.mark.xdist_specific
-    def test_xdist_verbose(self, many_tests_files, testdir, monkeypatch):
+    def test_xdist_verbose(self, many_tests_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
-        output = testdir.runpytest("-n2", "-v")
+        output = testdir.runpytest("-pxdist", "-n2", "-v")
         output.stdout.re_match_lines_random(
             [
                 r"\[gw\d\] \[\s*\d+%\] PASSED test_bar.py::test_bar\[1\]",
@@ -2251,10 +2245,9 @@ class TestProgressWithTeardown:
         )
 
     @pytest.mark.xdist_specific
-    def test_xdist_normal(self, many_files, testdir, monkeypatch):
+    def test_xdist_normal(self, many_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
-        output = testdir.runpytest("-n2")
+        output = testdir.runpytest("-pxdist", "-n2")
         output.stdout.re_match_lines([r"[\.E]{40} \s+ \[100%\]"])
 
 

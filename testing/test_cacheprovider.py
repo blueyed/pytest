@@ -65,7 +65,6 @@ class TestNewAPI:
 
     @pytest.mark.filterwarnings("default")
     def test_cache_failure_warns(self, testdir, monkeypatch):
-        monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
         cache_dir = str(testdir.tmpdir.ensure_dir(".pytest_cache"))
 
         def raising_mkdir(*args, **kwargs):
