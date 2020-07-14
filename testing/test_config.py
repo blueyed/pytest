@@ -587,7 +587,7 @@ def test_options_on_small_file_do_not_blow_up(testdir):
 
 
 def test_preparse_ordering_with_setuptools(testdir, monkeypatch):
-    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
+    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
 
     class EntryPoint:
         name = "mytestplugin"
@@ -619,7 +619,7 @@ def test_preparse_ordering_with_setuptools(testdir, monkeypatch):
 
 
 def test_setuptools_importerror_issue1479(testdir, monkeypatch):
-    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
+    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
 
     class DummyEntryPoint:
         name = "mytestplugin"
@@ -643,7 +643,7 @@ def test_setuptools_importerror_issue1479(testdir, monkeypatch):
 
 def test_importlib_metadata_broken_distribution(testdir, monkeypatch):
     """Integration test for broken distributions with 'files' metadata being None (#5389)"""
-    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
+    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
 
     class DummyEntryPoint:
         name = "mytestplugin"
@@ -666,7 +666,7 @@ def test_importlib_metadata_broken_distribution(testdir, monkeypatch):
 
 @pytest.mark.parametrize("block_it", [True, False])
 def test_plugin_preparse_prevents_setuptools_loading(testdir, monkeypatch, block_it):
-    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
+    monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
 
     plugin_module_placeholder = object()
 
@@ -727,7 +727,6 @@ def test_disable_plugin_autoload(testdir, monkeypatch, parse_args, should_load):
     def distributions():
         return (Distribution(),)
 
-    monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
     monkeypatch.setattr(importlib_metadata, "distributions", distributions)
     monkeypatch.setitem(sys.modules, "mytestplugin", PseudoPlugin())
     config = testdir.parseconfig(*parse_args)
