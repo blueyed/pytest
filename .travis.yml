@@ -32,6 +32,8 @@ before_script:
 
 script:
   - python -m tox -v --durations
+
+after_script:
   - .ci/report-coverage.sh -n "$TOXENV-$TRAVIS_OS_NAME" -F Travis,Linux
 
 branches:

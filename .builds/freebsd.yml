@@ -24,5 +24,6 @@ tasks:
 
   - test: |
       cd pytest
-      env COLUMNS=120 ../.venv/bin/tox -v
+      env COLUMNS=120 ../.venv/bin/tox -v; ret=$?
       .ci/report-coverage.sh -n freebsd-py37-xdist -F SourceHut,FreeBSD
+      exit $ret
