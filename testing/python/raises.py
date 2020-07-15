@@ -226,13 +226,12 @@ class TestRaises:
         (msg,) = excinfo.value.args
         assert msg == 'Regex pattern "\'foo" does not match "\'bar".'
 
-    def test_match_failure_exact_string_message(self):
+    def test_match_failure_exact_string_message(self) -> None:
         message = "Oh here is a message with (42) numbers in parameters"
         with pytest.raises(AssertionError) as excinfo:
             with pytest.raises(AssertionError, match=message):
                 raise AssertionError(message)
-        (msg,) = excinfo.value.args
-        assert msg == (
+        assert excinfo.value.args[0] == (
             "Regex pattern 'Oh here is a message with (42) numbers in "
             "parameters' does not match 'Oh here is a message with (42) "
             "numbers in parameters'. Did you mean to `re.escape()` the regex?"
