@@ -793,7 +793,7 @@ def test_runpytest_subprocess_stdin(testdir) -> None:
 
     result = testdir.runpytest_subprocess(str(p1), "-s")
     result.stdout.fnmatch_lines(
-        ["E   EOFError: EOF when reading a line", "=* 1 failed in *"]
+        ["E   EOFError*", "=* 1 failed in *"]
     )
 
     # bytes input
