@@ -66,10 +66,6 @@ jobs:
         COLUMNS: "120"
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
-    - name: Prepare coverage token
-      if: (contains(matrix.tox_env, '-coverage') && ( github.repository == 'blueyed/pytest' || github.event_name == 'pull_request' ))
-      run: .ci/append_codecov_token.py
-
     - name: Report coverage
       if: (contains(matrix.tox_env, '-coverage'))
       run: "bash .ci/report-coverage.sh -n '${{ matrix.name }}' -F 'GHA,${{ runner.os }}'"
