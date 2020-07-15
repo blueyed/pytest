@@ -71,7 +71,7 @@ class TestMetafunc:
         pytest.raises(ValueError, lambda: metafunc.parametrize("y", [5, 6]))
 
         with pytest.raises(TypeError, match="^ids must be a callable or an iterable$"):
-            metafunc.parametrize("y", [5, 6], ids=42)  # type: ignore[arg-type] # noqa: F821
+            metafunc.parametrize("y", [5, 6], ids=42)  # type: ignore[arg-type]
 
     def test_parametrize_error_iterator(self) -> None:
         def func(x):
@@ -89,7 +89,7 @@ class TestMetafunc:
         metafunc = self.Metafunc(func)
         # When the input is an iterator, only len(args) are taken,
         # so the bad Exc isn't reached.
-        metafunc.parametrize("x", [1, 2], ids=gen())  # type: ignore[arg-type] # noqa: F821
+        metafunc.parametrize("x", [1, 2], ids=gen())  # type: ignore[arg-type]
         assert [(x.funcargs, x.id) for x in metafunc._calls] == [
             ({"x": 1}, "0"),
             ({"x": 2}, "2"),
@@ -101,7 +101,7 @@ class TestMetafunc:
                 r" Exc\(from_gen\) \(type: <class .*Exc'>\) at index 2"
             ),
         ):
-            metafunc.parametrize("x", [1, 2, 3], ids=gen())  # type: ignore[arg-type] # noqa: F821
+            metafunc.parametrize("x", [1, 2, 3], ids=gen())  # type: ignore[arg-type]
 
     def test_parametrize_bad_scope(self) -> None:
         def func(x):
@@ -679,7 +679,7 @@ class TestMetafunc:
             fail.Exception,
             match="In func: expected Sequence or boolean for indirect, got dict",
         ):
-            metafunc.parametrize("x, y", [("a", "b")], indirect={})  # type: ignore[arg-type] # noqa: F821
+            metafunc.parametrize("x, y", [("a", "b")], indirect={})  # type: ignore[arg-type]
 
     def test_parametrize_indirect_list_functional(self, testdir: Testdir) -> None:
         """

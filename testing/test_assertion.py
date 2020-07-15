@@ -167,7 +167,7 @@ class TestImportHookInstallation:
 
     @pytest.mark.parametrize("mode", ["plain", "rewrite"])
     def test_installed_plugin_rewrite(self, testdir, mode, monkeypatch):
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
+        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
         # Make sure the hook is installed early enough so that plugins
         # installed via setuptools are rewritten.
         contents = {
@@ -1576,7 +1576,18 @@ def test_assert_tuple_warning(testdir):
     """
     )
     result = testdir.runpytest()
-    result.stdout.fnmatch_lines(["*test_assert_tuple_warning.py:2:*{}*".format(msg)])
+    result.stdout.fnmatch_lines(
+        [
+            "*= warnings summary [[]collect[]] =*",
+            "test_assert_tuple_warning.py:2",
+            "    assert(False, 'you shall not pass')",
+            "  PytestAssertRewriteWarning: assertion is always true, perhaps remove parentheses?",
+            "",
+            "-- Docs: *",
+            "*= 1 passed, 1 warning in *",
+        ],
+        consecutive=True,
+    )
 
     # tuples with size != 2 should not trigger the warning
     testdir.makepyfile(

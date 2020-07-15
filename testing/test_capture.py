@@ -1459,8 +1459,6 @@ def test_crash_on_closing_tmpfile_py27(testdir):
             printing.wait()
     """
     )
-    # Do not consider plugins like hypothesis, which might output to stderr.
-    testdir.monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
     result = testdir.runpytest_subprocess(str(p))
     assert result.ret == 0
     assert result.stderr.str() == ""
@@ -1612,8 +1610,8 @@ def test_stderr_write_returns_len(capsys):
 def test_encodedfile_writelines(tmpfile: BinaryIO) -> None:
     ef = capture.EncodedFile(tmpfile, "utf-8")
     with pytest.raises(AttributeError):
-        ef.writelines([b"line1", b"line2"])  # type: ignore[list-item]  # noqa: F821
-    assert ef.writelines(["line1", "line2"]) is None  # type: ignore[func-returns-value]  # noqa: F821
+        ef.writelines([b"line1", b"line2"])  # type: ignore[list-item]
+    assert ef.writelines(["line1", "line2"]) is None  # type: ignore[func-returns-value]
     tmpfile.seek(0)
     assert tmpfile.read() == b"line1line2"
     tmpfile.close()

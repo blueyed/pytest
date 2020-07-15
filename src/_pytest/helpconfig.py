@@ -213,6 +213,7 @@ def showhelp(config: Config) -> None:
     if reporter:
         tw = reporter._tw
         for warningreport in reporter.stats.get("warnings", []):
+            tw.line()
             tw.line("warning : " + warningreport.message, red=True)
 
 

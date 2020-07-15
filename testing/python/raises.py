@@ -198,7 +198,7 @@ class TestRaises:
             int("asdf")
 
         msg = "with base 16"
-        expr = "Pattern {!r} does not match \"invalid literal for int() with base 10: 'asdf'\"".format(
+        expr = "Regex pattern {!r} does not match \"invalid literal for int() with base 10: 'asdf'\".".format(
             msg
         )
         with pytest.raises(AssertionError, match=re.escape(expr)):
@@ -224,7 +224,18 @@ class TestRaises:
             with pytest.raises(AssertionError, match="'foo"):
                 raise AssertionError("'bar")
         (msg,) = excinfo.value.args
-        assert msg == 'Pattern "\'foo" does not match "\'bar"'
+        assert msg == 'Regex pattern "\'foo" does not match "\'bar".'
+
+    def test_match_failure_exact_string_message(self) -> None:
+        message = "Oh here is a message with (42) numbers in parameters"
+        with pytest.raises(AssertionError) as excinfo:
+            with pytest.raises(AssertionError, match=message):
+                raise AssertionError(message)
+        assert excinfo.value.args[0] == (
+            "Regex pattern 'Oh here is a message with (42) numbers in "
+            "parameters' does not match 'Oh here is a message with (42) "
+            "numbers in parameters'. Did you mean to `re.escape()` the regex?"
+        )
 
     def test_raises_match_wrong_type(self):
         """Raising an exception with the wrong type and match= given.

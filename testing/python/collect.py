@@ -300,8 +300,10 @@ class TestFunction:
         result.stdout.fnmatch_lines(
             [
                 "collected 0 items",
-                "*test_function_as_object_instance_ignored.py:2: "
-                "*cannot collect 'test_a' because it is not a function.",
+                "test_function_as_object_instance_ignored.py:2",
+                "    def __call__(self, tmpdir):",
+                "  PytestCollectionWarning: cannot collect 'test_a' because it is not a function.",
+                "*= 1 warning in *",
             ]
         )
 
@@ -1210,10 +1212,19 @@ def test_dont_collect_non_function_callable(testdir):
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         [
-            "*collected 1 item*",
-            "*test_dont_collect_non_function_callable.py:2: *cannot collect 'test_a' because it is not a function*",
-            "*1 passed, 1 warning in *",
-        ]
+            "collected 1 item",
+            "",
+            "test_dont_collect_non_function_callable.py . *",
+            "",
+            "*= warnings summary [[]collect[]] =*",
+            "test_dont_collect_non_function_callable.py:2",
+            "    def __call__(self):",
+            "  PytestCollectionWarning: cannot collect 'test_a' because it is not a function.",
+            "",
+            "-- Docs: *",
+            "*= 1 passed, 1 warning in *",
+        ],
+        consecutive=True,
     )
 
 

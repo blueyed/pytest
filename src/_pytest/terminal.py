@@ -3,14 +3,16 @@
 This is a good source for looking at the various reporting hooks.
 """
 import argparse
-import collections
 import datetime
+import inspect
+import linecache
 import os
 import platform
 import sys
 import time
 import warnings
 from functools import partial
+from types import FrameType
 from typing import Any
 from typing import Callable
 from typing import Dict
@@ -18,6 +20,7 @@ from typing import Generator
 from typing import List
 from typing import Mapping
 from typing import Optional
+from typing import Sequence
 from typing import Tuple
 from typing import Union
 
@@ -33,6 +36,7 @@ from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprFileLocation
 from _pytest._io import TerminalWriter
 from _pytest.assertion.util import _running_on_ci
+from _pytest.compat import order_preserving_dict
 from _pytest.compat import shell_quote
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
@@ -43,6 +47,7 @@ from _pytest.reports import CollectReport
 from _pytest.reports import TestReport
 
 if TYPE_CHECKING:
+    from typing_extensions import Literal
     from _pytest._code.code import _TracebackStyle
 
 REPORT_COLLECTING_RESOLUTION = 0.5
@@ -61,7 +66,7 @@ KNOWN_TYPES = (
 _REPORTCHARS_DEFAULT = "fE"
 
 
-def _getdimensions():
+def _getdimensions() -> Tuple[int, int]:
     # Improved version of shutil.get_terminal_size that looks at stdin,
     # stderr, stdout.  Ref: https://bugs.python.org/issue14841.
     fallback = (80, 24)
@@ -101,10 +106,12 @@ def _getdimensions():
 
 
 _cached_terminal_width = None
-_cached_terminal_width_sighandler = None
+_cached_terminal_width_sighandler = (
+    None
+)  # type: Optional[Union[Literal[False], Callable]]
 
 
-def get_terminal_width():
+def get_terminal_width() -> int:
     global _cached_terminal_width
     global _cached_terminal_width_sighandler
 
@@ -114,7 +121,7 @@ def get_terminal_width():
         _prev_sig_handler = None
         _in_sighandler = False
 
-        def _clear_cache_on_sigwinch(signum, frame):
+        def _clear_cache_on_sigwinch(signum: int, frame: FrameType) -> None:
             global _cached_terminal_width
             nonlocal _in_sighandler
 
@@ -340,40 +347,49 @@ def pytest_report_teststatus(report: TestReport) -> Tuple[str, str, str]:
 
 @attr.s
 class WarningReport:
-    """
-    Simple structure to hold warnings information captured by ``pytest_warning_captured``.
+    """Holds information for warnings captured by
+    :func:`TerminalReporter.pytest_warning_captured`."""
 
-    :ivar str message: user friendly message about the warning
-    :ivar str when: when the warning was emitted, e.g. "config", "collect", or
-      "runtest" (see :func:`_pytest.hookspec.pytest_warning_captured`)
-    :ivar str|None nodeid: node id that generated the warning (see ``get_location``).
-    :ivar tuple|py.path.local fslocation:
-        file system location of the source of the warning (see ``get_location``).
-    """
-
-    message = attr.ib(type=str)
+    warning = attr.ib(type=warnings.WarningMessage)
+    """The original warning."""
     when = attr.ib(type=str)
+    """When the warning was captured, e.g. "config", "collect", or
+    "runtest" (see :func:`_pytest.hookspec.pytest_warning_captured`)."""
+    fslocation = attr.ib(type=Tuple[str, int])
+    """Source of the warning (file system location, see :func:`get_location`)."""
     nodeid = attr.ib(type=Optional[str], default=None)
-    fslocation = attr.ib(default=None)
+    """Node id that generated the warning (see :func:`get_location`)."""
     count_towards_summary = True
 
-    def get_location(self, config):
+    @property
+    def message(self) -> str:
+        """Formatted warning (the standard way, without trailing newline)."""
+        wm = self.warning
+        return warnings.formatwarning(
+            str(wm.message), wm.category, wm.filename, wm.lineno, wm.line,
+        ).rstrip()
+
+    @property
+    def source_line(self) -> str:
+        line = self.warning.line
+        if line is None:
+            line = linecache.getline(self.warning.filename, self.warning.lineno)
+        return line
+
+    def get_location(self, config: Config) -> str:
         """
         Returns the more user-friendly information about the location
-        of a warning, or None.
+        of a warning.
         """
-        if self.nodeid:
-            return self.nodeid
-        if self.fslocation:
-            if isinstance(self.fslocation, tuple) and len(self.fslocation) >= 2:
-                filename, linenum = self.fslocation[:2]
-                relpath = py.path.local(filename).relto(config.invocation_dir)
-                if not relpath:
-                    relpath = str(filename)
-                return "{}:{}".format(relpath, linenum)
-            else:
-                return str(self.fslocation)
-        return None
+        filename, linenum = self.fslocation[:2]
+        relpath = config.invocation_dir.bestrelpath(py.path.local(filename))
+        if not self.nodeid:
+            return "{}:{}".format(relpath, linenum)
+        if self.nodeid.startswith(relpath):
+            names = self.nodeid[len(relpath) :]
+            if names.startswith("::"):
+                return "{}:{}{}".format(relpath, linenum, names)
+        return "{} ({}:{})".format(self.nodeid, relpath, linenum)
 
 
 class TerminalReporter:
@@ -399,6 +415,7 @@ class TerminalReporter:
         self._progress_items_reported = 0
         self._show_progress_info = self._determine_show_progress_info()
         self._collect_report_last_write = None  # type: Optional[float]
+        self._already_displayed_warnings = None  # type: Optional[int]
 
         self._collect_ignored = {}  # type: Dict[str, List[py.path.local]]
         """Information about ignored paths (for reporting)."""
@@ -469,9 +486,8 @@ class TerminalReporter:
             if self.currentfspath is not None and self._show_progress_info:
                 self._write_progress_information_filling_space()
             self.currentfspath = fspath
-            fspath = self.startdir.bestrelpath(fspath)
             self._tw.line()
-            self._tw.write(fspath + " ")
+            self._tw.write(self.startdir.bestrelpath(fspath) + " ")
         self._tw.write(res, **markup)
 
     def write_ensure_prefix(self, prefix, extra="", **kwargs):
@@ -537,16 +553,13 @@ class TerminalReporter:
             self.write_line("INTERNALERROR> " + line)
         return 1
 
-    def pytest_warning_captured(self, when: str, warning_message, item) -> None:
-        # from _pytest.nodes import get_fslocation_from_item
-        from _pytest.warnings import warning_record_to_str
-
+    def pytest_warning_captured(
+        self, when: str, warning_message: "warnings.WarningMessage", item: "nodes.Item"
+    ) -> None:
         fslocation = warning_message.filename, warning_message.lineno
-        message = warning_record_to_str(warning_message)
-
         nodeid = item.nodeid if item is not None else ""
         warning_report = WarningReport(
-            fslocation=fslocation, message=message, nodeid=nodeid, when=when,
+            warning=warning_message, fslocation=fslocation, nodeid=nodeid, when=when
         )
         self._add_stats("warnings", [warning_report])
 
@@ -751,7 +764,7 @@ class TerminalReporter:
         else:
             self.write_line(line)
 
-    def _verbose_collect_ignored(self) -> Optional[List[str]]:
+    def _verbose_collect_ignored(self) -> List[str]:
         """Get information about ignored files during collection."""
         verbosity = self.config.option.verbose
         if not self._collect_ignored or verbosity < 1:
@@ -902,7 +915,7 @@ class TerminalReporter:
                 for rep in failed:
                     rep.toterminal(self._tw)
 
-    def _printcollecteditems(self, items):
+    def _printcollecteditems(self, items: Sequence[nodes.Item]) -> None:
         # to print out items and their parent collectors
         # we take care to leave out Instances aka ()
         # because later versions are going to get rid of them anyway
@@ -918,7 +931,7 @@ class TerminalReporter:
                 for item in items:
                     self._tw.line(item.nodeid)
             return
-        stack = []
+        stack = []  # type: List[nodes.Node]
         indent = ""
         for item in items:
             needed_collectors = item.listchain()[1:]  # strip root node
@@ -933,9 +946,14 @@ class TerminalReporter:
                 indent = (len(stack) - 1) * "  "
                 self._tw.line("{}{}".format(indent, col))
                 if self.config.option.verbose >= 1:
-                    if hasattr(col, "_obj") and col._obj.__doc__:
-                        for line in col._obj.__doc__.strip().splitlines():
-                            self._tw.line("{}{}".format(indent + "  ", line.strip()))
+                    try:
+                        obj = col.obj  # type: ignore[attr-defined]
+                    except AttributeError:
+                        continue
+                    doc = inspect.getdoc(obj)
+                    if doc:
+                        for line in doc.splitlines():
+                            self._tw.line("{}{}".format(indent + "  ", line))
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_sessionfinish(self, session: Session, exitstatus: ExitCode):
@@ -1035,7 +1053,7 @@ class TerminalReporter:
                 values.append(x)
         return values
 
-    def summary_warnings(self):
+    def summary_warnings(self) -> None:
         if not self.hasopt("w"):
             return
 
@@ -1043,7 +1061,7 @@ class TerminalReporter:
         if not all_warnings:
             return
 
-        final = hasattr(self, "_already_displayed_warnings")
+        final = self._already_displayed_warnings is not None
         if final:
             warning_reports = all_warnings[self._already_displayed_warnings :]
         else:
@@ -1052,31 +1070,14 @@ class TerminalReporter:
         if not warning_reports:
             return
 
-        def collapsed_location_report(reports: List[WarningReport]) -> str:
-            locations = []
-            for w in reports:
-                location = w.get_location(self.config)
-                if location:
-                    locations.append(location)
-
-            if len(locations) < 10:
-                return "\n".join(map(str, locations))
-
-            counts_by_filename = collections.Counter(
-                str(loc).split("::", 1)[0] for loc in locations
-            )
-            return "\n".join(
-                "{0}: {1} test{2} with warning{2}".format(k, v, "s" if v > 1 else "")
-                for k, v in counts_by_filename.items()
-            )
-
         grouped = (
-            collections.OrderedDict()
-        )  # type: collections.OrderedDict[str, List[WarningReport]]
+            order_preserving_dict()
+        )  # type: Dict[str, Dict[str, List[WarningReport]]]
         for wr in warning_reports:
             if wr.when not in grouped:
-                grouped[wr.when] = collections.OrderedDict()
-            grouped[wr.when].setdefault(wr.message, []).append(wr)
+                grouped[wr.when] = order_preserving_dict()
+            wmsg = "{}: {}".format(wr.warning.category.__name__, wr.warning.message)
+            grouped[wr.when].setdefault(wmsg, []).append(wr)
 
         for when, grouped_by_message in grouped.items():
             title = (
@@ -1084,14 +1085,26 @@ class TerminalReporter:
             ) + " [{}]".format(when)
             self.write_sep("=", title, yellow=True, bold=False)
             for message, warning_reports in grouped_by_message.items():
-                maybe_location = collapsed_location_report(warning_reports)
-                if maybe_location:
-                    self._tw.line(maybe_location)
-                    lines = message.splitlines()
-                    indented = "\n".join("  " + x for x in lines)
-                    message = indented.rstrip()
-                else:
-                    message = message.rstrip()
+                locations = []
+                source_locs = []
+                for w in warning_reports:
+                    location = w.get_location(self.config)
+                    if location in locations:
+                        continue
+                    self._tw.line(location)
+                    locations.append(location)
+
+                    source_loc = w.warning.filename, w.warning.lineno
+                    if source_loc in source_locs:
+                        continue
+                    source_locs.append(source_loc)
+                    line = w.source_line
+                    if line:
+                        self._tw.line("    {}".format(line.strip()))
+
+                lines = message.splitlines()
+                indented = "\n".join("  " + x for x in lines)
+                message = indented.rstrip()
                 self._tw.line(message)
                 self._tw.line()
         self._tw.line("-- Docs: https://docs.pytest.org/en/latest/warnings.html")
@@ -1390,7 +1403,9 @@ def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
     return "%s (%s:%d)" % (desc, crash_path, crashloc.lineno)
 
 
-def _get_line_with_reprcrash_message(config, rep, termwidth):
+def _get_line_with_reprcrash_message(
+    config: Config, rep: Union[CollectReport, TestReport], termwidth: Optional[int]
+) -> str:
     """Get summary line for a report, trying to add reprcrash message."""
     verbose_word = rep._get_verbose_word(config)
     pos = _get_pos(config, rep)
@@ -1405,10 +1420,11 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             # No space for an additional message.
             return line
 
+    msg = None  # type: Optional[str]
     try:
-        msg = rep.longrepr.reprcrash.message
+        msg = rep.longrepr.reprcrash.message  # type: ignore[attr-defined]
     except AttributeError:
-        msg = None
+        pass
 
     if msg is not None:
         # Remove duplicate prefix, e.g. "Failed:" from pytest.fail.
@@ -1432,7 +1448,7 @@ def _get_line_with_reprcrash_message(config, rep, termwidth):
             # Non-printable/escape characters (except for newlines).
             msg = repr(orig_msg)
             len_msg = wcswidth(msg)
-            assert len_msg != -1, repr(msg, orig_msg)
+            assert len_msg != -1, repr((msg, orig_msg))
 
         if max_len_msg >= len_ellipsis:
             if len_msg > max_len_msg:

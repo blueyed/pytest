@@ -669,11 +669,15 @@ class Session(nodes.FSCollector):
         relpath = fname.replace("/", os.sep)
         fspath = self.config.invocation_dir.join(relpath, abs=True)
         if not fspath.check():
+            import shlex
+
             if self.config.option.pyargs:
                 raise UsageError(
-                    "file or package not found: " + arg + " (missing __init__.py?)"
+                    "file or package not found: {} (missing __init__.py?)".format(
+                        shlex.quote(arg)
+                    )
                 )
-            raise UsageError("file not found: " + arg)
+            raise UsageError("file not found: {}".format(shlex.quote(arg)))
         fspath = fspath.realpath()
         fspath.lineno = lineno
         return (fspath, parts)

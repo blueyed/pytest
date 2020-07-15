@@ -586,17 +586,13 @@ class TestRequestBasic:
         assert len(arg2fixturedefs) == 1
         assert arg2fixturedefs["something"][0].argname == "something"
 
+    @pytest.mark.xdist_specific
     @pytest.mark.skipif(
         hasattr(sys, "pypy_version_info"),
         reason="this method of test doesn't work on pypy",
     )
     def test_request_garbage(self, testdir):
-        try:
-            import xdist  # noqa
-        except ImportError:
-            pass
-        else:
-            pytest.xfail("this test is flaky when executed with xdist")
+        pytest.importorskip("xdist")
         testdir.makepyfile(
             """
             import sys

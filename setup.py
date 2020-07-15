@@ -3,7 +3,7 @@ from setuptools import setup
 # TODO: if py gets upgrade to >=1.6,
 #       remove _width_of_current_line in terminal.py
 INSTALL_REQUIRES = [
-    "py>=1.5.0",
+    "py>=1.5.0,!=1.8.2,!=1.9.0",
     "packaging",
     "attrs>=17.4.0",  # should match oldattrs tox env.
     "more-itertools>=4.0.0",
@@ -33,7 +33,7 @@ def main():
                 "xmlschema",
             ],  # fmt: on
             "checkqa-mypy": [
-                "mypy==v0.770",  # keep this in sync with .pre-commit-config.yaml.
+                "mypy==v0.782",  # keep this in sync with .pre-commit-config.yaml.
             ],
         },
         install_requires=INSTALL_REQUIRES,

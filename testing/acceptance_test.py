@@ -8,7 +8,11 @@ import py
 
 import pytest
 from _pytest.compat import importlib_metadata
+from _pytest.compat import MODULE_NOT_FOUND_ERROR
 from _pytest.config import ExitCode
+from _pytest.pytester import Testdir
+
+pytestmark = pytest.mark.acceptance_tests
 
 
 def prepend_pythonpath(*dirs):
@@ -66,10 +70,14 @@ class TestGeneralUsage:
             ["*INTERNALERROR*File*conftest.py*line 2*", "*0 / 0*"]
         )
 
-    def test_file_not_found(self, testdir):
+    def test_file_not_found(self, testdir: Testdir) -> None:
         result = testdir.runpytest("asd")
-        assert result.ret != 0
-        result.stderr.fnmatch_lines(["ERROR: file not found*asd"])
+        assert result.ret == ExitCode.USAGE_ERROR
+        assert result.stderr.lines == ["ERROR: file not found: asd", ""]
+
+        result = testdir.runpytest("with space")
+        assert result.ret == ExitCode.USAGE_ERROR
+        assert result.stderr.lines == ["ERROR: file not found: 'with space'", ""]
 
     def test_file_not_found_unconfigure_issue143(self, testdir):
         testdir.makeconftest(
@@ -220,15 +228,22 @@ class TestGeneralUsage:
         )
         result = testdir.runpytest("--help")
         result.stdout.fnmatch_lines(
-            """
-            *--version*
-            *warning*conftest.py*
-        """
+            [
+                "*shown according to specified*",
+                "",
+                "warning : *_pytest?config?__init__.py:*:"
+                " PytestConfigWarning: could not load initial conftests ({}):"
+                " {}: No module named 'qwerty'".format(
+                    conftest, MODULE_NOT_FOUND_ERROR
+                ),
+                "  *",  # source line differs between Python versions.
+            ],
+            consecutive=True,
         )
+        assert "--version" in result.stdout.str()
+        assert result.ret == 0
+
         result = testdir.runpytest()
-        exc_name = (
-            "ModuleNotFoundError" if sys.version_info >= (3, 6) else "ImportError"
-        )
         assert result.stdout.lines == []
         assert result.stderr.lines == [
             "ImportError while loading conftest '{}'.".format(conftest),
@@ -236,7 +251,7 @@ class TestGeneralUsage:
             "    foo()",
             "conftest.py:2: in foo",
             "    import qwerty",
-            "E   {}: No module named 'qwerty'".format(exc_name),
+            "E   {}: No module named 'qwerty'".format(MODULE_NOT_FOUND_ERROR),
         ]
 
     @pytest.mark.filterwarnings("always::pytest.PytestDeprecationWarning")
@@ -1217,6 +1232,9 @@ def test_usage_error_code(testdir):
 
 @pytest.mark.filterwarnings("default")
 def test_warn_on_async_function(testdir):
+    # In the below we .close() the coroutine only to avoid
+    # "RuntimeWarning: coroutine 'test_2' was never awaited"
+    # which messes with other tests.
     testdir.makepyfile(
         test_async="""
         async def test_1():
@@ -1224,22 +1242,34 @@ def test_warn_on_async_function(testdir):
         async def test_2():
             pass
         def test_3():
-            return test_2()
+            coro = test_2()
+            coro.close()
+            return coro
     """
     )
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         [
-            "test_async.py::test_1",
-            "test_async.py::test_2",
-            "test_async.py::test_3",
-            "*async def functions are not natively supported*",
-            "*3 skipped, 3 warnings in*",
-        ]
-    )
-    # ensure our warning message appears only once
-    assert (
-        result.stdout.str().count("async def functions are not natively supported") == 1
+            "test_async.py sss *",
+            "",
+            "*= warnings summary [[]runtest[]] =*",
+            "test_async.py:1::test_1",
+            "    async def test_1():",
+            "test_async.py:3::test_2",
+            "    async def test_2():",
+            "test_async.py:5::test_3",
+            "    def test_3():",
+            "  PytestUnhandledCoroutineWarning: async def functions are not natively supported and have been skipped.",
+            "  You need to install a suitable plugin for your async framework, for example:",
+            "    - pytest-asyncio",
+            "    - pytest-trio",
+            "    - pytest-tornasync",
+            "    - pytest-twisted",
+            "",
+            "-- Docs: *",
+            "*= 3 skipped, 3 warnings in *",
+        ],
+        consecutive=True,
     )
 
 
@@ -1261,16 +1291,25 @@ def test_warn_on_async_gen_function(testdir):
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         [
-            "test_async.py::test_1",
-            "test_async.py::test_2",
-            "test_async.py::test_3",
-            "*async def functions are not natively supported*",
-            "*3 skipped, 3 warnings in*",
-        ]
-    )
-    # ensure our warning message appears only once
-    assert (
-        result.stdout.str().count("async def functions are not natively supported") == 1
+            "test_async.py sss *",
+            "",
+            "*= warnings summary [[]runtest[]] =*",
+            "test_async.py:1::test_1",
+            "    async def test_1():",
+            "test_async.py:3::test_2",
+            "    async def test_2():",
+            "test_async.py:5::test_3",
+            "    def test_3():",
+            "  PytestUnhandledCoroutineWarning: async def functions are not natively supported and have been skipped.",
+            "  You need to install a suitable plugin for your async framework, for example:",
+            "    - pytest-asyncio",
+            "    - pytest-trio",
+            "    - pytest-tornasync",
+            "",
+            "-- Docs: *",
+            "*= 3 skipped, 3 warnings in *",
+        ],
+        consecutive=True,
     )
 
 

@@ -1,3 +1,9 @@
+from _pytest.compat import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
+
+
 def test_show_fixtures_and_test(testdir, dummy_yaml_custom_test):
     """ Verifies that fixtures are not executed. """
     testdir.makepyfile(
@@ -67,7 +73,9 @@ def test_show_multi_test_fixture_setup_and_teardown_correctly_simple(testdir):
     assert teardown_count == 1
 
 
-def test_show_multi_test_fixture_setup_and_teardown_same_as_setup_show(testdir):
+def test_show_multi_test_fixture_setup_and_teardown_same_as_setup_show(
+    testdir: "Testdir",
+) -> None:
     """
     Verify that SETUP/TEARDOWN messages match what comes out of --setup-show.
     """
@@ -97,14 +105,42 @@ def test_show_multi_test_fixture_setup_and_teardown_same_as_setup_show(testdir):
     )
 
     plan_result = testdir.runpytest("--setup-plan")
-    show_result = testdir.runpytest("--setup-show")
+    plan_result.stdout.fnmatch_lines(
+        [
+            "collected 3 items",
+            "",
+            "test_*.py ",
+            "SETUP    S sess",
+            "    SETUP    M mod",
+            "      SETUP    C cls",
+            "        SETUP    F func",
+            "        " "test_*.py::test_outside (fixtures used: cls, func, mod, sess)",
+            "        TEARDOWN F func",
+            "      TEARDOWN C cls",
+            "      SETUP    C cls",
+            "        SETUP    F func",
+            "        "
+            "test_*.py::TestCls::test_one (fixtures used: cls, func, mod, sess)",
+            "        TEARDOWN F func",
+            "        SETUP    F func",
+            "        "
+            "test_*.py::TestCls::test_two (fixtures used: cls, func, mod, sess)",
+            "        TEARDOWN F func",
+            "      TEARDOWN C cls",
+            "    TEARDOWN M mod",
+            "TEARDOWN S sess",
+            "",
+            "=*= no tests ran in *s =*=",
+        ],
+        consecutive=True,
+    )
 
     # the number and text of these lines should be identical
-    plan_lines = [
-        l for l in plan_result.stdout.lines if "SETUP" in l or "TEARDOWN" in l
-    ]
-    show_lines = [
-        l for l in show_result.stdout.lines if "SETUP" in l or "TEARDOWN" in l
-    ]
+    show_result = testdir.runpytest("--setup-show")
 
+    def match_line(line: str) -> bool:
+        return "SETUP" in line or "TEARDOWN" in line
+
+    plan_lines = [line for line in plan_result.stdout.lines if match_line(line)]
+    show_lines = [line for line in show_result.stdout.lines if match_line(line)]
     assert plan_lines == show_lines

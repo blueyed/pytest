@@ -1,7 +1,5 @@
-comment: off
-
+comment: false
 codecov:
-  ci:
-    - '!builds.sr.ht'
   notify:
-    after_n_builds: 7
+    after_n_builds: 10
+    wait_for_ci: false

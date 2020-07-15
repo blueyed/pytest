@@ -31,6 +31,8 @@ jobs:
           "windows-py37 (1)",
           "windows-py37 (2)",
 
+          "xdist",
+
           "linting",
           "docs",
           "doctesting",
@@ -41,13 +43,12 @@ jobs:
           - name: "ubuntu-py38"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "py38-numpy-oldattrs-twisted-xdist-coverage"
-            pytest_addopts: "-n4"
+            tox_env: "py38-numpy-oldattrs-twisted-coverage"
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
             tox_env: "pypy3-coverage"
-            pytest_addopts: "-m pypy_specific"
+            pytest_addopts: "-m 'pypy_specific or acceptance_tests'"
           - name: "ubuntu-py38 (pexpect, integration)"
             python: "3.8"
             os: ubuntu-latest
@@ -61,11 +62,12 @@ jobs:
 
           # Coverage for:
           # - osx
+          # - pygments
           # - verbosity=1
           - name: "macos-py36"
             python: "3.6"
             os: macos-latest
-            tox_env: "py36-nopygments-coverage"
+            tox_env: "py36-pygments-coverage"
             pytest_addopts: "--verbosity=1"
 
           - name: "windows-py37 (1)"
@@ -86,6 +88,12 @@ jobs:
             # - verbosity=2
             pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
 
+          - name: "xdist"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "py38-xdist-coverage"
+            pytest_addopts: "-m 'xdist_specific or acceptance_tests' -n 0"
+
           - name: "linting"
             python: "3.8"
             os: ubuntu-latest
@@ -104,9 +112,12 @@ jobs:
             tox_env: "mypy_ci"
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2000
+    - run: git fetch --tags origin
     - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python }}
 
@@ -142,25 +153,23 @@ jobs:
         COLUMNS: "120"
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
-    - name: Prepare coverage token
-      if: (contains(matrix.tox_env, '-coverage') && ( github.repository == 'blueyed/pytest' || github.event_name == 'pull_request' ))
-      run: |
-        python scripts/append_codecov_token.py
-
     - name: Report coverage
-      if: (contains(matrix.tox_env, '-coverage'))
+      if: always() && (contains(matrix.tox_env, '-coverage'))
       env:
-        CODECOV_NAME: ${{ matrix.name }}
-      run: bash scripts/report-coverage.sh -F GHA,${{ runner.os }}
+        CODECOV_TOKEN: d79f3a85-e675-4d75-8f55-3d0e4a99ebe8
+      run: "bash .ci/report-coverage.sh -n '${{ matrix.name }}' -F 'GHA,${{ runner.os }}'"
 
   deploy:
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && github.repository == 'pytest-dev/pytest'
     runs-on: ubuntu-latest
     needs: [tests]
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2000
+    - run: git fetch --tags origin
     - name: Set up Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: "3.7"
     - name: Install dependencies

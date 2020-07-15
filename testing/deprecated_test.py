@@ -25,6 +25,7 @@ def test_resultlog_is_deprecated(testdir):
     )
 
 
+@pytest.mark.xdist_specific
 def test_terminal_reporter_writer_attr(pytestconfig):
     """Check that TerminalReporter._tw is also available as 'writer' (#2984)
     This attribute has been deprecated in 5.4.

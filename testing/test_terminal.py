@@ -384,17 +384,33 @@ class TestCollectonly:
         result = testdir.runpytest("--collect-only", "-rs")
         result.stdout.fnmatch_lines(["*ERROR collecting*"])
 
-    def test_collectonly_display_test_description(self, testdir):
+    def test_collectonly_displays_test_description(
+        self, testdir: Testdir, dummy_yaml_custom_test
+    ) -> None:
+        """Used dummy_yaml_custom_test for an Item without ``obj``."""
         testdir.makepyfile(
             """
             def test_with_description():
-                \""" This test has a description.
-                \"""
-                assert True
-        """
+                '''  This test has a description.
+
+                  more1.
+                    more2.'''
+            """
         )
         result = testdir.runpytest("--collect-only", "--verbose")
-        result.stdout.fnmatch_lines(["    This test has a description."])
+        result.stdout.fnmatch_lines(
+            [
+                "<YamlFile test1.yaml>",
+                "  <YamlItem test1.yaml>",
+                "<Module test_collectonly_displays_test_description.py>",
+                "  <Function test_with_description>",
+                "    This test has a description.",
+                "    ",
+                "    more1.",
+                "      more2.",
+            ],
+            consecutive=True,
+        )
 
     def test_collectonly_failed_module(self, testdir):
         testdir.makepyfile("""raise ValueError(0)""")
@@ -688,15 +704,14 @@ class TestTerminalFunctional:
         result.stdout.fnmatch_lines(["test_passes.py ..*", "* 2 pass*"])
         assert result.ret == 0
 
-    def test_header_trailer_info(self, testdir, request):
-        testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
-        testdir.makepyfile(
-            """
-            def test_passes():
-                pass
-        """
-        )
-        result = testdir.runpytest()
+    @pytest.mark.xdist_specific  # to have some entrypoint plugin.
+    def test_header_trailer_info(self, testdir: "Testdir", request) -> None:
+        testdir.makepyfile("def test_pass(): pass")
+        has_xdist = request.config.pluginmanager.get_plugin("xdist")
+        if has_xdist:
+            result = testdir.runpytest("-pxdist")
+        else:
+            result = testdir.runpytest()
         verinfo = ".".join(map(str, sys.version_info[:3]))
         result.stdout.fnmatch_lines(
             [
@@ -713,7 +728,7 @@ class TestTerminalFunctional:
                 "=* 1 passed*in *.[0-9][0-9]s *=",
             ]
         )
-        if request.config.pluginmanager.list_plugin_distinfo():
+        if has_xdist:
             result.stdout.fnmatch_lines(["plugins: *"])
 
     def test_header(self, testdir: Testdir) -> None:
@@ -843,13 +858,13 @@ class TestTerminalFunctional:
         )
         assert result.ret == 1
 
-    def test_verbose_reporting_xdist(self, verbose_testfile, testdir, pytestconfig):
-        if not pytestconfig.pluginmanager.get_plugin("xdist"):
-            pytest.skip("xdist plugin not installed")
-
-        testdir.monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD")
+    @pytest.mark.xdist_specific
+    def test_verbose_reporting_xdist(
+        self, verbose_testfile: "py.path.local", testdir: "Testdir"
+    ) -> None:
+        pytest.importorskip("xdist")
         result = testdir.runpytest(
-            verbose_testfile, "-v", "-n 1", "-Walways::pytest.PytestWarning"
+            verbose_testfile, "-v", "-pxdist", "-n1", "-Walways::pytest.PytestWarning"
         )
         result.stdout.fnmatch_lines(
             ["*FAIL*test_verbose_reporting_xdist.py::test_fail*"]
@@ -1616,11 +1631,13 @@ def test_terminal_summary_warnings_are_displayed(testdir):
         [
             "*= warnings summary [[]runtest[]] =*",
             "*warning_from_test*",
-            "-- Docs: https://docs*",
+            "-- Docs: *",
             "*= short test summary info =*",
             "*= warnings summary (final) [[]config[]] =*",
-            "*conftest.py:3:*internal warning",
-            "-- Docs: https://docs*",
+            "conftest.py:3",
+            "    warnings.warn(UserWarning('internal warning'))",
+            "  UserWarning: internal warning",
+            "-- Docs: *",
             "*== 1 failed, 2 warnings in *",
         ]
     )
@@ -1666,7 +1683,7 @@ def test_terminal_summary_warnings_header_once(testdir):
 
 @pytest.fixture(scope="session")
 def tr() -> TerminalReporter:
-    config = _pytest.config._prepareconfig()
+    config = _pytest.config._prepareconfig([])
     return TerminalReporter(config)
 
 
@@ -1812,7 +1829,7 @@ def test_summary_stats(
     class fake_session:
         testscollected = 0
 
-    tr._session = fake_session  # type: ignore[assignment]  # noqa: F821
+    tr._session = fake_session  # type: ignore[assignment]
     assert tr._is_last_item
 
     # Reset cache.
@@ -2087,28 +2104,28 @@ class TestProgressOutputStyle:
             ]
         )
 
-    def test_xdist_normal(self, many_tests_files, testdir, monkeypatch):
+    @pytest.mark.xdist_specific
+    def test_xdist_normal(self, many_tests_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
-        output = testdir.runpytest("-n2")
+        output = testdir.runpytest("-pxdist", "-n2")
         output.stdout.re_match_lines([r"\.{20} \s+ \[100%\]"])
 
-    def test_xdist_normal_count(self, many_tests_files, testdir, monkeypatch):
+    @pytest.mark.xdist_specific
+    def test_xdist_normal_count(self, many_tests_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
         testdir.makeini(
             """
             [pytest]
             console_output_style = count
         """
         )
-        output = testdir.runpytest("-n2")
+        output = testdir.runpytest("-pxdist", "-n2")
         output.stdout.re_match_lines([r"\.{20} \s+ \[20/20\]"])
 
-    def test_xdist_verbose(self, many_tests_files, testdir, monkeypatch):
+    @pytest.mark.xdist_specific
+    def test_xdist_verbose(self, many_tests_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
-        output = testdir.runpytest("-n2", "-v")
+        output = testdir.runpytest("-pxdist", "-n2", "-v")
         output.stdout.re_match_lines_random(
             [
                 r"\[gw\d\] \[\s*\d+%\] PASSED test_bar.py::test_bar\[1\]",
@@ -2227,10 +2244,10 @@ class TestProgressWithTeardown:
             )
         )
 
-    def test_xdist_normal(self, many_files, testdir, monkeypatch):
+    @pytest.mark.xdist_specific
+    def test_xdist_normal(self, many_files, testdir: "Testdir") -> None:
         pytest.importorskip("xdist")
-        monkeypatch.delenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", raising=False)
-        output = testdir.runpytest("-n2")
+        output = testdir.runpytest("-pxdist", "-n2")
         output.stdout.re_match_lines([r"[\.E]{40} \s+ \[100%\]"])
 
 
@@ -2370,7 +2387,7 @@ def test__get_pos() -> None:
             return nodeid
 
     def check(config: object, rep: object) -> str:
-        return _get_pos(config, rep)  # type: ignore[arg-type]  # noqa: F821
+        return _get_pos(config, rep)  # type: ignore[arg-type]
 
     assert check(config, rep) == "nodeid_without_testname"
     rep.nodeid = "path::testname"
@@ -2380,8 +2397,8 @@ def test__get_pos() -> None:
     class longrepr:
         reprcrash = ReprFileLocation(path="path", lineno=2, message="msg")
 
-    rep.longrepr = longrepr  # type: ignore[assignment]  # noqa: F821
-    config.invocation_dir = py.path.local()  # type: ignore[attr-defined]  # noqa: F821
+    rep.longrepr = longrepr  # type: ignore[assignment]
+    config.invocation_dir = py.path.local()  # type: ignore[attr-defined]
     assert check(config, rep) == "path:2::testname"
 
     # Windows path with different path as in nodeid.

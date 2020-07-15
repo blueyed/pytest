@@ -259,7 +259,7 @@ class PdbBase(Generic[_P]):
 
 
 class pytestPDB(PdbBase):
-    def pytest_configure(self, config):
+    def pytest_configure(self) -> None:
         import pdb
 
         self._recursive_debug = 0
@@ -267,11 +267,11 @@ class pytestPDB(PdbBase):
         self._saved_pdb_set_trace = (pdb, pdb.set_trace)
         pdb.set_trace = functools.partial(self.set_trace, self)
 
-    def pytest_unconfigure(self, config):
+    def pytest_unconfigure(self) -> None:
         pdb, set_trace = self._saved_pdb_set_trace
-        pdb.set_trace = set_trace
+        pdb.set_trace = set_trace  # type: ignore[attr-defined]
 
-    def set_trace(self, *args, **kwargs):
+    def set_trace(self, *args, **kwargs) -> None:
         """Invoke debugging via ``Pdb.set_trace``, dropping any IO capturing."""
         frame = sys._getframe().f_back
         _pdb = self._init_pdb("set_trace", *args, **kwargs)

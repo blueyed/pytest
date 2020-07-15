@@ -487,20 +487,20 @@ def test_linematcher_with_nonlist() -> None:
 
     lm = LineMatcher([])
     with pytest.raises(TypeError, match="invalid type for lines2: set"):
-        lm.fnmatch_lines(set())  # type: ignore[arg-type]  # noqa: F821
+        lm.fnmatch_lines(set())  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="invalid type for lines2: dict"):
-        lm.fnmatch_lines({})  # type: ignore[arg-type]  # noqa: F821
+        lm.fnmatch_lines({})  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="invalid type for lines2: set"):
-        lm.re_match_lines(set())  # type: ignore[arg-type]  # noqa: F821
+        lm.re_match_lines(set())  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="invalid type for lines2: dict"):
-        lm.re_match_lines({})  # type: ignore[arg-type]  # noqa: F821
+        lm.re_match_lines({})  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="invalid type for lines2: Source"):
-        lm.fnmatch_lines(Source())  # type: ignore[arg-type]  # noqa: F821
+        lm.fnmatch_lines(Source())  # type: ignore[arg-type]
     lm.fnmatch_lines([])
     lm.fnmatch_lines(())
     lm.fnmatch_lines("")
-    assert lm._getlines({}) == {}  # type: ignore[arg-type,comparison-overlap]  # noqa: F821
-    assert lm._getlines(set()) == set()  # type: ignore[arg-type,comparison-overlap]  # noqa: F821
+    assert lm._getlines({}) == {}  # type: ignore[arg-type,comparison-overlap]
+    assert lm._getlines(set()) == set()  # type: ignore[arg-type,comparison-overlap]
     assert lm._getlines(Source()) == []
     assert lm._getlines(Source("pass\npass")) == ["pass", "pass"]
 
@@ -921,7 +921,7 @@ def test_runtest_inprocess_tty(testdir: Testdir) -> None:
             assert sys.stderr.isatty() is True
     """
     )
-    result = testdir.runpytest(str(p1), "-s", tty=True)
+    result = testdir.runpytest_inprocess(str(p1), "-s", tty=True)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
@@ -935,7 +935,7 @@ def test_runtest_inprocess_tty(testdir: Testdir) -> None:
             assert sys.stderr.isatty() is True
     """
     )
-    result = testdir.runpytest(str(p1), "-s", tty=True, stdin=False)
+    result = testdir.runpytest_inprocess(str(p1), "-s", tty=True, stdin=False)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
@@ -949,26 +949,38 @@ def test_runtest_inprocess_tty(testdir: Testdir) -> None:
             assert sys.stderr.isatty() is False
     """
     )
-    result = testdir.runpytest(str(p1), tty=True)
+    result = testdir.runpytest_inprocess(str(p1), tty=True)
     result.stdout.fnmatch_lines(["* 1 passed in *"])
     assert result.ret == 0
 
-    id_stdin = id(sys.stdin)
+
+def test_runtest_inprocess_tty_no_capture(testdir: Testdir) -> None:
+    # Wrapped in inner test to make it independent of outer "-s".
     p1 = testdir.makepyfile(
-        """
+        '''
         import sys
 
-        def test():
-            assert sys.stdin.isatty() is False
-            assert sys.stdout.isatty() is False
-            assert sys.stderr.isatty() is False
-            assert id(sys.stdin) == {}
-    """.format(
-            id_stdin
-        )
+        def test_inner(testdir):
+            id_stdin = id(sys.stdin)
+            p1 = testdir.makepyfile(
+                """
+                import sys
+
+                def test():
+                    assert sys.stdin.isatty() is False
+                    assert sys.stdout.isatty() is False
+                    assert sys.stderr.isatty() is False
+                    assert id(sys.stdin) == {}
+            """.format(
+                    id_stdin
+                )
+            )
+            result = testdir.runpytest_inprocess(str(p1), "-s", tty=False)
+            result.stdout.fnmatch_lines(["* 1 passed in *"])
+            assert result.ret == 0
+        '''
     )
-    result = testdir.runpytest(str(p1), "-s", tty=False)
-    result.stdout.fnmatch_lines(["* 1 passed in *"])
+    result = testdir.runpytest("-p", "pytester", str(p1))
     assert result.ret == 0
 
 
@@ -1003,19 +1015,30 @@ def test_popen_default_stdin_stderr_and_stdin_None(testdir: Testdir) -> None:
     # stdout, stderr default to pipes,
     # stdin can be None to not close the pipe, avoiding
     # "ValueError: flush of closed file" with `communicate()`.
+    #
+    # Wraps the test to not make it hang when run with "-s".
     p1 = testdir.makepyfile(
-        """
+        '''
         import sys
-        print(sys.stdin.read())  # empty
-        print('stdout')
-        sys.stderr.write('stderr')
-        """
+
+        def test_inner(testdir):
+            p1 = testdir.makepyfile(
+                """
+                import sys
+                print(sys.stdin.read())  # empty
+                print('stdout')
+                sys.stderr.write('stderr')
+                """
+            )
+            proc = testdir.popen([sys.executable, str(p1)], stdin=None)
+            stdout, stderr = proc.communicate(b"ignored")
+            assert stdout.splitlines() == [b"", b"stdout"]
+            assert stderr.splitlines() == [b"stderr"]
+            assert proc.returncode == 0
+        '''
     )
-    proc = testdir.popen([sys.executable, str(p1)], stdin=None)
-    stdout, stderr = proc.communicate(b"ignored")
-    assert stdout.splitlines() == [b"", b"stdout"]
-    assert stderr.splitlines() == [b"stderr"]
-    assert proc.returncode == 0
+    result = testdir.runpytest("-p", "pytester", str(p1))
+    assert result.ret == 0
 
 
 @pytest.mark.py35_specific
@@ -1089,7 +1112,7 @@ def test_spawn_calls(testdir: Testdir, monkeypatch: MonkeyPatch, capsys) -> None
             def spawn(*args, **kwargs):
                 check_calls(*args, **kwargs)
 
-        sys.modules["pexpect"] = fake_pexpect  # type: ignore[assignment] # noqa: F821
+        sys.modules["pexpect"] = fake_pexpect  # type: ignore[assignment]
 
     testdir.spawn("cmd arg1 'arg2 with spaces'")
     assert len(calls) == 1
@@ -1186,11 +1209,11 @@ def test_makefile_warts(testdir: Testdir) -> None:
 
     # Requires "ext".
     with pytest.raises(TypeError, match="required positional argument"):
-        testdir.makefile(foo="")  # type: ignore[call-arg]  # noqa: F821
+        testdir.makefile(foo="")  # type: ignore[call-arg]
 
     # Requires items to be created.
     with pytest.raises(TypeError):
-        testdir.makefile()  # type: ignore[call-arg]  # noqa: F821
+        testdir.makefile()  # type: ignore[call-arg]
     with pytest.raises(ValueError, match=r"^no files to create$"):
         testdir.makefile(None)
     with pytest.raises(ValueError, match=r"^no files to create$"):
@@ -1200,7 +1223,7 @@ def test_makefile_warts(testdir: Testdir) -> None:
     assert testdir.tmpdir.listdir() == []
 
     with pytest.raises(TypeError, match="got multiple values for argument 'ext'"):
-        testdir.makefile("", ext="")  # type: ignore[misc]  # noqa: F821
+        testdir.makefile("", ext="")  # type: ignore[misc]
 
     # However, "ext.py" can be created via `makepyfile` at least.
     p1 = testdir.makepyfile(ext="")
