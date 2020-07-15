@@ -1165,6 +1165,7 @@ def test_testdir_outcomes_with_multiple_errors(testdir):
     assert result.parseoutcomes() == {"error": 2}
 
 
+@pytest.mark.windows_specific
 def test_makefile_joins_absolute_path(testdir: Testdir) -> None:
     absfile = testdir.tmpdir / "absfile"
     if sys.platform == "win32":

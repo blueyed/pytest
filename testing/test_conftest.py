@@ -296,6 +296,7 @@ def test_conftest_symlink_files(testdir):
     os.path.normcase("x") != os.path.normcase("X"),
     reason="only relevant for case insensitive file systems",
 )
+@pytest.mark.windows_specific
 def test_conftest_badcase(testdir):
     """Check conftest.py loading when directory casing is wrong (#5792)."""
     testdir.tmpdir.mkdir("JenkinsRoot").mkdir("test")

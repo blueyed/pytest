@@ -957,6 +957,7 @@ class TestAssertionRewriteHookDetails:
         )
         assert testdir.runpytest().ret == 0
 
+    @pytest.mark.windows_specific
     def test_write_pyc(self, testdir: Testdir, tmpdir, monkeypatch) -> None:
         from _pytest.assertion.rewrite import _write_pyc
         from _pytest.assertion import AssertionState
