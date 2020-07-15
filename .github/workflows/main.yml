@@ -154,7 +154,7 @@ jobs:
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
     - name: Report coverage
-      if: (contains(matrix.tox_env, '-coverage'))
+      if: always() && (contains(matrix.tox_env, '-coverage'))
       env:
         CODECOV_TOKEN: d79f3a85-e675-4d75-8f55-3d0e4a99ebe8
       run: "bash .ci/report-coverage.sh -n '${{ matrix.name }}' -F 'GHA,${{ runner.os }}'"
