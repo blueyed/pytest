@@ -666,13 +666,14 @@ class ExceptionInfo(Generic[_E]):
         """
         __tracebackhide__ = True
         str_val = str(self.value)
-        if not re.search(regexp, str_val):
-            msg = "Regex pattern {!r} does not match {!r}.".format(regexp, str_val)
-            if regexp == str_val:
-                msg += " Did you mean to `re.escape()` the regex?"
-            assert False, msg
-        # Return True to allow for "assert excinfo.match()".
-        return True
+        if re.search(regexp, str_val):
+            # Return True to allow for "assert excinfo.match()".
+            return True
+        assert False, "Regex pattern {!r} does not match {!r}.{}".format(
+            regexp,
+            str_val,
+            " Did you mean to `re.escape()` the regex?" if regexp == str_val else "",
+        )
 
 
 @attr.s
