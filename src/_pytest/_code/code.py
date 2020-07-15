@@ -669,10 +669,13 @@ class ExceptionInfo(Generic[_E]):
         if re.search(regexp, str_val):
             # Return True to allow for "assert excinfo.match()".
             return True
-        assert False, "Regex pattern {!r} does not match {!r}.{}".format(
-            regexp,
-            str_val,
-            " Did you mean to `re.escape()` the regex?" if regexp == str_val else "",
+        raise AssertionError(
+            "Regex pattern {!r} does not match {!r}.{}".format(
+                regexp,
+                str_val,
+                " Did you mean to `re.escape()` the regex?"
+                if regexp == str_val else "",
+            )
         )
 
 
