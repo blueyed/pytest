@@ -77,7 +77,7 @@ jobs:
             script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
-            pytest_addopts: "-m 'windows_specific or acceptance_tests' --verbosity=2 --test-group-count 2 --test-group=1"
+            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
 
           - name: "windows-py37 (2)"
             python: "3.7"
@@ -86,7 +86,7 @@ jobs:
             script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
-            pytest_addopts: "-m 'windows_specific or acceptance_tests' --verbosity=2 --test-group-count 2 --test-group=2"
+            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
 
           - name: "xdist"
             python: "3.8"
