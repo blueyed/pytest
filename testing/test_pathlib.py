@@ -9,6 +9,7 @@ from _pytest.pathlib import fnmatch_ex
 from _pytest.pathlib import get_lock_path
 from _pytest.pathlib import maybe_delete_a_numbered_dir
 from _pytest.pathlib import Path
+from _pytest.pathlib import rm_rf
 
 
 class TestPort:
@@ -102,3 +103,10 @@ def test_shorten_path(testdir) -> None:
     abs_foo = os.path.abspath("foo")
     assert _shorten_path(abs_foo) == "~{}foo".format(os.path.sep)
     assert _shorten_path(os.path.join(abs_foo, "..")) == "~"
+
+
+def test_rm_rf_chmod0(tmp_path: "Path") -> None:
+    noperm = tmp_path / "noperm"
+    noperm.touch(mode=0)
+    rm_rf(tmp_path)
+    assert not os.path.exists(tmp_path)
