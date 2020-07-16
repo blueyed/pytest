@@ -1396,6 +1396,7 @@ def test_error_attribute_issue555(testdir):
     not sys.platform.startswith("win") and sys.version_info[:2] >= (3, 6),
     reason="only py3.6+ on windows",
 )
+@pytest.mark.windows_specific
 def test_py36_windowsconsoleio_workaround_non_standard_streams():
     """
     Ensure _py36_windowsconsoleio_workaround function works with objects that

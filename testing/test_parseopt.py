@@ -423,6 +423,7 @@ class TestParser:
         ]
 
 
+@pytest.mark.windows_specific  # XXX: only for skip with no output!
 def test_argcomplete(testdir, monkeypatch) -> None:
     if not shutil.which("bash"):
         pytest.skip("bash not available")

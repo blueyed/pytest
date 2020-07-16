@@ -225,6 +225,7 @@ def test_tmpdir_fallback_uid_not_found(testdir):
 
 @pytest.mark.usefixtures("break_getuser")
 @pytest.mark.skipif(sys.platform.startswith("win"), reason="no os.getuid on windows")
+@pytest.mark.windows_specific
 def test_get_user_uid_not_found():
     """Test that get_user() function works even if the current process's
     user id does not correspond to a valid user (e.g. running pytest in a
@@ -236,6 +237,7 @@ def test_get_user_uid_not_found():
 
 
 @pytest.mark.skipif(not sys.platform.startswith("win"), reason="win only")
+@pytest.mark.windows_specific
 def test_get_user(monkeypatch):
     """Test that get_user() function works even if environment variables
     required by getpass module are missing from the environment on Windows
@@ -379,6 +381,7 @@ class TestRmRf:
         mode = os.stat(str(path)).st_mode
         os.chmod(str(path), mode & ~stat.S_IWRITE)
 
+    @pytest.mark.windows_specific  # covers func=rmdir with dir (via shutil._rmtree_unsafe)
     def test_rm_rf_with_read_only_directory(self, tmp_path):
         """Ensure rm_rf can remove read-only directories (#5524)"""
         from _pytest.pathlib import rm_rf
