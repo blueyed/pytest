@@ -25,14 +25,16 @@ def truncate_if_required(explanation: "List[str]", config: "Config") -> "List[st
 
 
 def _should_truncate(config: "Config") -> bool:
-    level = config.getini("assert_truncate_level")
-    verbose = config.option.verbose
+    level = config.getini("assert_truncate_level")  # type: str
+    verbose = config.option.verbose  # type: int
     if level == "auto":
         return verbose < 2 and not _running_on_ci()
     return int(level) > verbose
 
 
-def _truncate_explanation(input_lines, max_lines=None, max_chars=None):
+def _truncate_explanation(
+    input_lines: "List[str]", max_lines: "int" = None, max_chars: "int" = None,
+) -> List[str]:
     """
     Truncate given list of strings that makes up the assertion explanation.
 
