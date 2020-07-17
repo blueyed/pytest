@@ -13,6 +13,10 @@ from _pytest import outcomes
 from _pytest.assertion import truncate
 from _pytest.assertion import util
 from _pytest.compat import ATTRS_EQ_FIELD
+from _pytest.compat import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 def mock_config(verbose=0):
@@ -1305,6 +1309,39 @@ def test_assertrepr_loaded_per_dir(testdir):
             "*def test_b():*",
             "*E*assert summary b*",
         ]
+    )
+
+
+def test_pytest_assertrepr_compare_firstresult(testdir: "Testdir") -> None:
+    testdir.makefiles({
+        "plugin_empty.py": """
+            def pytest_assertrepr_compare():
+                return []
+            """,
+        "plugin_nonempty.py": """
+            def pytest_assertrepr_compare():
+                return ["custom_summary_1", "custom_summary_2"]
+            """,
+        "test_this.py": "def test(): assert 1 == 2",
+    })
+    testdir.syspathinsert()
+    result = testdir.runpytest("-pplugin_nonempty", "-pplugin_empty")
+    result.stdout.fnmatch_lines(
+        [
+            ">   def test(): assert 1 == 2",
+            "E   assert 1 == 2",
+        ],
+        consecutive=True,
+    )
+
+    result = testdir.runpytest("-pplugin_empty", "-pplugin_nonempty")
+    result.stdout.fnmatch_lines(
+        [
+            ">   def test(): assert 1 == 2",
+            "E   assert custom_summary_1",
+            "E     custom_summary_2",
+        ],
+        consecutive=True,
     )
 
 
