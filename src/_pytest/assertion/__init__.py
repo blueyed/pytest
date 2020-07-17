@@ -141,14 +141,13 @@ def pytest_runtest_protocol(item):
         hook_result = ihook.pytest_assertrepr_compare(
             config=item.config, op=op, left=left, right=right
         )
-        for new_expl in hook_result:
-            if new_expl:
-                new_expl = truncate.truncate_if_required(new_expl, item)
-                new_expl = [line.replace("\n", "\\n") for line in new_expl]
-                res = "\n~".join(new_expl)
-                if item.config.getvalue("assertmode") == "rewrite":
-                    res = res.replace("%", "%%")
-                return res
+        if hook_result:
+            new_expl = truncate.truncate_if_required(hook_result, item)
+            new_expl = [line.replace("\n", "\\n") for line in new_expl]
+            res = "\n~".join(new_expl)
+            if item.config.getvalue("assertmode") == "rewrite":
+                res = res.replace("%", "%%")
+            return res
         return None
 
     saved_assert_hooks = util._reprcompare, util._assertion_pass

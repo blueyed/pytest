@@ -9,6 +9,8 @@ from pluggy import HookspecMarker
 from _pytest.compat import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import List
+
     from _pytest.config import Config
     from _pytest.main import Session
 
@@ -472,13 +474,18 @@ def pytest_unconfigure(config):
 # -------------------------------------------------------------------------
 
 
-def pytest_assertrepr_compare(config, op, left, right):
-    """return explanation for comparisons in failing assert expressions.
+@hookspec(firstresult=True)
+def pytest_assertrepr_compare(
+    config: "Config", op: str, left: object, right: object
+) -> "Optional[List[str]]":
+    """Return explanation for comparisons in failing assert expressions.
 
     Return None for no custom explanation, otherwise return a list
     of strings.  The strings will be joined by newlines but any newlines
     *in* a string will be escaped.  Note that all but the first line will
     be indented slightly, the intention is for the first line to be a summary.
+
+    Stops at first non-None result, see :ref:`firstresult`.
 
     :param _pytest.config.Config config: pytest config object
     """
