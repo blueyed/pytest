@@ -132,8 +132,7 @@ def pytest_runtest_protocol(item):
           (eg. if running in verbose mode).
         * Embedded newlines are escaped to help util.format_explanation()
           later.
-        * If the rewrite mode is used embedded %-characters are replaced
-          to protect later % formatting.
+        * Embedded %-characters are replaced to protect later % formatting.
 
         The result can be formatted by util.format_explanation() for
         pretty printing.
@@ -145,7 +144,6 @@ def pytest_runtest_protocol(item):
             new_expl = truncate.truncate_if_required(hook_result, item.config)
             new_expl = [line.replace("\n", "\\n") for line in new_expl]
             res = "\n~".join(new_expl)
-            assert item.config.getvalue("assertmode") == "rewrite"  # XXX
             res = res.replace("%", "%%")
             return res
         return None
