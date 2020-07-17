@@ -19,13 +19,17 @@ USAGE_MSG = "use '-vv' to show"
 
 
 def truncate_if_required(explanation: "List[str]", config: "Config") -> "List[str]":
-    level = config.getini("assert_truncate_level")
-    verbose = config.option.verbose
-    if (level == "auto" and verbose < 2 and not _running_on_ci()) or int(
-        level
-    ) > verbose:
+    if _should_truncate(config):
         return _truncate_explanation(explanation)
     return explanation
+
+
+def _should_truncate(config: "Config") -> bool:
+    level = config.getini("assert_truncate_level")
+    verbose = config.option.verbose
+    if level == "auto":
+        return verbose < 2 and not _running_on_ci()
+    return int(level) > verbose
 
 
 def _truncate_explanation(input_lines, max_lines=None, max_chars=None):
