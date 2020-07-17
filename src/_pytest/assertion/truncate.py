@@ -4,7 +4,13 @@ Utilities for truncating assertion output.
 Current default behaviour is to truncate assertion explanations at
 ~8 terminal lines, unless running in "-vv" mode or running on CI.
 """
+from ..compat import TYPE_CHECKING
 from _pytest.assertion.util import _running_on_ci
+
+if TYPE_CHECKING:
+    from typing import List
+
+    from _pytest.config import Config
 
 
 DEFAULT_MAX_LINES = 8
@@ -12,27 +18,23 @@ DEFAULT_MAX_CHARS = 8 * 80
 USAGE_MSG = "use '-vv' to show"
 
 
-def truncate_if_required(explanation, item, max_length=None):
-    """
-    Truncate this assertion explanation if the given test item is eligible.
-    """
-    if _should_truncate_item(item):
+def truncate_if_required(explanation: "List[str]", config: "Config") -> "List[str]":
+    if _should_truncate(config):
         return _truncate_explanation(explanation)
     return explanation
 
 
-def _should_truncate_item(item):
-    """
-    Whether or not this test item is eligible for truncation.
-    """
-    level = item.config.getini("assert_truncate_level")
-    verbose = item.config.option.verbose
+def _should_truncate(config: "Config") -> bool:
+    level = config.getini("assert_truncate_level")  # type: str
+    verbose = config.option.verbose  # type: int
     if level == "auto":
         return verbose < 2 and not _running_on_ci()
     return int(level) > verbose
 
 
-def _truncate_explanation(input_lines, max_lines=None, max_chars=None):
+def _truncate_explanation(
+    input_lines: "List[str]", max_lines: "int" = None, max_chars: "int" = None,
+) -> "List[str]":
     """
     Truncate given list of strings that makes up the assertion explanation.
 
