@@ -34,7 +34,7 @@ def _should_truncate(config: "Config") -> bool:
 
 def _truncate_explanation(
     input_lines: "List[str]", max_lines: "int" = None, max_chars: "int" = None,
-) -> List[str]:
+) -> "List[str]":
     """
     Truncate given list of strings that makes up the assertion explanation.
 
