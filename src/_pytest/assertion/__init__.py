@@ -145,8 +145,8 @@ def pytest_runtest_protocol(item):
             new_expl = truncate.truncate_if_required(hook_result, item)
             new_expl = [line.replace("\n", "\\n") for line in new_expl]
             res = "\n~".join(new_expl)
-            if item.config.getvalue("assertmode") == "rewrite":
-                res = res.replace("%", "%%")
+            assert item.config.getvalue("assertmode") == "rewrite"  # XXX
+            res = res.replace("%", "%%")
             return res
         return None
 
