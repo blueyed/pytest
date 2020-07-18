@@ -12,7 +12,6 @@ from typing import Optional
 from typing import Sequence
 from typing import Union
 
-import pytest
 from _pytest.compat import TYPE_CHECKING
 from _pytest.fixtures import fixture
 from _pytest.pathlib import Path
@@ -45,11 +44,9 @@ def monkeypatch():
     mpatch.undo()
 
 
-@pytest.fixture(scope="session")
-def monkeypatch_session(request):
+@fixture(scope="session")
+def monkeypatch_session():
     """Experimental (https://github.com/pytest-dev/pytest/issues/363)."""
-    from _pytest.monkeypatch import MonkeyPatch
-
     mpatch = MonkeyPatch()
     yield mpatch
     mpatch.undo()
@@ -256,6 +253,8 @@ class MonkeyPatch:
         if value is None:
             return self.delenv(name, raising=False)
         if not isinstance(value, str):
+            import pytest
+
             warnings.warn(
                 pytest.PytestWarning(
                     "Value of environment variable {name} type should be str, but got "
