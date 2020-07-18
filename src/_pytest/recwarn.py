@@ -83,9 +83,8 @@ def warns(  # noqa: F811
 ) -> Union["WarningsChecker", Any]:
     r"""Assert that code raises a particular class of warning.
 
-    Specifically, the parameter ``expected_warning`` can be a warning class or
-    sequence of warning classes, and the inside the ``with`` block must issue a warning of that class or
-    classes.
+    ``expected_warning`` can be a warning class or sequence of warning classes,
+    which are expected to be issued inside of the ``with`` block.
 
     This helper produces a list of :class:`warnings.WarningMessage` objects,
     one for each warning raised.
@@ -96,8 +95,9 @@ def warns(  # noqa: F811
         >>> with warns(RuntimeWarning):
         ...    warnings.warn("my warning", RuntimeWarning)
 
-    In the context manager form you may use the keyword argument ``match`` to assert
-    that the exception matches a text or regex::
+    In the context manager form the keyword argument ``match`` can be used to
+    assert that the warning message matches the given regular expression
+    (using :func:`python:re.search`)::
 
         >>> with warns(UserWarning, match='must be 0 or None'):
         ...     warnings.warn("value must be 0 or None", UserWarning)
@@ -109,24 +109,26 @@ def warns(  # noqa: F811
         ...     warnings.warn("this is not here", UserWarning)
         Traceback (most recent call last):
           ...
-        _pytest.outcomes.Failed: DID NOT WARN. No warnings of type ...UserWarning... was emitted...
+        _pytest.outcomes.Failed: DID NOT WARN. No warning of type ...UserWarning... was emitted...
     """
     __tracebackhide__ = True
     if not args:
         if kwargs:
-            msg = "Unexpected keyword arguments passed to pytest.warns: "
-            msg += ", ".join(sorted(kwargs))
-            msg += "\nUse context-manager form instead?"
-            raise TypeError(msg)
-        return WarningsChecker(expected_warning, match_expr=match)
-    else:
-        func = args[0]
-        if not callable(func):
             raise TypeError(
-                "{!r} object (type: {}) must be callable".format(func, type(func))
+                "Unexpected keyword arguments passed to pytest.warns: {}."
+                "  Did you mean to use the non-contextmanager form instead?".format(
+                    ", ".join(kwargs)
+                )
             )
-        with WarningsChecker(expected_warning):
-            return func(*args[1:], **kwargs)
+        return WarningsChecker(expected_warning, match_expr=match)
+
+    func = args[0]
+    if not callable(func):
+        raise TypeError(
+            "{!r} object (type: {}) must be callable".format(func, type(func))
+        )
+    with WarningsChecker(expected_warning):
+        return func(*args[1:], **kwargs)
 
 
 class WarningsRecorder(warnings.catch_warnings):
@@ -238,29 +240,32 @@ class WarningsChecker(WarningsRecorder):
 
         __tracebackhide__ = True
 
-        # only check if we're not currently handling an exception
-        if exc_type is None and exc_val is None and exc_tb is None:
-            if self.expected_warning is not None:
-                if not any(issubclass(r.category, self.expected_warning) for r in self):
-                    __tracebackhide__ = True
-                    fail(
-                        "DID NOT WARN. No warnings of type {} was emitted. "
-                        "The list of emitted warnings is: {}.".format(
-                            self.expected_warning, [each.message for each in self]
-                        )
+        if self.expected_warning is None:
+            return
+        if exc_type is not None:
+            # Only check if we're not currently handling an exception.
+            return
+
+        if not any(issubclass(r.category, self.expected_warning) for r in self):
+            fail(
+                "DID NOT WARN. No warning of type {} was emitted. "
+                "The list of emitted warnings is: {}.".format(
+                    self.expected_warning, [each.message for each in self]
+                )
+            )
+        elif self.match_expr is not None:
+            match_pat = re.compile(self.match_expr)
+            for r in self:
+                if issubclass(r.category, self.expected_warning):
+                    if match_pat.search(str(r.message)):
+                        break
+            else:
+                fail(
+                    "DID NOT WARN. No warning of type {} matching"
+                    " the regex pattern {!r} was emitted."
+                    " The list of emitted warnings is: {}.".format(
+                        self.expected_warning,
+                        match_pat.pattern,
+                        [each.message for each in self],
                     )
-                elif self.match_expr is not None:
-                    for r in self:
-                        if issubclass(r.category, self.expected_warning):
-                            if re.compile(self.match_expr).search(str(r.message)):
-                                break
-                    else:
-                        fail(
-                            "DID NOT WARN. No warnings of type {} matching"
-                            " ('{}') was emitted. The list of emitted warnings"
-                            " is: {}.".format(
-                                self.expected_warning,
-                                self.match_expr,
-                                [each.message for each in self],
-                            )
-                        )
+                )

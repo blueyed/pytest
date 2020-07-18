@@ -247,10 +247,8 @@ filter at the end of the test, so no global state is leaked.
 Asserting warnings with the warns function
 ------------------------------------------
 
-
-
 You can check that code raises a particular warning using ``pytest.warns``,
-which works in a similar manner to :ref:`raises <assertraises>`:
+which works similar to :ref:`raises <assertraises>`:
 
 .. code-block:: python
 
@@ -262,8 +260,9 @@ which works in a similar manner to :ref:`raises <assertraises>`:
         with pytest.warns(UserWarning):
             warnings.warn("my warning", UserWarning)
 
-The test will fail if the warning in question is not raised. The keyword
-argument ``match`` to assert that the exception matches a text or regex::
+The test will fail if the warning in question is not raised.
+The keyword argument ``match`` can be used to assert that the warning message
+matches the given regular expression (using :func:`python:re.search`)::
 
     >>> with warns(UserWarning, match='must be 0 or None'):
     ...     warnings.warn("value must be 0 or None", UserWarning)

@@ -88,7 +88,7 @@ class TestDeprecatedCall:
             )
 
     def test_deprecated_call_raises(self) -> None:
-        with pytest.raises(pytest.fail.Exception, match="No warnings of type"):
+        with pytest.raises(pytest.fail.Exception, match="No warning of type"):
             pytest.deprecated_call(self.dep, 3, 5)
 
     def test_deprecated_call(self) -> None:
@@ -129,7 +129,7 @@ class TestDeprecatedCall:
         def f():
             pass
 
-        msg = "No warnings of type (.*DeprecationWarning.*, .*PendingDeprecationWarning.*)"
+        msg = "No warning of type (.*DeprecationWarning.*, .*PendingDeprecationWarning.*)"
         with pytest.raises(pytest.fail.Exception, match=msg):
             if mode == "call":
                 pytest.deprecated_call(f)
@@ -244,14 +244,19 @@ class TestWarns:
         with pytest.warns(RuntimeWarning):
             warnings.warn("runtime", RuntimeWarning)
 
-        with pytest.warns(UserWarning):
+        with pytest.warns((RuntimeWarning, UserWarning)):
             warnings.warn("user", UserWarning)
+
+        with pytest.warns(UserWarning, match="second"):
+            warnings.warn("first (other_class)", RuntimeWarning)
+            warnings.warn("second", UserWarning)
+            warnings.warn("third", UserWarning)
 
         with pytest.raises(pytest.fail.Exception) as excinfo:
             with pytest.warns(RuntimeWarning):
                 warnings.warn("user", UserWarning)
         excinfo.match(
-            r"DID NOT WARN. No warnings of type \(.+RuntimeWarning.+,\) was emitted. "
+            r"DID NOT WARN. No warning of type \(.+RuntimeWarning.+,\) was emitted. "
             r"The list of emitted warnings is: \[UserWarning\('user',?\)\]."
         )
 
@@ -259,7 +264,7 @@ class TestWarns:
             with pytest.warns(UserWarning):
                 warnings.warn("runtime", RuntimeWarning)
         excinfo.match(
-            r"DID NOT WARN. No warnings of type \(.+UserWarning.+,\) was emitted. "
+            r"DID NOT WARN. No warning of type \(.+UserWarning.+,\) was emitted. "
             r"The list of emitted warnings is: \[RuntimeWarning\('runtime',?\)\]."
         )
 
@@ -267,7 +272,7 @@ class TestWarns:
             with pytest.warns(UserWarning):
                 pass
         excinfo.match(
-            r"DID NOT WARN. No warnings of type \(.+UserWarning.+,\) was emitted. "
+            r"DID NOT WARN. No warning of type \(.+UserWarning.+,\) was emitted. "
             r"The list of emitted warnings is: \[\]."
         )
 
@@ -278,7 +283,7 @@ class TestWarns:
                 warnings.warn("import", ImportWarning)
 
         message_template = (
-            "DID NOT WARN. No warnings of type {0} was emitted. "
+            "DID NOT WARN. No warning of type {0} was emitted. "
             "The list of emitted warnings is: {1}."
         )
         excinfo.match(
@@ -379,7 +384,12 @@ class TestWarns:
         assert pytest.warns(UserWarning, f) == 10
 
     def test_warns_context_manager_with_kwargs(self) -> None:
-        with pytest.raises(TypeError) as excinfo:
+        with pytest.raises(
+            TypeError,
+            match=re.escape(
+                "Unexpected keyword arguments passed to pytest.warns: foo."
+                "  Did you mean to use the non-contextmanager form instead?"
+            ),
+        ):
             with pytest.warns(UserWarning, foo="bar"):  # type: ignore
-                pass
-        assert "Unexpected keyword arguments" in str(excinfo.value)
+                assert False
