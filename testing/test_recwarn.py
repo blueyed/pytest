@@ -248,7 +248,7 @@ class TestWarns:
             warnings.warn("user", UserWarning)
 
         with pytest.warns(UserWarning, match="second"):
-            warnings.warn("first", UserWarning)
+            warnings.warn("first (other_class)", RuntimeWarning)
             warnings.warn("second", UserWarning)
             warnings.warn("third", UserWarning)
 
