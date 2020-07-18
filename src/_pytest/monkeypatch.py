@@ -45,10 +45,8 @@ def monkeypatch():
 
 
 @fixture(scope="session")
-def monkeypatch_session(request):
+def monkeypatch_session():
     """Experimental (https://github.com/pytest-dev/pytest/issues/363)."""
-    from _pytest.monkeypatch import MonkeyPatch
-
     mpatch = MonkeyPatch()
     yield mpatch
     mpatch.undo()
