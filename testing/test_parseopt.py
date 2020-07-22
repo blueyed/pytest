@@ -458,9 +458,10 @@ def test_argcomplete(testdir, monkeypatch) -> None:
             "bash provided no output on stdout, argcomplete not available? (stderr={!r})"
             .format(result.stderr.str())
         )
-    elif out == "\x00".join(
-        "Windows Subsystem for Linux has no installed distributions."
-    ) + "\x00":
+    elif out.startswith(
+        "\x00".
+        join("Windows Subsystem for Linux has no installed distributions.")
+    ):
         pytest.skip("bash not available via Windows Subsystem for Linux")
     else:
         result.stdout.fnmatch_lines(["--funcargs", "--fulltrace"])
