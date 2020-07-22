@@ -17,7 +17,11 @@ from _pytest import capture
 from _pytest.capture import _get_multicapture
 from _pytest.capture import CaptureManager
 from _pytest.capture import MultiCapture
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import ExitCode
+
+if TYPE_CHECKING:
+    from _pytest.fixtures import FixtureRequest
 
 # note: py.io capture tests where copied from
 # pylib 1.4.20.dev2 (rev 13d9af95547e)
@@ -525,6 +529,16 @@ class TestCaptureFixture:
             """
         )
         reprec.assertoutcome(passed=1)
+
+    @pytest.mark.parametrize("fixturename", ("capfd", "capsys"))
+    def test_preserves_newlines(
+        self, fixturename: str, request: "FixtureRequest"
+    ) -> None:
+        fixture = request.getfixturevalue(fixturename)
+        output = "test1\rtest2\ntest3\r\ntest4"
+        print(output, end="")
+        out, err = fixture.readouterr()
+        assert out == output
 
     @needsosdup
     def test_capfdbinary(self, testdir):
