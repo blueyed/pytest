@@ -27,7 +27,6 @@ from typing import Union
 import attr
 import pluggy
 import py.path
-from more_itertools import collapse
 from wcwidth import wcswidth
 
 import pytest
@@ -807,10 +806,15 @@ class TerminalReporter:
         )
         self._write_report_lines_from_hooks(lines)
 
-    def _write_report_lines_from_hooks(self, lines):
-        lines.reverse()
-        for line in collapse(lines):
-            self.write_line(line)
+    def _write_report_lines_from_hooks(
+        self, lines: Sequence[Union[str, Sequence[str]]]
+    ) -> None:
+        for line_or_lines in reversed(lines):
+            if isinstance(line_or_lines, str):
+                self.write_line(line_or_lines)
+            else:
+                for line in line_or_lines:
+                    self.write_line(line)
 
     @pytest.hookimpl(trylast=True)
     def pytest_report_header(self, config: Config) -> List[str]:
