@@ -1022,7 +1022,10 @@ def wrap_function_to_error_out_if_called_directly(function, fixture_marker):
 @attr.s(frozen=True)
 class FixtureFunctionMarker:
     scope = attr.ib()
-    params = attr.ib(converter=attr.converters.optional(tuple))
+    params = attr.ib(
+        type=Optional[Tuple[object, ...]],
+        converter=attr.converters.optional(tuple),
+    )
     autouse = attr.ib(default=False)
     # Ignore type because of https://github.com/python/mypy/issues/6172.
     ids = attr.ib(default=None, converter=_ensure_immutable_ids)  # type: ignore
