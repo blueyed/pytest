@@ -21,6 +21,8 @@ tasks:
       .venv/bin/tox --version
       cd pytest
       ../.venv/bin/tox --notest -v
+      .tox/py37-coverage-xdist/bin/pip --version
+      .tox/py37-coverage-xdist/bin/pip freeze
 
   - test: |
       cd pytest
