@@ -769,7 +769,7 @@ class Config:
             Plugins accessing ``InvocationParams`` must be aware of that.
         """
 
-        args = attr.ib(converter=tuple)
+        args = attr.ib(type=Tuple[str, ...], converter=tuple)
         plugins = attr.ib()
         dir = attr.ib(type=Path)
 
