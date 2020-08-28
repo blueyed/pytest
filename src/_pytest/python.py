@@ -19,7 +19,6 @@ from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
-from typing import Type
 from typing import Union
 
 import py
@@ -44,6 +43,7 @@ from _pytest.compat import REGEX_TYPE
 from _pytest.compat import safe_getattr
 from _pytest.compat import safe_isclass
 from _pytest.compat import STRING_TYPES
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import hookimpl
 from _pytest.deprecated import FUNCARGNAMES
@@ -58,6 +58,9 @@ from _pytest.outcomes import skip
 from _pytest.pathlib import parts
 from _pytest.warning_types import PytestCollectionWarning
 from _pytest.warning_types import PytestUnhandledCoroutineWarning
+
+if TYPE_CHECKING:
+    from typing import Type
 
 
 def pyobj_property(name):
