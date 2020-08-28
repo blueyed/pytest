@@ -63,6 +63,7 @@ class TestNewAPI:
         finally:
             testdir.tmpdir.ensure_dir(".pytest_cache").chmod(mode)
 
+    @pytest.mark.py35_specific
     @pytest.mark.filterwarnings("default")
     def test_cache_failure_warns(self, testdir, monkeypatch):
         cache_dir = str(testdir.tmpdir.ensure_dir(".pytest_cache"))
@@ -70,7 +71,7 @@ class TestNewAPI:
         def raising_mkdir(*args, **kwargs):
             raise OSError("my OSError")
 
-        monkeypatch.setattr("pathlib.Path.mkdir", raising_mkdir)
+        monkeypatch.setattr("_pytest.pathlib.Path.mkdir", raising_mkdir)
 
         testdir.makepyfile("def test_error(): raise Exception")
         result = testdir.runpytest("-s")
