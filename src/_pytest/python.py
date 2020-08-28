@@ -227,7 +227,7 @@ def pytest_pycollect_makeitem(collector, name, obj):
     # nothing was collected elsewhere, let's do it here
     if safe_isclass(obj):
         if collector.istestclass(obj, name):
-            outcome.force_result(Class.from_parent(collector, name=name, obj=obj))
+            outcome.force_result(Class.from_parent(collector, name=name))
     elif collector.istestfunction(obj, name):
         # mock seems to store unbound methods (issue473), normalize it
         obj = getattr(obj, "__func__", obj)
@@ -667,7 +667,7 @@ class Class(PyCollector):
 
     @classmethod
     def from_parent(  # type: ignore[override]
-        cls: "Type[nodes._N]", parent: nodes.Node, *, name: str, obj=None
+        cls: "Type[nodes._N]", parent: nodes.Node, *, name: str
     ) -> "nodes._N":
         """The public constructor."""
         return cast(
