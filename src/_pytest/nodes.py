@@ -324,7 +324,7 @@ class Node(metaclass=NodeMeta):
         excinfo: ExceptionInfo[Union[Failed, FixtureLookupError]],
         default_style: "_TracebackStyle" = None,
     ) -> Union[str, ReprExceptionInfo, ExceptionChainRepr, FixtureLookupErrorRepr]:
-        fulltrace = self.config.getoption("fulltrace", False)
+        fulltrace = self.config.option.fulltrace
         if (
             not fulltrace
             and isinstance(excinfo.value, fail.Exception)
@@ -336,7 +336,8 @@ class Node(metaclass=NodeMeta):
 
         # XXX should excinfo.getrepr record all data and toterminal() process it?
         # XXX: does not distinguish between default/unset and --tb=auto.
-        tbstyle = self.config.getoption("tbstyle", "auto")
+        tbstyle = self.config.option.tbstyle
+        verbosity = self.config.option.verbose
         if fulltrace:
             style = "long" if tbstyle == "auto" else tbstyle  # type: _TracebackStyle
         else:
@@ -349,11 +350,6 @@ class Node(metaclass=NodeMeta):
                 style = tbstyle
             self._prunetraceback(excinfo)
 
-        if self.config.getoption("verbose", 0) > 1:
-            truncate_locals = False
-        else:
-            truncate_locals = True
-
         try:
             os.getcwd()
             abspath = False
@@ -363,10 +359,10 @@ class Node(metaclass=NodeMeta):
         return excinfo.getrepr(
             funcargs=True,
             abspath=abspath,
-            showlocals=self.config.getoption("showlocals", False),
+            showlocals=self.config.option.showlocals,
             style=style,
             tbfilter=False,  # pruned already, or in --fulltrace mode.
-            truncate_locals=truncate_locals,
+            truncate_locals=verbosity < 2,
         )
 
     def repr_failure(

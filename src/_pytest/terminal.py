@@ -2,7 +2,6 @@
 
 This is a good source for looking at the various reporting hooks.
 """
-import argparse
 import datetime
 import inspect
 import linecache
@@ -148,56 +147,8 @@ def get_terminal_width() -> int:
     return _cached_terminal_width
 
 
-class MoreQuietAction(argparse.Action):
-    """
-    a modified copy of the argparse count action which counts down and updates
-    the legacy quiet attribute at the same time
-
-    used to unify verbosity handling
-    """
-
-    def __init__(self, option_strings, dest, default=None, required=False, help=None):
-        super().__init__(
-            option_strings=option_strings,
-            dest=dest,
-            nargs=0,
-            default=default,
-            required=required,
-            help=help,
-        )
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        new_count = getattr(namespace, self.dest, 0) - 1
-        setattr(namespace, self.dest, new_count)
-        # todo Deprecate config.quiet
-        namespace.quiet = getattr(namespace, "quiet", 0) + 1
-
-
 def pytest_addoption(parser):
     group = parser.getgroup("terminal reporting", "reporting", after="general")
-    group._addoption(
-        "-v",
-        "--verbose",
-        action="count",
-        default=0,
-        dest="verbose",
-        help="increase verbosity.",
-    )
-    group._addoption(
-        "-q",
-        "--quiet",
-        action=MoreQuietAction,
-        default=0,
-        dest="verbose",
-        help="decrease verbosity.",
-    )
-    group._addoption(
-        "--verbosity",
-        dest="verbose",
-        type=int,
-        default=0,
-        help="set verbosity. Default is 0.",
-    )
     group._addoption(
         "-r",
         action="store",
@@ -219,32 +170,6 @@ def pytest_addoption(parser):
         help="disable warnings summary",
     )
     group._addoption(
-        "-l",
-        "--showlocals",
-        action="store_true",
-        dest="showlocals",
-        default=False,
-        help="show locals in tracebacks (disabled by default).",
-    )
-    group._addoption(
-        "--tb",
-        metavar="style",
-        action="store",
-        dest="tbstyle",
-        default="auto",
-        choices=["auto", "long", "short", "no", "line", "native"],
-        help=(
-            "traceback print mode (auto/long/short/line/native/no):\n"
-            " - auto (default): 'long' tracebacks for the first and last entry,"
-            " but 'short' style for the other entries\n"
-            " - long: exhaustive, informative traceback formatting\n"
-            " - short: shorter traceback format\n"
-            " - line: only one line per failure\n"
-            " - native: Python standard library formatting\n"
-            " - no: no traceback at all\n"
-        ),
-    )
-    group._addoption(
         "--show-capture",
         action="store",
         dest="showcapture",
@@ -252,16 +177,6 @@ def pytest_addoption(parser):
         default="all",
         help="Controls how captured stdout/stderr/log is shown on failed tests. "
         "Default is 'all'.",
-    )
-    group._addoption(
-        "--fulltrace",
-        "--full-trace",
-        action="store_true",
-        default=False,
-        help=(
-            "don't cut any tracebacks (default is to cut). "
-            "When used `-tb` defaults to 'long'."
-        ),
     )
     group._addoption(
         "--color",
@@ -973,7 +888,7 @@ class TerminalReporter:
         self.summary_warnings()
 
     def pytest_keyboard_interrupt(self, excinfo: ExceptionInfo) -> None:
-        tbstyle = self.config.getoption("tbstyle", "auto")
+        tbstyle = self.config.option.tbstyle
         style = "long" if tbstyle == "auto" else tbstyle  # type: _TracebackStyle
         self._keyboardinterrupt_memo = excinfo.getrepr(funcargs=True, style=style)
 

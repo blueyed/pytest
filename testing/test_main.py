@@ -139,3 +139,18 @@ def test_collect_ignores_hidden_file(testdir: Testdir) -> None:
     testdir.makepyfile(**{"tests/.test_hidden@meh.py": "def test(): assert 0"})
     result = testdir.runpytest("-o", "python_files=tests/*.py")
     assert result.ret == ExitCode.NO_TESTS_COLLECTED
+
+
+def test_options_without_essential_plugins(testdir: Testdir) -> None:
+    testdir.makepyfile(
+        """
+        def test_options(request):
+            assert request.config.option.verbose == 0
+
+            assert request.config.option.fulltrace is False
+            assert request.config.option.showlocals is False
+            assert request.config.option.tbstyle == "auto"
+        """
+    )
+    result = testdir.runpytest("-p", "no:[defaults]", "-p", "python")
+    assert result.ret == 0
