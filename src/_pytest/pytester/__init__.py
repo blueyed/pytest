@@ -771,12 +771,12 @@ class Testdir(Generic[AnyStr]):
 
         # Validate that files are inside of tmpdir, might raise ValueError.
         if base_path:
-            base_path = Path(base_path).absolute()
+            base_path = os.path.abspath(base_path)
         else:
-            base_path = Path.cwd()
+            base_path = os.getcwd()
         validated_files = []
         for k, v in files.items():
-            abspath = Path(os.path.normpath(base_path / k))
+            abspath = Path(os.path.normpath(os.path.join(base_path, k)))
             assert abspath.is_absolute(), abspath
             if clobber:
                 if not (abspath.is_file() or abspath.is_symlink()):

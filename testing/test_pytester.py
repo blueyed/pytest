@@ -1250,6 +1250,7 @@ def test_handles_non_python_items(testdir: Testdir):
 
 
 class TestTestdirMakefiles:
+    @pytest.mark.py35_specific
     def test_makefiles(self, testdir: Testdir) -> None:
         tmpdir = testdir.tmpdir
 
