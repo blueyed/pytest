@@ -1,9 +1,13 @@
 import sys
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.runner import runtestprotocol
 from _pytest.skipping import MarkEvaluator
 from _pytest.skipping import pytest_runtest_setup
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 class TestEvaluator:
@@ -879,39 +883,48 @@ def test_reportchars_all_error(testdir):
 
 
 @pytest.mark.pypy_specific
-def test_errors_in_xfail_skip_expressions(testdir):
-    testdir.makepyfile(
+def test_errors_in_xfail_skip_expressions(testdir: "Testdir") -> None:
+    p1 = testdir.makepyfile(
         """
         import pytest
+
         @pytest.mark.skipif("asd")
         def test_nameerror():
             pass
+
         @pytest.mark.xfail("syntax error")
-        def test_syntax():
+        def test_syntaxerror():
             pass
 
-        def test_func():
+        def test_pass():
             pass
-    """
+        """
     )
-    result = testdir.runpytest()
+    result = testdir.runpytest(p1)
     markline = "                ^"
-    if hasattr(sys, "pypy_version_info") and sys.pypy_version_info < (6,):
-        markline = markline[5:]
-    elif sys.version_info >= (3, 8) or hasattr(sys, "pypy_version_info"):
+    if sys.version_info >= (3, 8) or hasattr(sys, "pypy_version_info"):
         markline = markline[4:]
     result.stdout.fnmatch_lines(
         [
-            "*ERROR*test_nameerror*",
-            "*evaluating*skipif*expression*",
-            "*asd*",
-            "*ERROR*test_syntax*",
-            "*evaluating*xfail*expression*",
+            "test_errors_in_xfail_skip_expressions.py EE. * [[]100%[]]",
+            "",
+            "=*= ERRORS =*=",
+            "_*_ ERROR at setup of test_nameerror _*_",
+            "Error evaluating 'skipif' expression",
+            "    asd",
+            "NameError: name 'asd' is not defined",
+            "",
+            "_*_ ERROR at setup of test_syntaxerror _*_",
+            "Error evaluating 'xfail' expression",
             "    syntax error",
             markline,
             "SyntaxError: invalid syntax",
-            "*1 pass*2 errors*",
-        ]
+            "=*= short test summary info =*=",
+            "ERROR test_errors_in_xfail_skip_expressions.py::test_nameerror",
+            "ERROR test_errors_in_xfail_skip_expressions.py::test_syntaxerror",
+            "=*= 1 passed, 2 errors in *s =*=",
+        ],
+        consecutive=True,
     )
 
 
