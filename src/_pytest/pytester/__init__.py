@@ -740,7 +740,7 @@ class Testdir(Generic[AnyStr]):
         self,
         files: Mapping[str, str],
         *,
-        base_path: Optional[Union[str, Path]] = None,
+        base_path: Optional[str] = None,
         dedent: bool = True,
         strip_outer_newlines: bool = True,
         clobber: bool = False

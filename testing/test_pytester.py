@@ -1336,9 +1336,6 @@ class TestTestdirMakefiles:
         assert testdir.makefiles({"bar": ""}, base_path="foo") == [
             Path("foo/bar").absolute()
         ]
-        assert testdir.makefiles({"baz": ""}, base_path=Path("foo")) == [
-            Path("foo/baz").absolute()
-        ]
 
     def test_makefiles_dangling_symlink_outside(
         self, testdir: Testdir, symlink_or_skip
