@@ -297,6 +297,7 @@ class TestParser:
             "  -h, --[no-]help",
         ]
 
+    @pytest.mark.py35_specific
     def test_inverse_option_with_store_true_action(self) -> None:
         """`--foo` generates `--no-foo`, but handles existing `--no-foo`."""
         parser = Parser(usage="usage")
@@ -309,9 +310,9 @@ class TestParser:
 
         parser.addoption("--no-foo", action="store_true", dest="no_foo")
         parser.addoption("--foo", action="store_true", dest="foo")
-        assert list(parser._getparser()._option_string_actions.keys()) == [
-            "--no-foo",
+        assert sorted(list(parser._getparser()._option_string_actions.keys())) == [
             "--foo",
+            "--no-foo",
         ]
         p1 = parser.parse([])
         assert (p1.foo, p1.no_foo) == (False, False)
@@ -337,6 +338,7 @@ class TestParser:
             "  --[no-]bar",
         ]
 
+    @pytest.mark.py35_specific
     def test_inverse_option_with_nodash_prefix_and_other(self) -> None:
         parser = Parser(usage="usage")
         parser.addoption(
@@ -352,12 +354,12 @@ class TestParser:
         assert parser.parse(["--no-other"]).nonomnom is False
 
         optparser = parser._getparser()
-        assert list(optparser._option_string_actions.keys()) == [
-            "--nonomnom",
+        assert sorted(list(optparser._option_string_actions.keys())) == [
             "--no-nomnom",
-            "--other",
-            "--nomnom",
             "--no-other",
+            "--nomnom",
+            "--nonomnom",
+            "--other",
         ]
         assert optparser.format_help().splitlines() == [
             "usage: usage",

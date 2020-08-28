@@ -1250,6 +1250,7 @@ def test_handles_non_python_items(testdir: Testdir):
 
 
 class TestTestdirMakefiles:
+    @pytest.mark.py35_specific
     def test_makefiles(self, testdir: Testdir) -> None:
         tmpdir = testdir.tmpdir
 
@@ -1334,9 +1335,6 @@ class TestTestdirMakefiles:
     def test_makefiles_basepath(self, testdir: Testdir) -> None:
         assert testdir.makefiles({"bar": ""}, base_path="foo") == [
             Path("foo/bar").absolute()
-        ]
-        assert testdir.makefiles({"baz": ""}, base_path=Path("foo")) == [
-            Path("foo/baz").absolute()
         ]
 
     def test_makefiles_dangling_symlink_outside(
