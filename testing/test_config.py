@@ -1083,31 +1083,6 @@ class TestOverrideIniArgs:
         assert result.ret == 0
         result.stdout.fnmatch_lines(["custom_option:3.0"])
 
-    def test_override_ini_pathlist(self, testdir):
-        testdir.makeconftest(
-            """
-            def pytest_addoption(parser):
-                parser.addini("paths", "my new ini value", type="pathlist")"""
-        )
-        testdir.makeini(
-            """
-            [pytest]
-            paths=blah.py"""
-        )
-        testdir.makepyfile(
-            """
-            import py.path
-            def test_pathlist(pytestconfig):
-                config_paths = pytestconfig.getini("paths")
-                print(config_paths)
-                for cpf in config_paths:
-                    print('\\nuser_path:%s' % cpf.basename)"""
-        )
-        result = testdir.runpytest(
-            "--override-ini", "paths=foo/bar1.py foo/bar2.py", "-s"
-        )
-        result.stdout.fnmatch_lines(["user_path:bar1.py", "user_path:bar2.py"])
-
     def test_override_multiple_and_default(self, testdir):
         testdir.makeconftest(
             """
