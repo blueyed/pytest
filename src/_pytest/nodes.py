@@ -335,11 +335,11 @@ class Node(metaclass=NodeMeta):
             return excinfo.value.formatrepr()
 
         # XXX should excinfo.getrepr record all data and toterminal() process it?
+        # XXX: does not distinguish between default/unset and --tb=auto.
         tbstyle = self.config.option.tbstyle
         verbosity = self.config.option.verbose
         if fulltrace:
-            tbstyle_given = "tbstyle" in self.config._nondefault_options
-            style = tbstyle if tbstyle_given else "long"  # type: _TracebackStyle
+            style = "long" if tbstyle == "auto" else tbstyle  # type: _TracebackStyle
         else:
             if tbstyle == "auto":
                 if default_style is None:

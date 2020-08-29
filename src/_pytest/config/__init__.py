@@ -778,7 +778,6 @@ class Config:
             )
 
         self.option = argparse.Namespace()
-        self._nondefault_options = set()  # type: Set[str]
         self.invocation_params = invocation_params
 
         _a = FILE_OR_DIR
@@ -892,10 +891,9 @@ class Config:
         for name in opt._short_opts + opt._long_opts:
             self._opt2dest[name] = opt.dest
 
-        if hasattr(self.option, opt.dest):
-            self._nondefault_options.add(opt.dest)
-        elif hasattr(opt, "default"):
-            setattr(self.option, opt.dest, opt.default)
+        if hasattr(opt, "default"):
+            if not hasattr(self.option, opt.dest):
+                setattr(self.option, opt.dest, opt.default)
 
     @hookimpl(trylast=True)
     def pytest_load_initial_conftests(self, early_config):
