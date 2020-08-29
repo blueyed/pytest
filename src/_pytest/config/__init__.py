@@ -1096,6 +1096,7 @@ class Config:
                 value = self.inicfg[name]
             except KeyError:
                 return default
+        assert isinstance(value, str), repr(value)
         if type == "pathlist":
             split_value = shlex.split(value)
             values = []
