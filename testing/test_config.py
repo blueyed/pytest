@@ -356,11 +356,15 @@ class TestConfigAPI:
         ]
 
         # Via `--override-ini`.
-        config = testdir.parseconfig("-o", r"paths=foo {!r}".format(str(abs_bar)))
+        config = testdir.parseconfig(
+            "-o", r"paths=foo {!r}".format(str(abs_bar)),
+            "-o", "paths_wd=",
+        )
         assert config.getini("paths") == [
             testdir.tmpdir / "foo",
             abs_bar,
         ]
+        assert config.getini("paths_wd") == []
 
         p = testdir.makeini(
             """
