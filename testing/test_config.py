@@ -339,7 +339,7 @@ class TestConfigAPI:
     def test_addini_pathlist(self, testdir: "Testdir") -> None:
         abs_bar = py.path.local("bar")
         testdir.makeconftest(
-            """
+            r"""
             def pytest_addoption(parser):
                 parser.addini("paths", "my new ini value", type="pathlist")
                 parser.addini("paths_wd", "with default", type="pathlist",
