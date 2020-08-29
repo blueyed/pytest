@@ -336,14 +336,32 @@ class TestConfigAPI:
 
         pytest.raises(ValueError, config.getini, "other")
 
-    def test_addini_pathlist(self, testdir):
+    def test_addini_pathlist(self, testdir: "Testdir") -> None:
+        abs_bar = py.path.local("bar")
         testdir.makeconftest(
             """
             def pytest_addoption(parser):
                 parser.addini("paths", "my new ini value", type="pathlist")
-                parser.addini("abc", "abc value")
-        """
+                parser.addini("paths_wd", "with default", type="pathlist",
+                              default=["def1", {abs_bar!r}])
+            """.format(abs_bar=str(abs_bar))
         )
+
+        # Defaults.
+        config = testdir.parseconfig()
+        assert config.getini("paths") == []
+        assert config.getini("paths_wd") == [
+            "def1",  # XXX: does not make paths absolute with defaults.
+            abs_bar,
+        ]
+
+        # Via `--override-ini`.
+        config = testdir.parseconfig("-o", "paths=foo {}".format(abs_bar))
+        assert config.getini("paths") == [
+            testdir.tmpdir / "foo",
+            abs_bar,
+        ]
+
         p = testdir.makeini(
             """
             [pytest]
@@ -355,7 +373,6 @@ class TestConfigAPI:
         assert len(values) == 2
         assert values[0] == p.dirpath("hello")
         assert values[1] == p.dirpath("world/sub.py")
-        pytest.raises(ValueError, config.getini, "other")
 
     def test_addini_args(self, testdir):
         testdir.makeconftest(
