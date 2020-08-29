@@ -22,11 +22,13 @@ jobs:
       fail-fast: false
       matrix:
         name: [
-          "ubuntu-py38",
+          "ubuntu-py38 (1)",
+          "ubuntu-py38 (2)",
           "ubuntu-py38 (pexpect, integration)",
           "ubuntu-pypy3",
 
-          "macos-py36",
+          "macos-py36 (1)",
+          "macos-py36 (2)",
 
           "windows-py37 (1)",
           "windows-py37 (2)",
@@ -40,10 +42,16 @@ jobs:
         ]
 
         include:
-          - name: "ubuntu-py38"
+          - name: "ubuntu-py38 (1)"
             python: "3.8"
             os: ubuntu-latest
-            tox_env: "py38-numpy-oldattrs-twisted-coverage"
+            tox_env: "py38-numpy-oldattrs-twisted-coverage-grouped"
+            pytest_addopts: "--test-group-count 2 --test-group=1"
+          - name: "ubuntu-py38 (2)"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "py38-numpy-oldattrs-twisted-coverage-grouped"
+            pytest_addopts: "--test-group-count 2 --test-group=2"
           - name: "ubuntu-pypy3"
             python: "pypy3"
             os: ubuntu-latest
@@ -64,11 +72,16 @@ jobs:
           # - osx
           # - pygments
           # - verbosity=1
-          - name: "macos-py36"
+          - name: "macos-py36 (1)"
             python: "3.6"
             os: macos-latest
-            tox_env: "py36-pygments-coverage"
-            pytest_addopts: "--verbosity=1"
+            tox_env: "py36-pygments-coverage-grouped"
+            pytest_addopts: "--verbosity=1 --test-group-count 2 --test-group=1"
+          - name: "macos-py36 (2)"
+            python: "3.6"
+            os: macos-latest
+            tox_env: "py36-pygments-coverage-grouped"
+            pytest_addopts: "--verbosity=1 --test-group-count 2 --test-group=2"
 
           - name: "windows-py37 (1)"
             python: "3.7"
@@ -78,7 +91,6 @@ jobs:
             # Coverage for:
             # - verbosity=2
             pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
-
           - name: "windows-py37 (2)"
             python: "3.7"
             os: windows-latest
