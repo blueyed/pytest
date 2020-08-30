@@ -4,7 +4,7 @@ import textwrap
 import types
 
 import attr
-import py
+import py.path
 
 import pytest
 from _pytest.compat import importlib_metadata

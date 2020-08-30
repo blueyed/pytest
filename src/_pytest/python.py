@@ -20,7 +20,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
-import py
+import py.path
 
 import _pytest
 from _pytest import fixtures

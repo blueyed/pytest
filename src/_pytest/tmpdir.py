@@ -5,7 +5,7 @@ import tempfile
 from typing import Optional
 
 import attr
-import py
+import py.path
 
 import pytest
 from .pathlib import ensure_reset_dir

@@ -26,7 +26,7 @@ from typing import Union
 
 import attr
 import pluggy
-import py
+import py.path
 from more_itertools import collapse
 from wcwidth import wcswidth
 

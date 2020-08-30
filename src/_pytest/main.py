@@ -15,7 +15,7 @@ from typing import Tuple
 from typing import Union
 
 import attr
-import py
+import py.path
 
 import _pytest._code
 from _pytest import nodes

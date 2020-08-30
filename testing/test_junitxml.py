@@ -3,7 +3,7 @@ import platform
 from datetime import datetime
 from xml.dom import minidom
 
-import py
+import py.path
 
 import pytest
 from _pytest.compat import TYPE_CHECKING

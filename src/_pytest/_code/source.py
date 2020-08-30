@@ -16,7 +16,7 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 
-import py
+import py.path
 
 from _pytest.compat import get_real_func
 from _pytest.compat import overload

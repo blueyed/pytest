@@ -10,7 +10,7 @@ import textwrap
 import zipfile
 from functools import partial
 
-import py
+import py.path
 
 import _pytest._code
 import pytest

@@ -1,4 +1,4 @@
-import py
+import py.path
 
 failure_demo = py.path.local(__file__).dirpath("failure_demo.py")
 pytest_plugins = ("pytester",)

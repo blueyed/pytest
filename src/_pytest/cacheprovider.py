@@ -13,7 +13,7 @@ from typing import Optional
 from typing import Set
 
 import attr
-import py
+import py.path
 
 import pytest
 from .pathlib import Path

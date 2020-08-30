@@ -6,7 +6,7 @@ from typing import Dict
 from typing import List
 from typing import Tuple
 
-import py
+import py.path
 
 import _pytest._code
 import pytest
