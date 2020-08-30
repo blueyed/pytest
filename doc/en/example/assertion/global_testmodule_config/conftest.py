@@ -1,4 +1,4 @@
-import py
+import py.path
 
 import pytest
 

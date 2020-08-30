@@ -28,7 +28,7 @@ from typing import Tuple
 from typing import Union
 from weakref import WeakKeyDictionary
 
-import py
+import py.path
 
 import pytest
 from _pytest._code import Source

@@ -21,7 +21,7 @@ from typing import TypeVar
 from typing import Union
 
 import attr
-import py
+import py.path
 
 from _pytest._io.saferepr import saferepr
 from _pytest.outcomes import fail

@@ -21,7 +21,7 @@ from typing import Tuple
 from typing import Union
 
 import attr
-import py
+import py.path
 from packaging.version import Version
 from pluggy import HookimplMarker
 from pluggy import HookspecMarker

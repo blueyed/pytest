@@ -7,7 +7,7 @@ from typing import Tuple
 from typing import Union
 
 import attr
-import py
+import py.path
 
 from _pytest._code.code import ExceptionChainRepr
 from _pytest._code.code import ExceptionInfo

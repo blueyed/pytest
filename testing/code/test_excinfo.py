@@ -5,7 +5,7 @@ import sys
 import textwrap
 from typing import Union
 
-import py
+import py.path
 
 import _pytest
 import pytest

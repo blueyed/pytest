@@ -11,7 +11,7 @@ from typing import Optional
 from typing import Tuple
 
 import attr
-import py
+import py.path
 
 import _pytest
 from _pytest._code.code import FormattedExcinfo

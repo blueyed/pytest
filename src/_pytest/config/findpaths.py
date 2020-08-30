@@ -4,7 +4,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-import py
+import py.path
 
 from .exceptions import UsageError
 from _pytest.compat import TYPE_CHECKING

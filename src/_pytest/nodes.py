@@ -9,7 +9,7 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
-import py
+import py.path
 
 import _pytest._code
 from _pytest._code.code import ExceptionChainRepr

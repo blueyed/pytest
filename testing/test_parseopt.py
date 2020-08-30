@@ -4,7 +4,7 @@ import shlex
 import shutil
 import sys
 
-import py
+import py.path
 
 import pytest
 from _pytest.config import argparsing as parseopt

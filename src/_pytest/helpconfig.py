@@ -6,7 +6,7 @@ from typing import Generator
 from typing import List
 from typing import Optional
 
-import py
+import py.path
 
 import pytest
 from _pytest.compat import TYPE_CHECKING

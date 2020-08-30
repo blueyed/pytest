@@ -5,7 +5,7 @@ import stat
 import sys
 import warnings
 
-import py
+import py.path
 
 import pytest
 from _pytest.config import ExitCode

@@ -13,7 +13,7 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 
-import py
+import py.path
 
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config.exceptions import UsageError

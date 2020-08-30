@@ -11,7 +11,7 @@ from typing import List
 from typing import Tuple
 
 import pluggy
-import py
+import py.path
 
 import _pytest.config
 import pytest

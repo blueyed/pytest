@@ -3,7 +3,7 @@ import pprint
 import sys
 import textwrap
 
-import py
+import py.path
 
 import pytest
 from _pytest.config import ExitCode

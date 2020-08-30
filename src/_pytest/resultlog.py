@@ -3,7 +3,7 @@ text file.
 """
 import os
 
-import py
+import py.path
 
 
 def pytest_addoption(parser):

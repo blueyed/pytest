@@ -1,7 +1,7 @@
 import os.path
 import sys
 
-import py
+import py.path
 
 import pytest
 from _pytest.pathlib import _shorten_path

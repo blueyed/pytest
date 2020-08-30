@@ -16,7 +16,7 @@ import sys
 import time
 from datetime import datetime
 
-import py
+import py.path
 
 import pytest
 from _pytest import deprecated

@@ -26,7 +26,7 @@ from weakref import ref
 
 import attr
 import pluggy
-import py
+import py.path
 
 import _pytest
 from _pytest._io import TerminalWriter
