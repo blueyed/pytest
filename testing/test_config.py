@@ -336,14 +336,36 @@ class TestConfigAPI:
 
         pytest.raises(ValueError, config.getini, "other")
 
-    def test_addini_pathlist(self, testdir):
+    def test_addini_pathlist(self, testdir: "Testdir") -> None:
+        abs_bar = py.path.local("bar")
         testdir.makeconftest(
-            """
+            r"""
             def pytest_addoption(parser):
                 parser.addini("paths", "my new ini value", type="pathlist")
-                parser.addini("abc", "abc value")
-        """
+                parser.addini("paths_wd", "with default", type="pathlist",
+                              default=["def1", {abs_bar!r}])
+            """.format(abs_bar=str(abs_bar))
         )
+
+        # Defaults.
+        config = testdir.parseconfig()
+        assert config.getini("paths") == []
+        assert config.getini("paths_wd") == [
+            "def1",  # XXX: does not make paths absolute with defaults.
+            abs_bar,
+        ]
+
+        # Via `--override-ini`.
+        config = testdir.parseconfig(
+            "-o", r"paths=foo {!r}".format(str(abs_bar)),
+            "-o", "paths_wd=",
+        )
+        assert config.getini("paths") == [
+            testdir.tmpdir / "foo",
+            abs_bar,
+        ]
+        assert config.getini("paths_wd") == []
+
         p = testdir.makeini(
             """
             [pytest]
@@ -355,7 +377,6 @@ class TestConfigAPI:
         assert len(values) == 2
         assert values[0] == p.dirpath("hello")
         assert values[1] == p.dirpath("world/sub.py")
-        pytest.raises(ValueError, config.getini, "other")
 
     def test_addini_args(self, testdir):
         testdir.makeconftest(
@@ -1065,31 +1086,6 @@ class TestOverrideIniArgs:
         )
         assert result.ret == 0
         result.stdout.fnmatch_lines(["custom_option:3.0"])
-
-    def test_override_ini_pathlist(self, testdir):
-        testdir.makeconftest(
-            """
-            def pytest_addoption(parser):
-                parser.addini("paths", "my new ini value", type="pathlist")"""
-        )
-        testdir.makeini(
-            """
-            [pytest]
-            paths=blah.py"""
-        )
-        testdir.makepyfile(
-            """
-            import py.path
-            def test_pathlist(pytestconfig):
-                config_paths = pytestconfig.getini("paths")
-                print(config_paths)
-                for cpf in config_paths:
-                    print('\\nuser_path:%s' % cpf.basename)"""
-        )
-        result = testdir.runpytest(
-            "--override-ini", "paths=foo/bar1.py foo/bar2.py", "-s"
-        )
-        result.stdout.fnmatch_lines(["user_path:bar1.py", "user_path:bar2.py"])
 
     def test_override_multiple_and_default(self, testdir):
         testdir.makeconftest(

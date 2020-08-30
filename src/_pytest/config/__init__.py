@@ -1097,10 +1097,15 @@ class Config:
             except KeyError:
                 return default
         if type == "pathlist":
-            dp = py.path.local(self.inicfg.config.path).dirpath()
+            split_value = shlex.split(value)
             values = []
-            for relpath in shlex.split(value):
-                values.append(dp.join(relpath, abs=True))
+            if split_value:
+                if self.inifile is None:
+                    dp = self.invocation_dir
+                else:
+                    dp = py.path.local(self.inifile).dirpath()
+                for relpath in split_value:
+                    values.append(dp.join(relpath, abs=True))
             return values
         elif type == "args":
             return shlex.split(value)
