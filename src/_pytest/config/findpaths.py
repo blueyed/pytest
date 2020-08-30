@@ -1,5 +1,4 @@
 import os
-from typing import Any
 from typing import Iterable
 from typing import List
 from typing import Optional
@@ -12,6 +11,9 @@ from _pytest.compat import TYPE_CHECKING
 from _pytest.outcomes import fail
 
 if TYPE_CHECKING:
+    from typing import Dict
+    from typing import Union
+
     from . import Config  # noqa: F401
 
 
@@ -116,24 +118,23 @@ def determine_setup(
     args: List[str],
     rootdir_cmd_arg: Optional[str] = None,
     config: Optional["Config"] = None,
-) -> Tuple[py.path.local, Optional[str], Any]:
+) -> Tuple[py.path.local, Optional[str], "Union[py.iniconfig._SectionWrapper, Dict]"]:
     dirs = get_dirs_from_args(args)
     if inifile:
         iniconfig = py.iniconfig.IniConfig(inifile)
         is_cfg_file = str(inifile).endswith(".cfg")
         sections = ["tool:pytest", "pytest"] if is_cfg_file else ["pytest"]
+        inicfg = None  # type: Optional[py.iniconfig._SectionWrapper]
         for section in sections:
             try:
-                inicfg = iniconfig[
-                    section
-                ]  # type: Optional[py.iniconfig._SectionWrapper]
-                if is_cfg_file and section == "pytest" and config is not None:
-                    fail(
-                        CFG_PYTEST_SECTION.format(filename=str(inifile)), pytrace=False
-                    )
-                break
+                inicfg = iniconfig[section]
             except KeyError:
-                inicfg = None
+                continue
+            if is_cfg_file and section == "pytest" and config is not None:
+                fail(
+                    CFG_PYTEST_SECTION.format(filename=str(inifile)), pytrace=False
+                )
+            break
         if rootdir_cmd_arg is None:
             rootdir = get_common_ancestor(dirs)
     else:
