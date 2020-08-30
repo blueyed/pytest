@@ -74,16 +74,13 @@ jobs:
             python: "3.7"
             os: windows-latest
             tox_env: "py37-coverage-grouped"
-            script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
             pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
-
           - name: "windows-py37 (2)"
             python: "3.7"
             os: windows-latest
             tox_env: "py37-coverage-grouped"
-            script_prefix: "env PYTEST_REORDER_TESTS=0"
             # Coverage for:
             # - verbosity=2
             pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
