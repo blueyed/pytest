@@ -1271,7 +1271,14 @@ class TestTestdirMakefiles:
         expected_abspath = Path("/abspath").resolve().absolute()
         with pytest.raises(ValueError) as exc:
             testdir.makefiles({"shouldnotbecreated": "", "/abspath": ""})
-        assert str(exc.value) == "{!r} does not start with {!r}".format(
+        if sys.version_info >= (3, 9):
+            exp_valueerror = (
+                "{!r} is not in the subpath of {!r}"
+                " OR one path is relative and the other is absolute."
+            )
+        else:
+            exp_valueerror = "{!r} does not start with {!r}"
+        assert str(exc.value) == exp_valueerror.format(
             str(expected_abspath), str(tmpdir)
         )
         assert len(exc.traceback) == 2
@@ -1281,7 +1288,7 @@ class TestTestdirMakefiles:
         expected_resolved_path = Path("../outside").resolve()
         with pytest.raises(ValueError) as exc:
             testdir.makefiles({"../outside": ""})
-        assert str(exc.value) == "{!r} does not start with {!r}".format(
+        assert str(exc.value) == exp_valueerror.format(
             str(expected_resolved_path), str(tmpdir)
         )
 

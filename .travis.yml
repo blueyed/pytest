@@ -1,12 +1,10 @@
 language: python
-dist: trusty
-python: '3.5.1'
+dist: xenial
 cache: false
 
 env:
   global:
     - PIP_DISABLE_PIP_VERSION_CHECK=1
-    - CODECOV_FLAGS=Travis,Linux
     - COLUMNS=130
 
 # setuptools-scm needs all tags in order to obtain a proper version
@@ -21,11 +19,17 @@ install:
 jobs:
   include:
     # Coverage for Python 3.5.{0,1} specific code, mostly typing related.
-    - env:
+    - python: '3.5.1'
+      dist: trusty
+      env:
         - TOXENV=py35-coverage
         - PYTEST_ADDOPTS="-ra --durations=50 -m 'py35_specific or acceptance_tests'"
       before_install:
         - python -m pip install -U pip==19.3.1
+    # Coverage for Python 3.9
+    - python: '3.9-dev'
+      env:
+        - TOXENV=py39-coverage
 
 before_script:
   - python -m tox --notest -v --durations
