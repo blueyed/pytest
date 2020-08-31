@@ -5,7 +5,6 @@ cache: false
 env:
   global:
     - PIP_DISABLE_PIP_VERSION_CHECK=1
-    - CODECOV_FLAGS=Travis,Linux
     - COLUMNS=130
 
 # setuptools-scm needs all tags in order to obtain a proper version
