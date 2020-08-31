@@ -28,8 +28,7 @@ jobs:
 
           "macos-py36",
 
-          "windows-py37 (1)",
-          "windows-py37 (2)",
+          "windows-py37",
 
           "xdist",
 
@@ -70,20 +69,14 @@ jobs:
             tox_env: "py36-pygments-coverage"
             pytest_addopts: "--verbosity=1"
 
-          - name: "windows-py37 (1)"
+          - name: "windows-py37"
             python: "3.7"
             os: windows-latest
-            tox_env: "py37-coverage-grouped"
+            tox_env: "py37-coverage"
             # Coverage for:
+            # - Windows
             # - verbosity=2
-            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
-          - name: "windows-py37 (2)"
-            python: "3.7"
-            os: windows-latest
-            tox_env: "py37-coverage-grouped"
-            # Coverage for:
-            # - verbosity=2
-            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
+            pytest_addopts: "--verbosity=2 -m 'windows_specific or acceptance_tests'"
 
           - name: "xdist"
             python: "3.8"
