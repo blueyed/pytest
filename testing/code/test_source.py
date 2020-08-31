@@ -525,7 +525,7 @@ def test_getfslineno() -> None:
     class B:
         pass
 
-    B.__name__ = "B2"
+    B.__name__ = B.__qualname__ = "do_not_find_me"
     assert getfslineno(B)[1] == -1
 
     co = compile("...", "", "eval")
