@@ -14,7 +14,9 @@ git:
   depth: false
 
 install:
+  - python -m pip --version
   - python -m pip install git+https://github.com/blueyed/tox@master
+  - python -m pip list
 
 jobs:
   include:
