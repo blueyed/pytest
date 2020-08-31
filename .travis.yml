@@ -14,7 +14,9 @@ git:
   depth: false
 
 install:
+  - python -m pip --version
   - python -m pip install git+https://github.com/blueyed/tox@master
+  - python -m pip list
 
 jobs:
   include:
@@ -24,8 +26,6 @@ jobs:
         - PYTEST_ADDOPTS="-ra --durations=50 -m 'py35_specific or acceptance_tests'"
       before_install:
         - python -m pip install -U pip==19.3.1
-        # Work around https://github.com/jaraco/zipp/issues/40.
-        - python -m pip install -U 'setuptools>=34.4.0' virtualenv==16.7.9
 
 before_script:
   - python -m tox --notest -v --durations
