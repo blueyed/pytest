@@ -85,7 +85,6 @@ class AssertionState:
 
 
 def install_importhook(config):
-    """Try to install the rewrite hook, raise SystemError if it fails."""
     config._assertstate = AssertionState(config, "rewrite")
     config._assertstate.hook = hook = rewrite.AssertionRewritingHook(config)
     sys.meta_path.insert(0, hook)
