@@ -21,11 +21,11 @@ def test_ischildnode(baseid, nodeid, expected):
     assert result is expected
 
 
-def test_node_from_parent_disallowed_arguments():
+def test_node_from_parent_disallowed_arguments() -> None:
     with pytest.raises(TypeError, match="session is"):
-        nodes.Node.from_parent(None, session=None)
+        nodes.Node.from_parent(None, session=None)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="config is"):
-        nodes.Node.from_parent(None, config=None)
+        nodes.Node.from_parent(None, config=None)  # type: ignore[arg-type]
 
 
 def test_std_warn_not_pytestwarning(testdir):
@@ -66,7 +66,7 @@ def test_tbstyle_with_non_python(testdir: Testdir) -> None:
                 assert 0, "failure"
 
         def pytest_collect_file(path, parent):
-            return MyItem.from_parent(parent, name="foo")
+            return MyItem("foo", parent)
     """
     )
 

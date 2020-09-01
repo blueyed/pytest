@@ -1081,7 +1081,7 @@ class TestReportInfo:
                     return "ABCDE", 42, "custom"
             def pytest_pycollect_makeitem(collector, name, obj):
                 if name == "test_func":
-                    return MyFunction.from_parent(name=name, parent=collector)
+                    return MyFunction(name, parent=collector)
         """
         )
         item = testdir.getitem("def test_func(): pass")
