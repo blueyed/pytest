@@ -1,6 +1,10 @@
 import pytest
 from _pytest import nodes
+from _pytest.compat import TYPE_CHECKING
 from _pytest.pytester import Testdir
+
+if TYPE_CHECKING:
+    from _pytest.fixtures import FixtureRequest
 
 
 @pytest.mark.parametrize(
@@ -21,11 +25,12 @@ def test_ischildnode(baseid, nodeid, expected):
     assert result is expected
 
 
-def test_node_from_parent_disallowed_arguments() -> None:
-    with pytest.raises(TypeError, match="session is"):
-        nodes.Node.from_parent(None, session=None)  # type: ignore[arg-type]
-    with pytest.raises(TypeError, match="config is"):
-        nodes.Node.from_parent(None, config=None)  # type: ignore[arg-type]
+def test_node_from_parent_disallowed_arguments(request: "FixtureRequest") -> None:
+    msg = "^{} is not a valid argument for from_parent$"
+    with pytest.raises(TypeError, match=msg.format("session")):
+        nodes.Node.from_parent(request.session, session=None)
+    with pytest.raises(TypeError, match=msg.format("config")):
+        nodes.Node.from_parent(request.session, config=None)
 
 
 def test_std_warn_not_pytestwarning(testdir):
