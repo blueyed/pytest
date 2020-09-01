@@ -316,10 +316,10 @@ class TestFunction:
         from _pytest.fixtures import FixtureManager
 
         config = testdir.parseconfigure()
-        session = testdir.Session.from_config(config)
+        session = testdir.Session(config)
         session._fixturemanager = FixtureManager(session)
 
-        return pytest.Function.from_parent(parent=session, **kwargs)
+        return pytest.Function(config=config, parent=session, **kwargs)
 
     def test_function_equality(self, testdir):
         def func1():

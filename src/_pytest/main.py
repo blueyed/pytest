@@ -183,7 +183,7 @@ def wrap_session(
     config: Config, doit: Callable[[Config, "Session"], Optional[Union[int, ExitCode]]]
 ) -> Union[int, ExitCode]:
     """Skeleton command line program"""
-    session = Session.from_config(config)
+    session = Session(config)
     session.exitstatus = ExitCode.OK
     initstate = 0
     try:
@@ -386,10 +386,6 @@ class Session(nodes.FSCollector):
         self.config.pluginmanager.register(self, name="session")
 
         self._deselected = []  # type: List[nodes.Item]
-
-    @classmethod
-    def from_config(cls, config):
-        return cls._create(config)
 
     def __repr__(self):
         return "<%s %s exitstatus=%r testsfailed=%d testscollected=%d>" % (

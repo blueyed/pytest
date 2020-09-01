@@ -20,7 +20,6 @@ from _pytest.compat import cached_property
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import PytestPluginManager
-from _pytest.deprecated import NODE_USE_FROM_PARENT
 from _pytest.fixtures import FixtureDef
 from _pytest.fixtures import FixtureLookupError
 from _pytest.fixtures import FixtureLookupErrorRepr
@@ -31,10 +30,13 @@ from _pytest.outcomes import fail
 from _pytest.outcomes import Failed
 
 if TYPE_CHECKING:
-    # Imported here due to circular import.
-    from _pytest.main import Session  # noqa: F401
+    from typing import Type
+    from typing import TypeVar
 
-    from _pytest._code.code import _TracebackStyle  # noqa: F401
+    from _pytest._code.code import _TracebackStyle
+    from _pytest.main import Session  # circular import
+
+    _N = TypeVar("_N", bound="Node")
 
 SEP = "/"
 
@@ -79,16 +81,7 @@ def ischildnode(baseid, nodeid):
     return node_parts[: len(base_parts)] == base_parts
 
 
-class NodeMeta(type):
-    def __call__(self, *k, **kw):
-        warnings.warn(NODE_USE_FROM_PARENT.format(name=self.__name__), stacklevel=2)
-        return super().__call__(*k, **kw)
-
-    def _create(self, *k, **kw):
-        return super().__call__(*k, **kw)
-
-
-class Node(metaclass=NodeMeta):
+class Node:
     """ base class for Collector and Item the test collection tree.
     Collector subclasses have children, Items are terminal nodes."""
 
@@ -151,22 +144,13 @@ class Node(metaclass=NodeMeta):
         self._chain = self.listchain()
 
     @classmethod
-    def from_parent(cls, parent: "Node", **kw):
-        """
-        Public Constructor for Nodes
-
-        This indirection got introduced in order to enable removing
-        the fragile logic from the node constructors.
-
-        Subclasses can use ``super().from_parent(...)`` when overriding the construction
-
-        :param parent: the parent node of this test Node
-        """
+    def from_parent(cls: "Type[_N]", parent: "Node", **kw) -> "_N":
+        """Public constructor for Nodes (for compatibility with pytest only)."""
         if "config" in kw:
             raise TypeError("config is not a valid argument for from_parent")
         if "session" in kw:
             raise TypeError("session is not a valid argument for from_parent")
-        return cls._create(parent=parent, **kw)
+        return cls(parent=parent, **kw)
 
     @property
     def ihook(self):
@@ -472,13 +456,6 @@ class FSCollector(Collector):
         super().__init__(name, parent, config, session, nodeid=nodeid, fspath=fspath)
 
         self._norecursepatterns = self.config.getini("norecursedirs")
-
-    @classmethod
-    def from_parent(cls, parent, *, fspath):
-        """
-        The public constructor
-        """
-        return super().from_parent(parent=parent, fspath=fspath)
 
     def _gethookproxy(self, fspath: py.path.local):
         # check if we have the common case of running
