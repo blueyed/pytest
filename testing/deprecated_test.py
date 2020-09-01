@@ -5,6 +5,30 @@ from _pytest import deprecated
 from _pytest import nodes
 
 
+@pytest.mark.parametrize(
+    "attribute",
+    (
+        "Collector",
+        "Module",
+        "Function",
+        "Instance",
+        "Session",
+        "Item",
+        "Class",
+        "File",
+        "_fillfuncargs",
+    ),
+)
+def test_pytest_collect_module_deprecated(attribute: str) -> None:
+    msg = str(deprecated.PYTEST_COLLECT_MODULE.format(name=attribute))
+    with pytest.warns(DeprecationWarning, match=msg) as wr:
+        getattr(pytest.collect, attribute)
+    assert len(wr) == 1
+    assert wr[0].filename == __file__
+    f_lineno = inspect.currentframe().f_lineno  # type: ignore[union-attr]
+    assert wr[0].lineno == f_lineno - 3
+
+
 @pytest.mark.filterwarnings("default")
 def test_resultlog_is_deprecated(testdir):
     result = testdir.runpytest("--help")

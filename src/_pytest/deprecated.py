@@ -19,6 +19,12 @@ DEPRECATED_EXTERNAL_PLUGINS = {
     "pytest_faulthandler",
 }
 
+PYTEST_COLLECT_MODULE = UnformattedWarning(
+    PytestDeprecationWarning,
+    "pytest.collect.{name} was moved to pytest.{name}\n"
+    "Please update to the new name.",
+)
+
 FUNCARGNAMES = PytestDeprecationWarning(
     "The `funcargnames` attribute was an alias for `fixturenames`, "
     "since pytest 2.3 - use the newer attribute instead."

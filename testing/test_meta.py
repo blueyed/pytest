@@ -37,7 +37,10 @@ def test_no_warnings(module: str) -> None:
     # fmt: on
 
 
-def test_pytest_collect_attribute(_sys_snapshot):
+@pytest.mark.filterwarnings(
+    "ignore:pytest.collect.Item was moved to pytest.Item:pytest.PytestDeprecationWarning",
+)
+def test_pytest_collect_attribute(_sys_snapshot) -> None:
     from types import ModuleType
 
     del sys.modules["pytest"]
@@ -45,17 +48,24 @@ def test_pytest_collect_attribute(_sys_snapshot):
     import pytest
 
     assert isinstance(pytest.collect, ModuleType)
-    assert pytest.collect.Item is pytest.Item
+    assert pytest.collect.Item is pytest.Item  # type: ignore[attr-defined]
 
     with pytest.raises(ImportError):
         import pytest.collect
 
+    from pytest import collect
+
+    with pytest.raises(AttributeError):
+        collect.doesnotexist  # type: ignore[attr-defined]
+
+
+def test_pytest___get_attr__(_sys_snapshot) -> None:
     if sys.version_info >= (3, 7):
         with pytest.raises(AttributeError, match=r"^doesnotexist$"):
             pytest.doesnotexist
     else:
         with pytest.raises(AttributeError, match=r"doesnotexist"):
-            pytest.doesnotexist
+            pytest.doesnotexist  # type: ignore[attr-defined]
 
 
 def test_pytest_circular_import(testdir: Testdir, symlink_or_skip) -> None:
