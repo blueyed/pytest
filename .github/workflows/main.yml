@@ -20,96 +20,16 @@ jobs:
       fail-fast: false
       matrix:
         name: [
-          "ubuntu-py39",
-          "ubuntu-py38",
-          "ubuntu-py38 (pexpect, integration)",
-          "ubuntu-pypy3",
-
-          "macos-py36",
-
           "windows-py37 (1)",
-          "windows-py37 (2)",
-
-          "xdist",
-
-          "linting",
-          "docs",
-          "doctesting",
-          "mypy",
         ]
 
         include:
-          - name: "ubuntu-py39"
-            python: "3.9"
-            os: ubuntu-latest
-            tox_env: "py39-coverage"
-          - name: "ubuntu-py38"
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "py38-numpy-oldattrs-twisted-coverage"
-          - name: "ubuntu-pypy3"
-            python: "pypy3"
-            os: ubuntu-latest
-            tox_env: "pypy3-coverage"
-            pytest_addopts: "-m 'pypy_specific or acceptance_tests'"
-          - name: "ubuntu-py38 (pexpect, integration)"
-            python: "3.8"
-            os: ubuntu-latest
-            # NOTE: the lsof factor is not really useful currently, with its
-            # warnings being ignored.  This uses it here only to cover the
-            # LsofFdLeakChecker itself.
-            # (https://github.com/blueyed/pytest/issues/195)
-            tox_env: "py38-lsof-pexpect-coverage"
-            pytest_addopts: "-m 'uses_pexpect or integration'"
-            script_prefix: "env -u COLUMNS"
-
-          # Coverage for:
-          # - osx
-          # - pygments
-          # - verbosity=1
-          - name: "macos-py36"
-            python: "3.6"
-            os: macos-latest
-            tox_env: "py36-pygments-coverage"
-            pytest_addopts: "--verbosity=1"
-
           - name: "windows-py37 (1)"
             python: "3.7"
             os: windows-latest
-            tox_env: "py37-coverage-grouped"
-            # Coverage for:
-            # - verbosity=2
-            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
-          - name: "windows-py37 (2)"
-            python: "3.7"
-            os: windows-latest
-            tox_env: "py37-coverage-grouped"
-            # Coverage for:
-            # - verbosity=2
-            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
-
-          - name: "xdist"
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "py38-xdist-coverage"
-            pytest_addopts: "-m 'xdist_specific or acceptance_tests' -n 0"
-
-          - name: "linting"
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "linting_ci"
-          - name: "docs"
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "docs"
-          - name: "doctesting"
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "doctesting-coverage"
-          - name: "mypy"
-            python: "3.8"
-            os: ubuntu-latest
-            tox_env: "mypy_ci"
+            tox_env: "py37"
+            script_prefix: "env PYTEST_REORDER_TESTS=0 PYTEST_DEBUG=1"
+            pytest_addopts: "--verbosity=2 testing/test_assertrewrite.py::TestEarlyRewriteBailout::test_basic testing/test_collection.py::Test_getinitialnodes::test_pkgfile testing/test_collection.py::test_collect_init_tests testing/python/fixtures.py::TestFixtureManagerParseFactories::test_package_xunit_fixture testing/python/fixtures.py::TestScopeOrdering::test_multiple_packages"
 
     steps:
     - uses: actions/checkout@v2
