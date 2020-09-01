@@ -29,7 +29,7 @@ jobs:
             os: windows-latest
             tox_env: "py37"
             script_prefix: "env PYTEST_REORDER_TESTS=0 PYTEST_DEBUG=1"
-            pytest_addopts: "--verbosity=2 testing/test_assertrewrite.py::TestEarlyRewriteBailout::test_basic testing/test_collection.py::Test_getinitialnodes::test_pkgfile testing/test_collection.py::test_collect_init_tests testing/python/fixtures.py::TestFixtureManagerParseFactories::test_package_xunit_fixture testing/python/fixtures.py::TestScopeOrdering::test_multiple_packages"
+            pytest_addopts: "--debug --verbosity=2 testing/test_assertrewrite.py::TestEarlyRewriteBailout::test_basic testing/test_collection.py::Test_getinitialnodes::test_pkgfile testing/test_collection.py::test_collect_init_tests testing/python/fixtures.py::TestFixtureManagerParseFactories::test_package_xunit_fixture testing/python/fixtures.py::TestScopeOrdering::test_multiple_packages"
 
     steps:
     - uses: actions/checkout@v2
