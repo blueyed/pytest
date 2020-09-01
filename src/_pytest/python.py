@@ -374,24 +374,30 @@ class PyCollector(PyobjMixin, nodes.Collector):
         # NB. we avoid random getattrs and peek in the __dict__ instead
         # (XXX originally introduced from a PyPy need, still true?)
         dicts = [getattr(self.obj, "__dict__", {})]
-        for basecls in inspect.getmro(self.obj.__class__):
+        for basecls in self.obj.__class__.__mro__:
             dicts.append(basecls.__dict__)
-        seen = {}
+        seen = set()
         values = []
+        ihook = self.ihook
         for dic in dicts:
+            # Note: seems like the dict can change during iteration -
+            # be careful not to remove the list() without consideration.
             for name, obj in list(dic.items()):
                 if name[:2] == "__" or name[:3] == "@py":
                     # Skip dunders, and "@py_*"/"@pytest_*" from assertrewrite.
                     continue
                 if name in seen:
                     continue
-                seen[name] = True
-                res = self._makeitem(name, obj)
+                seen.add(name)
+                res = ihook.pytest_pycollect_makeitem(
+                    collector=self, name=name, obj=obj
+                )
                 if res is None:
                     continue
-                if not isinstance(res, list):
-                    res = [res]
-                values.extend(res)
+                elif isinstance(res, list):
+                    values.extend(res)
+                else:
+                    values.append(res)
 
         def sort_key(item):
             fspath, lineno, _ = item.reportinfo()
@@ -399,10 +405,6 @@ class PyCollector(PyobjMixin, nodes.Collector):
 
         values.sort(key=sort_key)
         return values
-
-    def _makeitem(self, name, obj):
-        # assert self.ihook.fspath == self.fspath, self
-        return self.ihook.pytest_pycollect_makeitem(collector=self, name=name, obj=obj)
 
     def _genfunctions(self, name, funcobj):
         module = self.getparent(Module).obj

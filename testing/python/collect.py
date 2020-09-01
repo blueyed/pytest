@@ -4,8 +4,12 @@ import textwrap
 
 import _pytest._code
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import ExitCode
 from _pytest.nodes import Collector
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 class TestModule:
@@ -845,14 +849,20 @@ class TestConftestCustomization:
         result = testdir.runpytest("--collect-only")
         result.stdout.fnmatch_lines(["*MyFunction*some*"])
 
-    def test_makeitem_non_underscore(self, testdir, monkeypatch):
-        modcol = testdir.getmodulecol("def _hello(): pass")
-        values = []
-        monkeypatch.setattr(
-            pytest.Module, "_makeitem", lambda self, name, obj: values.append(name)
+    def test_makeitem_non_dunder(self, testdir: "Testdir") -> None:
+        modcol = testdir.getmodulecol(
+            """
+            def _hello(): pass
+            def __world(): pass
+            """
         )
-        values = modcol.collect()
-        assert "_hello" not in values
+        values = []
+        testdir.monkeypatch.setattr(
+            modcol.ihook, "pytest_pycollect_makeitem",
+            lambda collector, name, obj: values.append(name)
+        )
+        modcol.collect()
+        assert values == ["_hello"]
 
     def test_issue2369_collect_module_fileext(self, testdir):
         """Ensure we can collect files with weird file extensions as Python
