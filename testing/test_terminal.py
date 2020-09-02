@@ -1607,9 +1607,11 @@ def test_terminal_summary(testdir):
 
 
 @pytest.mark.filterwarnings("default")
-def test_terminal_summary_warnings_are_displayed(testdir):
+def test_terminal_summary_warnings_are_displayed(testdir: "Testdir") -> None:
     """Test that warnings emitted during pytest_terminal_summary are displayed.
     (#1305).
+
+    This also covers warnings from tests with the same location.
     """
     testdir.makeconftest(
         """
@@ -1620,39 +1622,51 @@ def test_terminal_summary_warnings_are_displayed(testdir):
     )
     testdir.makepyfile(
         """
-        def test_failure():
-            import warnings
-            warnings.warn("warning_from_" + "test")
+        import warnings
+
+        def warn():
+            warnings.warn("warning_from_" + "test", DeprecationWarning)
+
+        def test_two_warnings_with_same_location():
+            warn()
+            warn()
             assert 0
     """
     )
     result = testdir.runpytest("-ra")
     result.stdout.fnmatch_lines(
         [
-            "*= warnings summary [[]runtest[]] =*",
-            "*warning_from_test*",
+            "test_terminal_summary_warnings_are_displayed.py:9: assert 0",
+            "=*= warnings summary [[]runtest[]] =*=",
+            "test_*.py:4::test_two_warnings_with_same_location",
+            '    warnings.warn("warning_from_" + "test", DeprecationWarning)',
+            "  DeprecationWarning: warning_from_test",
+            "",
             "-- Docs: *",
-            "*= short test summary info =*",
-            "*= warnings summary (final) [[]config[]] =*",
+            "=*= short test summary info =*=",
+            "FAILED test_*.py:9::test_two_warnings_with_same_location - assert 0",
+            "=*= warnings summary (final) [[]config[]] =*=",
             "conftest.py:3",
             "    warnings.warn(UserWarning('internal warning'))",
             "  UserWarning: internal warning",
+            "",
             "-- Docs: *",
-            "*== 1 failed, 2 warnings in *",
-        ]
+            "=*= 1 failed, 3 warnings in *s =*=",
+        ],
+        consecutive=True,
     )
-    result.stdout.no_fnmatch_line("*None*")
-    stdout = result.stdout.str()
-    assert stdout.count("warning_from_test") == 1
-    assert stdout.count("=== warnings summary ") == 2
-    assert stdout.count(" 1 failed, 2 warnings ") == 1
     assert result.ret == 1
 
     result = testdir.runpytest("--disable-warnings")
-    stdout = result.stdout.str()
-    assert stdout.count("warning_from_test") == 0
-    assert stdout.count("=== warnings summary ") == 0
-    assert stdout.count(" 1 failed, 2 warnings ") == 1
+    result.stdout.fnmatch_lines(
+        [
+            "test_terminal_summary_warnings_are_displayed.py:9: assert 0",
+            "=*= short test summary info =*=",
+            "FAILED test_*.py:9::test_two_warnings_with_same_location - assert 0",
+            "=*= 1 failed, 3 warnings in *s =*=",
+        ],
+        consecutive=True,
+    )
     assert result.ret == 1
 
 
