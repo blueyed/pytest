@@ -4,6 +4,7 @@ import sys
 from typing import List
 
 import pytest
+from _pytest.mark.legacy import matchmark
 from _pytest.pytester import RunResult
 
 
@@ -39,6 +40,11 @@ def pytest_runtest_setup(item):
     # "tests/test_foo.py::test_bar" with
     # "tests/test_foo.py" in invocation args.
     if any(item.nodeid == arg for arg in item.config.invocation_params.args):
+        return
+
+    # Run the test if selected by mark explicitly.
+    markexpr = item.config.option.markexpr
+    if markexpr and matchmark(item, markexpr):
         return
 
     pytest.skip("Not running {} test (use {})".format(mark, option))
