@@ -2411,11 +2411,18 @@ def test__get_pos() -> None:
     assert rep.longrepr
     rep.longrepr.reprcrash.path = r"windows\path.py"
     assert check(config, rep) == r"path::testname (windows\path.py:2)"
+    # lineno=None
+    rep.longrepr.reprcrash.lineno = None
+    assert check(config, rep) == r"path::testname (windows\path.py)"
 
     # Windows path with same path as in nodeid.
+    rep.longrepr.reprcrash.lineno = 2
     rep.nodeid = "windows/path.py::testname"
     rep.longrepr.reprcrash.path = r"windows\path.py"
     assert check(config, rep) == "windows/path.py:2::testname"
+    # lineno=None
+    rep.longrepr.reprcrash.lineno = None
+    assert check(config, rep) == "windows/path.py::testname"
 
 
 def test_crash_during_collection(testdir, monkeypatch) -> None:
