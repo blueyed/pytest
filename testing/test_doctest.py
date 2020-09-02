@@ -3,12 +3,16 @@ import textwrap
 
 import pytest
 from _pytest.compat import MODULE_NOT_FOUND_ERROR
+from _pytest.compat import TYPE_CHECKING
 from _pytest.doctest import _get_checker
 from _pytest.doctest import _is_mocked
 from _pytest.doctest import _patch_unwrap_mock_aware
 from _pytest.doctest import DoctestItem
 from _pytest.doctest import DoctestModule
 from _pytest.doctest import DoctestTextfile
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 class TestDoctests:
@@ -355,7 +359,7 @@ class TestDoctests:
             ]
         )
 
-    def test_doctest_no_linedata_on_overriden_property(self, testdir):
+    def test_doctest_no_linedata_on_overriden_property(self, testdir: "Testdir") -> None:
         testdir.makepyfile(
             """
             class Sample(object):
@@ -381,7 +385,7 @@ class TestDoctests:
                 "Got:",
                 "    'something'",
                 "",
-                "*/test_doctest_no_linedata_on_overriden_property.py:None: DocTestFailure",
+                "*/test_doctest_no_linedata_on_overriden_property.py: DocTestFailure",
                 "*= 1 failed in *",
             ]
         )

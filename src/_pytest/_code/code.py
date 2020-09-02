@@ -1126,7 +1126,7 @@ class ReprEntry(TerminalRepr):
 @attr.s
 class ReprFileLocation(TerminalRepr):
     path = attr.ib(type=str, converter=str)
-    lineno = attr.ib(type=int)
+    lineno = attr.ib(type="Optional[int]")
     message = attr.ib(type=str)
 
     def _get_short_msg(self) -> str:
@@ -1143,7 +1143,10 @@ class ReprFileLocation(TerminalRepr):
         # using an output format that most editors understand
         bold = style != "short"
         tw.write("%s" % self.path, bold=bold)
-        tw.line(":{}: {}".format(self.lineno, self._get_short_msg()))
+        if self.lineno:
+            tw.line(":{}: {}".format(self.lineno, self._get_short_msg()))
+        else:
+            tw.line(": {}".format(self._get_short_msg()))
 
 
 class ReprLocals(TerminalRepr):

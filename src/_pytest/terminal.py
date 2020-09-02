@@ -1374,12 +1374,13 @@ def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
     crash_path = crashloc.path
     if os.path.isabs(crash_path):
         crash_path = _shorten_path(crash_path, str(config.invocation_dir))
+    linenostr = "" if crashloc.lineno is None else ":{}".format(crashloc.lineno)
 
     if str(crash_path).replace("\\", nodes.SEP) == path:
         if not testname:
-            return "%s:%d" % (path, crashloc.lineno)
-        return "%s:%d::%s" % (path, crashloc.lineno, testname)
-    return "%s (%s:%d)" % (desc, crash_path, crashloc.lineno)
+            return "{}{}".format(path, linenostr)
+        return "{}{}::{}".format(path, linenostr, testname)
+    return "{} ({}{})".format(desc, crash_path, linenostr)
 
 
 def _get_line_with_reprcrash_message(
