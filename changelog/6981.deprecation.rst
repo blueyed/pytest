@@ -1,0 +1,1 @@
+The forwarding attributes from `pytest.collect.X` (to `pytest.X`) are deprecated (`pytest.collect` was not a module since 3.0.7-161-gae234786e (in 2017) already).

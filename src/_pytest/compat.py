@@ -7,6 +7,7 @@ import io
 import os
 import re
 import sys
+import warnings
 from contextlib import contextmanager
 from inspect import Parameter
 from inspect import signature
@@ -34,6 +35,7 @@ else:
 
 
 if TYPE_CHECKING:
+    from typing import List
     from types import ModuleType  # noqa: F401 (used in type string)
     from typing import Type  # noqa: F401 (used in type string)
 
@@ -340,25 +342,34 @@ def safe_isclass(obj: object) -> bool:
 def _setup_collect_fakemodule() -> "ModuleType":
     """Setup pytest.collect fake module for backward compatibility."""
     from types import ModuleType
+
     import _pytest.nodes
+    from _pytest.deprecated import PYTEST_COLLECT_MODULE
 
-    collect_fakemodule_attributes = (
-        ("Collector", _pytest.nodes.Collector),
-        ("Module", _pytest.python.Module),
-        ("Function", _pytest.python.Function),
-        ("Instance", _pytest.python.Instance),
-        ("Session", _pytest.main.Session),
-        ("Item", _pytest.nodes.Item),
-        ("Class", _pytest.python.Class),
-        ("File", _pytest.nodes.File),
-        ("_fillfuncargs", _pytest.fixtures.fillfixtures),
-    )
+    collect_fakemodule_attributes = {
+        "Collector": _pytest.nodes.Collector,
+        "Module": _pytest.python.Module,
+        "Function": _pytest.python.Function,
+        "Instance": _pytest.python.Instance,
+        "Session": _pytest.main.Session,
+        "Item": _pytest.nodes.Item,
+        "Class": _pytest.python.Class,
+        "File": _pytest.nodes.File,
+        "_fillfuncargs": _pytest.fixtures.fillfixtures,
+    }
 
-    mod = ModuleType("pytest.collect")
-    mod.__all__ = []  # type: ignore  # used for setns (obsolete?)
-    for attr_name, value in collect_fakemodule_attributes:
-        setattr(mod, attr_name, value)
-    return mod
+    class FakeCollectModule(ModuleType):
+        def __init__(self) -> None:
+            super().__init__("pytest.collect")
+            self.__all__ = []  # type: List[str]  # backward compatibility.
+
+        def __getattr__(self, name: str) -> Any:
+            if name in collect_fakemodule_attributes:
+                warnings.warn(PYTEST_COLLECT_MODULE.format(name=name), stacklevel=2)
+                return collect_fakemodule_attributes[name]
+            raise AttributeError(name)
+
+    return FakeCollectModule()
 
 
 class CaptureIO(io.TextIOWrapper):
