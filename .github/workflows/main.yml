@@ -57,7 +57,7 @@ jobs:
             # LsofFdLeakChecker itself.
             # (https://github.com/blueyed/pytest/issues/195)
             tox_env: "py38-lsof-pexpect-coverage"
-            pytest_addopts: "-m 'uses_pexpect or integration' --run-integration-tests"
+            pytest_addopts: "-m 'uses_pexpect or integration'"
             script_prefix: "env -u COLUMNS"
 
           # Coverage for:

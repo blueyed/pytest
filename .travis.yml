@@ -23,7 +23,7 @@ jobs:
       dist: trusty
       env:
         - TOXENV=py35-coverage
-        - PYTEST_ADDOPTS="-ra --durations=50 -m 'py35_specific or acceptance_tests'"
+        - PYTEST_ADDOPTS="-ra --durations=50 -m 'py35_specific or acceptance_tests or integration' --run-integration-tests"
       before_install:
         - python -m pip install -U pip==19.3.1
     # Coverage for Python 3.9
