@@ -786,7 +786,7 @@ raise ValueError()
 
         def raiseos():
             nonlocal raised
-            if sys._getframe().f_back.f_code.co_name == "checked_call":
+            if sys._getframe(1).f_code.co_name == "checked_call":
                 # Only raise with expected calls, but not via e.g. inspect for
                 # py38-windows.
                 raised += 1

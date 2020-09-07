@@ -273,7 +273,7 @@ class pytestPDB(PdbBase):
 
     def set_trace(self, *args, **kwargs) -> None:
         """Invoke debugging via ``Pdb.set_trace``, dropping any IO capturing."""
-        frame = sys._getframe().f_back
+        frame = sys._getframe(1)
         _pdb = self._init_pdb("set_trace", *args, **kwargs)
         _pdb.set_trace(frame)
 
@@ -286,7 +286,7 @@ def set_trace(*, header=None):
     pdb_ = pdb.Pdb()
     if header is not None:
         pdb_.message(header)
-    pdb_.set_trace(sys._getframe().f_back)
+    pdb_.set_trace(sys._getframe(1))
 
 
 class PdbInvoke(PdbBase):
