@@ -776,19 +776,29 @@ class TestPDB:
             assert "> PDB continue >" in rest
         assert "= 1 passed in" in rest
 
-    def test_pytest_set_trace_used_outside_of_test(self, testdir):
+    def test_pytest_set_trace_used_outside_of_test(self, testdir: "Testdir") -> None:
         p1 = testdir.makepyfile(
             """
             import pytest
             pytest.set_trace()
             x = 5
-        """
+            pytest.set_trace(header="custom_header")
+            x = 6
+            """
         )
-        child = testdir.spawn("{} {}".format(sys.executable, p1))
-        child.expect("x = 5")
-        child.expect("Pdb")
-        child.sendeof()
-        self.flush(child)
+        result = testdir.run(sys.executable, p1, stdin="c\nc\n")
+        result.stdout.fnmatch_lines(
+            [
+                "> */test_pytest_set_trace_used_outside_of_test.py(3)<module>()",
+                "-> x = 5",
+                "(Pdb) custom_header",
+                "> */test_pytest_set_trace_used_outside_of_test.py(5)<module>()",
+                "-> x = 6",
+                "(Pdb) ",
+            ],
+            complete=True,
+        )
+        assert result.ret == 0
 
     def test_pdb_used_in_generate_tests(self, testdir):
         p1 = testdir.makepyfile(
