@@ -1,5 +1,3 @@
-# Main jobs.
-# Keep the steps in sync with .github/workflows/pull-requests.yml.
 name: main
 
 on:
