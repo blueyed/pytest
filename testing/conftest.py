@@ -9,6 +9,8 @@ from _pytest.mark.legacy import matchmark
 from _pytest.pytester import RunResult
 
 if TYPE_CHECKING:
+    from typing import Generator
+
     from _pytest.config import Config
 
 
@@ -18,7 +20,9 @@ def pytest_addoption(parser):
     )
 
 
-if sys.gettrace():
+orig_trace = sys.gettrace()
+
+if orig_trace:
 
     @pytest.fixture(autouse=True)
     def restore_tracing():
@@ -26,10 +30,25 @@ if sys.gettrace():
 
         https://bugs.python.org/issue37011
         """
-        orig_trace = sys.gettrace()
+        assert orig_trace == sys.gettrace(), (orig_trace, sys.gettrace())
         yield
         if sys.gettrace() != orig_trace:
             sys.settrace(orig_trace)
+
+    orig_settrace = sys.settrace
+
+    def wrapped_settrace(tracer):
+        if tracer is None:
+            orig_settrace(orig_trace)
+        else:
+            orig_settrace(tracer)
+
+    @pytest.fixture(autouse=True)
+    def wrap_sys_settrace_for_pdb_with_coverage(
+        monkeypatch,
+    ) -> "Generator[None, None, None]":
+        monkeypatch.setattr("sys.settrace", wrapped_settrace)
+        yield
 
 
 @pytest.hookimpl
