@@ -28,8 +28,9 @@ def use_markup(file: "TextIO") -> bool:
     if "NO_COLOR" in os.environ:
         return False
 
-    if _running_on_ci():
-        return True
+    # TODO
+    # if _running_on_ci():
+    #     return True
 
     return file.isatty() if hasattr(file, "isatty") else False
 
