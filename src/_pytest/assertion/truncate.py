@@ -5,7 +5,6 @@ Current default behaviour is to truncate assertion explanations at
 ~8 terminal lines, unless running in "-vv" mode or running on CI.
 """
 from ..compat import TYPE_CHECKING
-from _pytest.assertion.util import _running_on_ci
 
 if TYPE_CHECKING:
     from typing import List
@@ -28,7 +27,12 @@ def _should_truncate(config: "Config") -> bool:
     level = config.getini("assert_truncate_level")  # type: str
     verbose = config.option.verbose  # type: int
     if level == "auto":
-        return verbose < 2 and not _running_on_ci()
+        if verbose >= 2:
+            return False
+
+        from _pytest._io import _running_on_ci
+
+        return not _running_on_ci()
     return int(level) > verbose
 
 

@@ -34,7 +34,6 @@ import pytest
 from _pytest import nodes
 from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprFileLocation
-from _pytest.assertion.util import _running_on_ci
 from _pytest.compat import order_preserving_dict
 from _pytest.compat import shell_quote
 from _pytest.compat import TYPE_CHECKING
@@ -1214,10 +1213,15 @@ class TerminalReporter:
         if not self.reportchars:
             return
 
-        if not self.isatty or _running_on_ci():
+        if not self.isatty:
             termwidth = None
         else:
-            termwidth = self._tw.fullwidth
+            from _pytest._io import _running_on_ci
+
+            if _running_on_ci():
+                termwidth = None
+            else:
+                termwidth = self._tw.fullwidth
 
         def show_simple(stat, lines: List[str]) -> None:
             failed = self.stats.get(stat, [])

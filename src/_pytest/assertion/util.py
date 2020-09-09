@@ -1,7 +1,6 @@
 """Utilities for assertion debugging"""
 import collections.abc
 import itertools
-import os
 import pprint
 import re
 from typing import AbstractSet
@@ -534,7 +533,3 @@ def _notin_text(term: str, text: str, verbose: int = 0) -> List[str]:
         "? " + indent + marker,
     ]
     return newdiff
-
-
-def _running_on_ci():
-    return os.environ.get("CI", "").lower() == "true" or "BUILD_NUMBER" in os.environ
