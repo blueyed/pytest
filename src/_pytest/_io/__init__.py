@@ -17,12 +17,13 @@ def use_markup(file: "TextIO") -> bool:
     if val in ("0", "1"):
         return val == "1"
 
-    # PYTEST_FORCE_COLOR: handled as boolean.
-    val = os.getenv("PYTEST_FORCE_COLOR")
-    if val is not None:
-        from _pytest.config import _strtobool
-
-        return _strtobool(val)
+    # TODO
+    # # PYTEST_FORCE_COLOR: handled as boolean.
+    # val = os.getenv("PYTEST_FORCE_COLOR")
+    # if val is not None:
+    #     from _pytest.config import _strtobool
+    #
+    #     return _strtobool(val)
 
     # NO_COLOR: disable markup with any value (https://no-color.org/).
     if "NO_COLOR" in os.environ:
