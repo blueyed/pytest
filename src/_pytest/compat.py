@@ -24,10 +24,6 @@ from typing import Union
 import attr
 import py.path
 
-from _pytest._io.saferepr import saferepr
-from _pytest.outcomes import fail
-from _pytest.outcomes import TEST_OUTCOME
-
 if sys.version_info < (3, 5, 2):
     TYPE_CHECKING = False  # type: bool
 else:
@@ -159,6 +155,8 @@ def getfuncargnames(
     try:
         parameters = signature(function).parameters
     except (ValueError, TypeError) as e:
+        from _pytest.outcomes import fail
+
         fail(
             "Could not determine arguments of {!r}: {}".format(function, e),
             pytrace=False,
@@ -285,6 +283,8 @@ def get_real_func(obj):
             break
         obj = new_obj
     else:
+        from _pytest._io.saferepr import saferepr
+
         raise ValueError(
             ("could not find real function of {start}\nstopped at {current}").format(
                 start=saferepr(start_obj), current=saferepr(obj)
@@ -327,8 +327,13 @@ def safe_getattr(object: Any, name: str, default: Any) -> Any:
     """
     try:
         return getattr(object, name, default)
-    except TEST_OUTCOME:
-        return default
+    except BaseException as exc:
+        from _pytest.outcomes import TEST_OUTCOME
+
+        if isinstance(exc, TEST_OUTCOME):
+            return default
+
+        raise
 
 
 def safe_isclass(obj: object) -> bool:
