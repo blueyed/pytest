@@ -10,6 +10,7 @@ import pytest
 from _pytest.compat import importlib_metadata
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import _iter_rewritable_modules
+from _pytest.config import _strtobool
 from _pytest.config import Config
 from _pytest.config import ExitCode
 from _pytest.config.exceptions import UsageError
@@ -1573,3 +1574,32 @@ def test_report_implicit_args(testdir, monkeypatch):
     result = testdir.runpytest()
     # Not displayed without any.
     assert "explicit_args" not in result.stdout.str()
+
+
+@pytest.mark.parametrize("upper", (True, False))
+@pytest.mark.parametrize(
+    "val, expected",
+    (
+        ("y", True),
+        ("yes", True),
+        ("t", True),
+        ("true", True),
+        ("on", True),
+        ("1", True),
+        ("n", False),
+        ("no", False),
+        ("f", False),
+        ("false", False),
+        ("off", False),
+        ("0", False),
+    ),
+)
+def test__strtobool_valid(upper: bool, val: str, expected: bool) -> None:
+    if upper:
+        val = val.upper()
+    assert _strtobool(val) is expected
+
+
+def test__strtobool_invalid() -> None:
+    with pytest.raises(ValueError, match="^invalid truth value 'invalid'$"):
+        _strtobool("invalid")
