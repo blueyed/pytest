@@ -1113,7 +1113,7 @@ class Config:
         elif type == "linelist":
             return [t for t in map(lambda x: x.strip(), value.split("\n")) if t]
         elif type == "bool":
-            return bool(_strtobool(value.strip()))
+            return _strtobool(value.strip())
         elif type == "int":
             return int(value.strip())
         else:
@@ -1226,19 +1226,19 @@ def create_terminal_writer(config: Config, *args, **kwargs) -> TerminalWriter:
     return tw
 
 
-def _strtobool(val):
-    """Convert a string representation of truth to true (1) or false (0).
+def _strtobool(val: str) -> bool:
+    """Convert a string representation of truth to `True` or `False`.
 
-    True values are 'y', 'yes', 't', 'true', 'on', and '1'; false values
-    are 'n', 'no', 'f', 'false', 'off', and '0'.  Raises ValueError if
-    'val' is anything else.
+    True values are 'y', 'yes', 't', 'true', 'on', and '1';
+    false values are 'n', 'no', 'f', 'false', 'off', and '0'.
 
-    .. note:: copied from distutils.util
+    (based on a copy from `distutils.util`)
+
+    :raises ValueError: if 'val' is not any of the true/false values.
     """
     val = val.lower()
     if val in ("y", "yes", "t", "true", "on", "1"):
-        return 1
+        return True
     elif val in ("n", "no", "f", "false", "off", "0"):
-        return 0
-    else:
-        raise ValueError("invalid truth value {!r}".format(val))
+        return False
+    raise ValueError("invalid truth value {!r}".format(val))
