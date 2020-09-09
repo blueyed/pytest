@@ -19,6 +19,8 @@ def test_validate_log_level() -> None:
         validate_log_level("FOO", "setting_name")
 
     assert validate_log_level("debug", "setting_name") == logging.DEBUG
+    assert validate_log_level("0", "setting_name") == logging.NOTSET
+    assert validate_log_level("123", "setting_name") == 123
 
 
 def test_invalid_log_level(testdir: Testdir) -> None:

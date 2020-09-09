@@ -466,6 +466,8 @@ def get_log_level_for_setting(config: Config, *setting_names: str) -> Optional[i
 
 
 def check_level(log_level: str) -> int:
+    if log_level.isnumeric():
+        return int(log_level)
     try:
         rv = logging._checkLevel(log_level)  # type: int  # type: ignore[attr-defined]
     except ValueError:
