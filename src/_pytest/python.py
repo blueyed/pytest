@@ -28,7 +28,6 @@ from _pytest import nodes
 from _pytest._code import filter_traceback
 from _pytest._code.code import ExceptionInfo
 from _pytest._code.source import getfslineno
-from _pytest._io import TerminalWriter
 from _pytest._io.saferepr import saferepr
 from _pytest.compat import ascii_escaped
 from _pytest.compat import get_default_arg_names
@@ -42,6 +41,7 @@ from _pytest.compat import REGEX_TYPE
 from _pytest.compat import safe_getattr
 from _pytest.compat import safe_isclass
 from _pytest.compat import STRING_TYPES
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import Config
 from _pytest.config import hookimpl
 from _pytest.deprecated import FUNCARGNAMES
@@ -56,6 +56,9 @@ from _pytest.outcomes import skip
 from _pytest.pathlib import parts
 from _pytest.warning_types import PytestCollectionWarning
 from _pytest.warning_types import PytestUnhandledCoroutineWarning
+
+if TYPE_CHECKING:
+    from _pytest._io import TerminalWriter
 
 
 def pyobj_property(name):
@@ -1382,7 +1385,7 @@ def _showfixtures_main(config, session):
         tw.line()
 
 
-def write_docstring(tw: TerminalWriter, doc: str, indent: str = "    ") -> None:
+def write_docstring(tw: "TerminalWriter", doc: str, indent: str = "    ") -> None:
     for line in doc.split("\n"):
         tw.write(indent + line + "\n")
 

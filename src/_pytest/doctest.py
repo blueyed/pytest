@@ -19,7 +19,6 @@ from _pytest import outcomes
 from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import ReprFileLocation
 from _pytest._code.code import TerminalRepr
-from _pytest._io import TerminalWriter
 from _pytest.compat import safe_getattr
 from _pytest.compat import TYPE_CHECKING
 from _pytest.fixtures import FixtureRequest
@@ -30,6 +29,8 @@ from _pytest.warning_types import PytestWarning
 if TYPE_CHECKING:
     import doctest
     from typing import Type
+
+    from _pytest._io import TerminalWriter
 
 DOCTEST_REPORT_CHOICE_NONE = "none"
 DOCTEST_REPORT_CHOICE_CDIFF = "cdiff"
@@ -136,10 +137,10 @@ def _is_doctest(config, path, parent):
 class ReprFailDoctest(TerminalRepr):
     def __init__(
         self, reprlocation_lines: Sequence[Tuple[ReprFileLocation, Sequence[str]]]
-    ):
+    ) -> None:
         self.reprlocation_lines = reprlocation_lines
 
-    def toterminal(self, tw: TerminalWriter) -> None:
+    def toterminal(self, tw: "TerminalWriter") -> None:
         for reprlocation, lines in self.reprlocation_lines:
             for line in lines:
                 tw.line(line)
