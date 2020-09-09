@@ -17,7 +17,6 @@ import _pytest
 from _pytest._code.code import FormattedExcinfo
 from _pytest._code.code import TerminalRepr
 from _pytest._code.source import getfslineno
-from _pytest._io import TerminalWriter
 from _pytest.compat import _format_args
 from _pytest.compat import _PytestWrapper
 from _pytest.compat import get_real_func
@@ -41,6 +40,7 @@ if TYPE_CHECKING:
     from typing_extensions import Literal
 
     from _pytest import nodes
+    from _pytest._io import TerminalWriter
     from _pytest.main import Session
     from _pytest.runner import _RuntestPhase
 
@@ -776,7 +776,7 @@ class FixtureLookupErrorRepr(TerminalRepr):
         self.firstlineno = firstlineno
         self.argname = argname
 
-    def toterminal(self, tw: TerminalWriter) -> None:
+    def toterminal(self, tw: "TerminalWriter") -> None:
         # tw.line("FixtureLookupError: %s" %(self.argname), red=True)
         for tbline in self.tblines:
             tw.line(tbline.rstrip())
