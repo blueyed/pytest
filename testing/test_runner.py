@@ -20,6 +20,8 @@ from _pytest.outcomes import OutcomeException
 if TYPE_CHECKING:
     from typing import Type
 
+    from _pytest.pytester import Testdir
+
 
 class TestSetupState:
     def test_setup(self, testdir) -> None:
@@ -90,23 +92,31 @@ class TestSetupState:
             ss._callfinalizers(item)
         assert err.value.args == ("oops2",)
 
-    def test_teardown_multiple_scopes_one_fails(self, testdir) -> None:
+    @pytest.mark.parametrize("fail_module", (False, True))
+    def test_teardown_multiple_scopes_failures(
+        self, fail_module: bool, testdir: "Testdir"
+    ) -> None:
         module_teardown = []
 
+        class CustomExc(Exception):
+            pass
+
         def fin_func():
-            raise Exception("oops1")
+            raise CustomExc("oops1")
 
         def fin_module():
             module_teardown.append("fin_module")
+            if fail_module:
+                raise CustomExc("oops2_mod")
 
         item = testdir.getitem("def test_func(): pass")
         ss = runner.SetupState()
         ss.addfinalizer(fin_module, item.listchain()[-2])
         ss.addfinalizer(fin_func, item)
         ss.prepare(item)
-        with pytest.raises(Exception, match="oops1"):
+        with pytest.raises(CustomExc, match="oops1"):
             ss.teardown_exact(item, None)
-        assert module_teardown
+        assert module_teardown == ["fin_module"]
 
 
 class BaseFunctionalTests:
@@ -894,7 +904,7 @@ def test_store_except_info_on_error() -> None:
                 raise IndexError("TEST")
 
     try:
-        runner.pytest_runtest_call(ItemMightRaise())
+        runner.pytest_runtest_call(ItemMightRaise())  # type: ignore[arg-type]
     except IndexError:
         pass
     # Check that exception info is stored on sys
@@ -905,7 +915,7 @@ def test_store_except_info_on_error() -> None:
 
     # The next run should clear the exception info stored by the previous run
     ItemMightRaise.raise_error = False
-    runner.pytest_runtest_call(ItemMightRaise())
+    runner.pytest_runtest_call(ItemMightRaise())  # type: ignore[arg-type]
     assert not hasattr(sys, "last_type")
     assert not hasattr(sys, "last_value")
     assert not hasattr(sys, "last_traceback")

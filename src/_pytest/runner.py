@@ -128,7 +128,7 @@ def pytest_runtest_setup(item):
     item.session._setupstate.prepare(item)
 
 
-def pytest_runtest_call(item):
+def pytest_runtest_call(item: "Item") -> None:
     _update_current_test_var(item, "call")
     try:
         del sys.last_type
@@ -138,16 +138,14 @@ def pytest_runtest_call(item):
         pass
     try:
         item.runtest()
-    except Exception:
+    except Exception as e:
         # Store trace info to allow postmortem debugging
-        type, value, tb = sys.exc_info()
-        assert tb is not None
-        tb = tb.tb_next  # Skip *this* frame
-        sys.last_type = type
-        sys.last_value = value
-        sys.last_traceback = tb
-        del type, value, tb  # Get rid of these in this frame
-        raise
+        sys.last_type = type(e)
+        sys.last_value = e
+        assert e.__traceback__ is not None
+        # Skip *this* frame
+        sys.last_traceback = e.__traceback__.tb_next
+        raise e
 
 
 def pytest_runtest_teardown(item, nextitem):
@@ -322,22 +320,20 @@ class SetupState:
         colitem = self.stack.pop()
         self._teardown_with_finalization(colitem)
 
-    def _callfinalizers(self, colitem):
+    def _callfinalizers(self, colitem) -> None:
         finalizers = self._finalizers.pop(colitem, None)
         exc = None
         while finalizers:
             fin = finalizers.pop()
             try:
                 fin()
-            except TEST_OUTCOME:
+            except TEST_OUTCOME as e:
                 # XXX Only first exception will be seen by user,
                 #     ideally all should be reported.
                 if exc is None:
-                    exc = sys.exc_info()
+                    exc = e
         if exc:
-            _, val, tb = exc
-            assert val is not None
-            raise val.with_traceback(tb)
+            raise exc
 
     def _teardown_with_finalization(self, colitem):
         self._callfinalizers(colitem)
@@ -356,24 +352,22 @@ class SetupState:
         needed_collectors = nextitem and nextitem.listchain() or []
         self._teardown_towards(needed_collectors)
 
-    def _teardown_towards(self, needed_collectors):
+    def _teardown_towards(self, needed_collectors) -> None:
         exc = None
         while self.stack:
             if self.stack == needed_collectors[: len(self.stack)]:
                 break
             try:
                 self._pop_and_teardown()
-            except TEST_OUTCOME:
+            except TEST_OUTCOME as e:
                 # XXX Only first exception will be seen by user,
                 #     ideally all should be reported.
                 if exc is None:
-                    exc = sys.exc_info()
+                    exc = e
         if exc:
-            _, val, tb = exc
-            assert val is not None
-            raise val.with_traceback(tb)
+            raise exc
 
-    def prepare(self, colitem):
+    def prepare(self, colitem: "Item") -> None:
         """ setup objects along the collector chain to the test-method
             and teardown previously setup objects."""
         needed_collectors = colitem.listchain()
@@ -382,15 +376,14 @@ class SetupState:
         # check if the last collection node has raised an error
         for col in self.stack:
             if hasattr(col, "_prepare_exc"):
-                _, val, tb = col._prepare_exc
-                raise val.with_traceback(tb)
+                raise col._prepare_exc  # type: ignore[attr-defined]
         for col in needed_collectors[len(self.stack) :]:
             self.stack.append(col)
             try:
                 col.setup()
-            except TEST_OUTCOME:
-                col._prepare_exc = sys.exc_info()
-                raise
+            except TEST_OUTCOME as e:
+                col._prepare_exc = e  # type: ignore[attr-defined]
+                raise e
 
 
 def collect_one_node(collector):
