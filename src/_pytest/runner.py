@@ -128,7 +128,7 @@ def pytest_runtest_setup(item):
     item.session._setupstate.prepare(item)
 
 
-def pytest_runtest_call(item):
+def pytest_runtest_call(item: "Item") -> None:
     _update_current_test_var(item, "call")
     try:
         del sys.last_type
@@ -320,7 +320,7 @@ class SetupState:
         colitem = self.stack.pop()
         self._teardown_with_finalization(colitem)
 
-    def _callfinalizers(self, colitem):
+    def _callfinalizers(self, colitem) -> None:
         finalizers = self._finalizers.pop(colitem, None)
         exc = None
         while finalizers:
@@ -352,7 +352,7 @@ class SetupState:
         needed_collectors = nextitem and nextitem.listchain() or []
         self._teardown_towards(needed_collectors)
 
-    def _teardown_towards(self, needed_collectors):
+    def _teardown_towards(self, needed_collectors) -> None:
         exc = None
         while self.stack:
             if self.stack == needed_collectors[: len(self.stack)]:
@@ -367,7 +367,7 @@ class SetupState:
         if exc:
             raise exc
 
-    def prepare(self, colitem):
+    def prepare(self, colitem: "Item") -> None:
         """ setup objects along the collector chain to the test-method
             and teardown previously setup objects."""
         needed_collectors = colitem.listchain()
@@ -376,14 +376,13 @@ class SetupState:
         # check if the last collection node has raised an error
         for col in self.stack:
             if hasattr(col, "_prepare_exc"):
-                exc = col._prepare_exc
-                raise exc
+                raise col._prepare_exc  # type: ignore[attr-defined]
         for col in needed_collectors[len(self.stack) :]:
             self.stack.append(col)
             try:
                 col.setup()
             except TEST_OUTCOME as e:
-                col._prepare_exc = e
+                col._prepare_exc = e  # type: ignore[attr-defined]
                 raise e
 
 
