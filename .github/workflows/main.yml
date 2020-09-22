@@ -125,12 +125,12 @@ jobs:
       with:
         path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
         key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*') }}"
-    # Work around tox not rebuilding on changed requirements file.
     - name: Cache .tox (docs)
       if: (matrix.tox_env == 'docs')
       uses: actions/cache@v1
       with:
         path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
+        # Work around tox not rebuilding on changed requirements file (https://github.com/tox-dev/tox/issues/149).
         key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*', 'doc/en/requirements.txt') }}"
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting_ci')
