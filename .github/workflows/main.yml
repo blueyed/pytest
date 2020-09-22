@@ -97,7 +97,6 @@ jobs:
             python: "3.8"
             os: ubuntu-latest
             tox_env: "docs"
-            tox_cache_key: ${{ matrix.tox_cache_key }}|${{ hashFiles('doc/en/requirements.txt') }}
           - name: "doctesting"
             python: "3.8"
             os: ubuntu-latest
@@ -125,13 +124,14 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
-        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
+        key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*') }}"
+    # Work around tox not rebuilding on changed requirements file.
     - name: Cache .tox (docs)
       if: (matrix.tox_env == 'docs')
       uses: actions/cache@v1
       with:
         path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
-        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}|${{ hashFiles('doc/en/requirements.txt') }}
+        key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*', 'doc/en/requirements.txt') }}"
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting_ci')
       uses: actions/cache@v1
