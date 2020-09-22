@@ -120,10 +120,18 @@ jobs:
     - name: set PY_CACHE_KEY
       run: echo "::set-env name=PY_CACHE_KEY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
     - name: Cache .tox
+      if: (matrix.tox_env != 'docs')
       uses: actions/cache@v1
       with:
         path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
-        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
+        key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*') }}"
+    - name: Cache .tox (docs)
+      if: (matrix.tox_env == 'docs')
+      uses: actions/cache@v1
+      with:
+        path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
+        # Work around tox not rebuilding on changed requirements file (https://github.com/tox-dev/tox/issues/149).
+        key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*', 'doc/en/requirements.txt') }}"
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting_ci')
       uses: actions/cache@v1

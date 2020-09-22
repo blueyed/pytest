@@ -139,6 +139,7 @@ pytest.mark.parametrize
 **Tutorial**: :doc:`parametrize`.
 
 .. automethod:: _pytest.python.Metafunc.parametrize
+   :noindex:
 
 
 .. _`pytest.mark.skip ref`:
