@@ -37,6 +37,8 @@ jobs:
           "mypy",
         ]
 
+        tox_cache_key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
+
         include:
           - name: "ubuntu-py38"
             python: "3.8"
@@ -97,6 +99,7 @@ jobs:
             python: "3.8"
             os: ubuntu-latest
             tox_env: "docs"
+            tox_cache_key: ${{ matrix.tox_cache_key }}|${{ hashFiles('doc/en/requirements.txt') }}
           - name: "doctesting"
             python: "3.8"
             os: ubuntu-latest
@@ -123,7 +126,7 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
-        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
+        key: ${{ matrix.tox_cache_key }}
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting_ci')
       uses: actions/cache@v1
