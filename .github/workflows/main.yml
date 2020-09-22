@@ -37,8 +37,6 @@ jobs:
           "mypy",
         ]
 
-        tox_cache_key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
-
         include:
           - name: "ubuntu-py38"
             python: "3.8"
@@ -123,10 +121,17 @@ jobs:
     - name: set PY_CACHE_KEY
       run: echo "::set-env name=PY_CACHE_KEY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
     - name: Cache .tox
+      if: (matrix.tox_env != 'docs')
       uses: actions/cache@v1
       with:
         path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
-        key: ${{ matrix.tox_cache_key }}
+        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}
+    - name: Cache .tox (docs)
+      if: (matrix.tox_env == 'docs')
+      uses: actions/cache@v1
+      with:
+        path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
+        key: tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini') }}|${{ hashFiles('setup.*') }}|${{ hashFiles('doc/en/requirements.txt') }}
     - name: Cache .pre-commit
       if: (matrix.tox_env == 'linting_ci')
       uses: actions/cache@v1
