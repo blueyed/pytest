@@ -363,6 +363,7 @@ def get_statement_startend2(lineno: int, node: ast.AST) -> Tuple[int, Optional[i
                     values.append(val[0].lineno - 1 - 1)
     values.sort()
     insert_index = bisect_right(values, lineno)
+    assert insert_index > 0, (insert_index, values, lineno)
     start = values[insert_index - 1]
     if insert_index >= len(values):
         end = None

@@ -244,14 +244,12 @@ class TracebackEntry:
                 astnode = astcache.get(key, None)
         start = self.getfirstlinesource()
         try:
-            astnode, ast_start, end = getstatementrange_ast(
+            astnode, _, end = getstatementrange_ast(
                 self.lineno, source, astnode=astnode
             )
         except SyntaxError:
             end = self.lineno + 1
         else:
-            if ast_start - 1 < start:
-                start = ast_start
             if key is not None:
                 astcache[key] = astnode
         return source[start:end]
