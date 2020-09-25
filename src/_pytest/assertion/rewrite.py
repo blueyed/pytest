@@ -618,44 +618,30 @@ class AssertionRewriter(ast.NodeVisitor):
     def run(self, mod: ast.Module) -> None:
         """Find all assert statements in *mod* and rewrite them."""
         if not mod.body:
-            # Nothing to do.
             return
-        # Insert some special imports at the top of the module but after any
-        # docstrings and __future__ imports.
-        aliases = [
-            ast.alias("builtins", "@py_builtins"),
-            ast.alias("_pytest.assertion.rewrite", "@pytest_ar"),
-        ]
-        doc = getattr(mod, "docstring", None)
-        expect_docstring = doc is None
-        if doc is not None and self.is_rewrite_disabled(doc):
-            return
+
+        # Find position for imports (after docstrings and __future__ imports).
+        iter_body = iter(mod.body)
         pos = 0
+        doc = ast.get_docstring(mod, clean=False)
+        if doc:
+            if self.is_rewrite_disabled(doc):
+                return
+            skipped_doc = next(iter_body)
+            assert isinstance(skipped_doc, ast.Expr)
+            pos += 1
+
         lineno = 1
-        for item in mod.body:
+        for item in iter_body:
             if (
-                expect_docstring
-                and isinstance(item, ast.Expr)
-                and isinstance(item.value, ast.Str)
-            ):
-                doc = item.value.s
-                if self.is_rewrite_disabled(doc):
-                    return
-                expect_docstring = False
-            elif (
                 not isinstance(item, ast.ImportFrom)
                 or item.level > 0
                 or item.module != "__future__"
             ):
-                lineno = item.lineno
                 break
-            pos += 1
-        else:
             lineno = item.lineno
-        imports = [
-            ast.Import([alias], lineno=lineno, col_offset=0) for alias in aliases
-        ]
-        mod.body[pos:pos] = imports
+            pos += 1
+
         # Collect asserts.
         nodes = [mod]  # type: List[ast.AST]
         while nodes:
@@ -680,8 +666,18 @@ class AssertionRewriter(ast.NodeVisitor):
                 ):
                     nodes.append(field)
 
+        imports = ast.Import(
+            names=[
+                ast.alias("builtins", "@py_builtins"),
+                ast.alias("_pytest.assertion.rewrite", "@pytest_ar"),
+            ],
+            lineno=lineno,
+            col_offset=0,
+        )
+        mod.body.insert(pos, imports)
+
     @staticmethod
-    def is_rewrite_disabled(docstring):
+    def is_rewrite_disabled(docstring: str) -> bool:
         return "PYTEST_DONT_REWRITE" in docstring
 
     def variable(self):
