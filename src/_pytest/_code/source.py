@@ -368,6 +368,7 @@ def get_statement_startend2(lineno: int, node: ast.AST) -> Tuple[int, Optional[i
         end = None
     else:
         end = values[insert_index]
+        assert start <= end, (lineno, node, start, end)
     return start, end
 
 
