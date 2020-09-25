@@ -15,6 +15,7 @@ import _pytest._code
 import pytest
 from _pytest._code import getfslineno
 from _pytest._code import Source
+from _pytest._code.source import get_statement_startend2
 
 
 def test_source_str_function() -> None:
@@ -798,3 +799,22 @@ def test_getstartingblock_multiline() -> None:
     # fmt: on
     values = [i for i in x.source.lines if i.strip()]
     assert len(values) == 4
+
+
+def test_deco_statements() -> None:
+    """Ref: https://github.com/pytest-dev/pytest/issues/4984"""
+    code = "\n".join(
+        [
+            "@deco",
+            "def test(): pass",
+            "",
+            "last_line = 1",
+        ]
+    )
+    astnode = ast.parse(code, "source", "exec")
+    assert get_statement_startend2(0, astnode) == (0, 1)
+
+    assert getstatement(0, code).lines == ["@deco"]
+    assert getstatement(1, code).lines == ["def test(): pass"]
+    assert getstatement(2, code).lines == ["def test(): pass"]
+    assert getstatement(3, code).lines == ["last_line = 1"]

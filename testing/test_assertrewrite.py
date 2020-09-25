@@ -36,9 +36,10 @@ def teardown_module(mod):
     del mod._old_reprcompare
 
 
-def rewrite(src):
+def rewrite(src: str) -> ast.Module:
     tree = ast.parse(src)
     rewrite_asserts(tree, src.encode())
+    compile(tree, "test-compile", "exec")
     return tree
 
 
@@ -67,47 +68,71 @@ def getmsg(f, extra_ns=None, must_pass=False):
 
 
 class TestAssertionRewrite:
-    def test_place_initial_imports(self):
-        s = """'Doc string'\nother = stuff"""
-        m = rewrite(s)
+    def test_place_initial_imports(self) -> None:
+        m = rewrite("'Doc string'\nother = stuff")
         assert isinstance(m.body[0], ast.Expr)
-        for imp in m.body[1:3]:
-            assert isinstance(imp, ast.Import)
-            assert imp.lineno == 2
-            assert imp.col_offset == 0
-        assert isinstance(m.body[3], ast.Assign)
-        s = """from __future__ import division\nother_stuff"""
-        m = rewrite(s)
+        imp = m.body[1]
+        assert isinstance(imp, ast.Import)
+        assert imp.lineno == 1
+        assert imp.col_offset == 0
+        assert isinstance(m.body[2], ast.Assign)
+        assert len(m.body) == 3
+
+        m = rewrite("'''Multiline\nDoc string'''\nother = stuff")
+        assert isinstance(m.body[0], ast.Expr)
+        imp = m.body[1]
+        assert isinstance(imp, ast.Import)
+        assert imp.lineno == 1
+        assert imp.col_offset == 0
+        assert isinstance(m.body[2], ast.Assign)
+        assert len(m.body) == 3
+
+        m = rewrite("from __future__ import division\nother_stuff")
         assert isinstance(m.body[0], ast.ImportFrom)
-        for imp in m.body[1:3]:
-            assert isinstance(imp, ast.Import)
-            assert imp.lineno == 2
-            assert imp.col_offset == 0
-        assert isinstance(m.body[3], ast.Expr)
-        s = """'doc string'\nfrom __future__ import division"""
-        m = rewrite(s)
+        imp = m.body[1]
+        assert isinstance(imp, ast.Import)
+        assert imp.lineno == 1
+        assert imp.col_offset == 0
+        assert isinstance(m.body[2], ast.Expr)
+        assert len(m.body) == 3
+
+        m = rewrite("'doc string'\nfrom __future__ import division")
         assert isinstance(m.body[0], ast.Expr)
         assert isinstance(m.body[1], ast.ImportFrom)
-        for imp in m.body[2:4]:
-            assert isinstance(imp, ast.Import)
-            assert imp.lineno == 2
-            assert imp.col_offset == 0
-        s = """'doc string'\nfrom __future__ import division\nother"""
-        m = rewrite(s)
+        imp = m.body[2]
+        assert isinstance(imp, ast.Import)
+        assert imp.lineno == 2
+        assert imp.col_offset == 0
+        assert len(m.body) == 3
+
+        m = rewrite("'doc string'\nfrom __future__ import division\nother")
         assert isinstance(m.body[0], ast.Expr)
         assert isinstance(m.body[1], ast.ImportFrom)
-        for imp in m.body[2:4]:
-            assert isinstance(imp, ast.Import)
-            assert imp.lineno == 3
-            assert imp.col_offset == 0
-        assert isinstance(m.body[4], ast.Expr)
-        s = """from . import relative\nother_stuff"""
-        m = rewrite(s)
-        for imp in m.body[:2]:
-            assert isinstance(imp, ast.Import)
-            assert imp.lineno == 1
-            assert imp.col_offset == 0
+        imp = m.body[2]
+        assert isinstance(imp, ast.Import)
+        assert imp.lineno == 2
+        assert imp.col_offset == 0
         assert isinstance(m.body[3], ast.Expr)
+        assert len(m.body) == 4
+
+        m = rewrite("from . import relative\nother_stuff")
+        imp = m.body[0]
+        assert isinstance(imp, ast.Import)
+        assert imp.lineno == 1
+        assert imp.col_offset == 0
+        assert isinstance(m.body[1], ast.ImportFrom)
+        assert isinstance(m.body[2], ast.Expr)
+        assert len(m.body) == 3
+
+    def test_place_initial_imports_decorated_func(self) -> None:
+        """Ref: https://github.com/pytest-dev/pytest/issues/4984"""
+        m = rewrite("@deco\ndef func(): pass")
+        imp = m.body[0]
+        assert isinstance(imp, ast.Import)
+        assert imp.lineno == 1
+        assert imp.col_offset == 0
+        assert isinstance(m.body[1], ast.FunctionDef)
+        assert len(m.body) == 2
 
     def test_dont_rewrite(self):
         s = """'PYTEST_DONT_REWRITE'\nassert 14"""

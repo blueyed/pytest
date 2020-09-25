@@ -7,6 +7,10 @@ from _pytest._code import Code
 from _pytest._code import ExceptionInfo
 from _pytest._code import Frame
 from _pytest._code.code import ReprFuncArgs
+from _pytest.compat import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 def test_ne() -> None:
@@ -231,15 +235,15 @@ class TestReprFuncArgs:
         )
 
 
-def test_nameerror_with_decorator(testdir):
-    # TODO: unittest with Code (additionally)?!
+def test_nameerror_with_decorator(testdir: "Testdir") -> None:
+    """Ref: https://github.com/pytest-dev/pytest/issues/4984"""
     source = """
         @nameerror_deco1
         def test():
             pass
         """
     p1 = testdir.makepyfile(source)
-    result = testdir.runpytest(str(p1), "-rf")
+    result = testdir.runpytest(p1)
     result.stdout.fnmatch_lines(
         [
             "*_ ERROR collecting test_nameerror_with_decorator.py _*",
