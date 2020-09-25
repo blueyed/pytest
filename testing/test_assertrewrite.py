@@ -39,6 +39,7 @@ def teardown_module(mod):
 def rewrite(src):
     tree = ast.parse(src)
     rewrite_asserts(tree, src.encode())
+    compile(tree, "test-compile", "exec")
     return tree
 
 
@@ -76,7 +77,6 @@ class TestAssertionRewrite:
         assert imp.col_offset == 0
         assert isinstance(m.body[2], ast.Assign)
         assert len(m.body) == 3
-        compile(m, "test", "exec")
 
         m = rewrite("'''Multiline\nDoc string'''\nother = stuff")
         assert isinstance(m.body[0], ast.Expr)
@@ -86,7 +86,6 @@ class TestAssertionRewrite:
         assert imp.col_offset == 0
         assert isinstance(m.body[2], ast.Assign)
         assert len(m.body) == 3
-        compile(m, "test", "exec")
 
         m = rewrite("from __future__ import division\nother_stuff")
         assert isinstance(m.body[0], ast.ImportFrom)
@@ -96,7 +95,6 @@ class TestAssertionRewrite:
         assert imp.col_offset == 0
         assert isinstance(m.body[2], ast.Expr)
         assert len(m.body) == 3
-        compile(m, "test", "exec")
 
         m = rewrite("'doc string'\nfrom __future__ import division")
         assert isinstance(m.body[0], ast.Expr)
@@ -106,7 +104,6 @@ class TestAssertionRewrite:
         assert imp.lineno == 2
         assert imp.col_offset == 0
         assert len(m.body) == 3
-        compile(m, "test", "exec")
 
         m = rewrite("'doc string'\nfrom __future__ import division\nother")
         assert isinstance(m.body[0], ast.Expr)
@@ -117,7 +114,6 @@ class TestAssertionRewrite:
         assert imp.col_offset == 0
         assert isinstance(m.body[3], ast.Expr)
         assert len(m.body) == 4
-        compile(m, "test", "exec")
 
         m = rewrite("from . import relative\nother_stuff")
         imp = m.body[0]
@@ -127,8 +123,8 @@ class TestAssertionRewrite:
         assert isinstance(m.body[1], ast.ImportFrom)
         assert isinstance(m.body[2], ast.Expr)
         assert len(m.body) == 3
-        compile(m, "test", "exec")
 
+    def test_place_initial_imports_decorated_func(self) -> None:
         m = rewrite("@deco\ndef func(): pass")
         imp = m.body[0]
         assert isinstance(imp, ast.Import)
@@ -136,7 +132,6 @@ class TestAssertionRewrite:
         assert imp.col_offset == 0
         assert isinstance(m.body[1], ast.FunctionDef)
         assert len(m.body) == 2
-        compile(m, "test", "exec")
 
     def test_dont_rewrite(self):
         s = """'PYTEST_DONT_REWRITE'\nassert 14"""
