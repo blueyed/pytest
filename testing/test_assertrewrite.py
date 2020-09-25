@@ -36,7 +36,7 @@ def teardown_module(mod):
     del mod._old_reprcompare
 
 
-def rewrite(src):
+def rewrite(src: str) -> ast.Module:
     tree = ast.parse(src)
     rewrite_asserts(tree, src.encode())
     compile(tree, "test-compile", "exec")
