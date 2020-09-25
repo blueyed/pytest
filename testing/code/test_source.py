@@ -802,6 +802,7 @@ def test_getstartingblock_multiline() -> None:
 
 
 def test_deco_statements() -> None:
+    """Ref: https://github.com/pytest-dev/pytest/issues/4984"""
     code = "\n".join(
         [
             "@deco",

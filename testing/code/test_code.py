@@ -236,6 +236,7 @@ class TestReprFuncArgs:
 
 
 def test_nameerror_with_decorator(testdir: "Testdir") -> None:
+    """Ref: https://github.com/pytest-dev/pytest/issues/4984"""
     source = """
         @nameerror_deco1
         def test():
