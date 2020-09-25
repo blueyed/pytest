@@ -125,6 +125,7 @@ class TestAssertionRewrite:
         assert len(m.body) == 3
 
     def test_place_initial_imports_decorated_func(self) -> None:
+        """Ref: https://github.com/pytest-dev/pytest/issues/4984"""
         m = rewrite("@deco\ndef func(): pass")
         imp = m.body[0]
         assert isinstance(imp, ast.Import)
