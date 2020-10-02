@@ -51,13 +51,19 @@ class TestWarningsRecorderChecker:
             warnings.warn("test", DeprecationWarning, 2)
 
     def test_typechecking(self) -> None:
-        msg = "exceptions must be derived from Warning, not <class '{}'>"
+        msg = "exceptions must be derived from Warning, not {}"
         with pytest.raises(TypeError, match=msg.format("int")):
             WarningsChecker(5)
         with pytest.raises(TypeError, match=msg.format("str")):
             WarningsChecker(("hi", RuntimeWarning))
         with pytest.raises(TypeError, match=msg.format("list")):
             WarningsChecker([DeprecationWarning, RuntimeWarning])
+
+    def test_nested_tuples(self) -> None:
+        wc1 = WarningsChecker((DeprecationWarning, RuntimeWarning))
+        wc2 = WarningsChecker(((DeprecationWarning,), (RuntimeWarning,)))
+        assert wc1.expected_warning == (DeprecationWarning, RuntimeWarning)
+        assert wc1.expected_warning == wc2.expected_warning
 
     def test_invalid_enter_exit(self) -> None:
         # wrap this test in WarningsRecorder to ensure warning state gets reset

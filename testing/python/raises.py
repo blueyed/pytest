@@ -129,14 +129,14 @@ class TestRaises:
     def test_noclass_iterable(self) -> None:
         with pytest.raises(
             TypeError,
-            match="^exceptions must be derived from BaseException, not <class 'str'>$",
+            match="^exceptions must be derived from BaseException, not str$",
         ):
             pytest.raises("wrong", lambda: None)  # type: ignore[call-overload]
 
     def test_noclass_noniterable(self) -> None:
         with pytest.raises(
             TypeError,
-            match="^exceptions must be derived from BaseException, not <class 'int'>$",
+            match="^exceptions must be derived from BaseException, not int$",
         ):
             pytest.raises(41, lambda: None)  # type: ignore[call-overload]
 
@@ -295,20 +295,15 @@ class TestRaises:
         assert "Unexpected keyword arguments" in str(excinfo.value)
 
     def test_expected_exception_is_not_a_baseexception(self) -> None:
-        with pytest.raises(TypeError) as excinfo:
-            with pytest.raises("hello"):  # type: ignore[call-overload]
-                pass  # pragma: no cover
-        assert "must be a BaseException type, not str" in str(excinfo.value)
+        msg = "^exceptions must be derived from BaseException, not {}$"
+        with pytest.raises(TypeError, match=msg.format("str")):
+            pytest.raises("hello")  # type: ignore[call-overload]
 
         class NotAnException:
             pass
 
-        with pytest.raises(TypeError) as excinfo:
-            with pytest.raises(NotAnException):  # type: ignore[type-var]
-                pass  # pragma: no cover
-        assert "must be a BaseException type, not NotAnException" in str(excinfo.value)
+        with pytest.raises(TypeError, match=msg.format("NotAnException")):
+            pytest.raises(NotAnException)  # type: ignore[type-var]
 
-        with pytest.raises(TypeError) as excinfo:
-            with pytest.raises(("hello", NotAnException)):  # type: ignore[arg-type]
-                pass  # pragma: no cover
-        assert "must be a BaseException type, not str" in str(excinfo.value)
+        with pytest.raises(TypeError, match=msg.format("str")):
+            pytest.raises(("hello", NotAnException))  # type: ignore[arg-type]

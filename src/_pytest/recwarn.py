@@ -13,6 +13,7 @@ from typing import Union
 
 from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
+from .types import validate_tup_type
 from _pytest.fixtures import yield_fixture
 from _pytest.outcomes import fail
 
@@ -214,20 +215,7 @@ class WarningsChecker(WarningsRecorder):
     ) -> None:
         super().__init__()
 
-        msg = "exceptions must be derived from Warning, not %s"
-        if expected_warning is None:
-            expected_warning_tup = None
-        elif isinstance(expected_warning, tuple):
-            for exc in expected_warning:
-                if not issubclass(exc, Warning):
-                    raise TypeError(msg % type(exc))
-            expected_warning_tup = expected_warning
-        elif issubclass(expected_warning, Warning):
-            expected_warning_tup = (expected_warning,)
-        else:
-            raise TypeError(msg % type(expected_warning))
-
-        self.expected_warning = expected_warning_tup
+        self.expected_warning = validate_tup_type(expected_warning, Warning)
         self.match_expr = match_expr
 
     def __exit__(

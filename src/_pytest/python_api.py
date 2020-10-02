@@ -17,6 +17,7 @@ from typing import TypeVar
 from typing import Union
 
 import _pytest._code
+from .types import validate_tup_type
 from _pytest.compat import overload
 from _pytest.compat import STRING_TYPES
 from _pytest.compat import TYPE_CHECKING
@@ -671,15 +672,7 @@ def raises(  # noqa: F811
     """
     __tracebackhide__ = True
 
-    if isinstance(expected_exception, type):
-        excepted_exceptions = (expected_exception,)  # type: Tuple[Type[_E], ...]
-    else:
-        excepted_exceptions = expected_exception
-    for exc in excepted_exceptions:
-        if not isinstance(exc, type) or not issubclass(exc, BaseException):
-            msg = "expected exception must be a BaseException type, not {}"
-            not_a = exc.__name__ if isinstance(exc, type) else type(exc).__name__
-            raise TypeError(msg.format(not_a))
+    validate_tup_type(expected_exception, BaseException)
 
     message = "DID NOT RAISE {}".format(expected_exception)
 
