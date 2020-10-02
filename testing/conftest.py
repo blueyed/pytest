@@ -4,8 +4,12 @@ import sys
 from typing import List
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.mark.legacy import matchmark
 from _pytest.pytester import RunResult
+
+if TYPE_CHECKING:
+    from _pytest.config import Config
 
 
 def pytest_addoption(parser):
@@ -170,7 +174,17 @@ def dummy_yaml_custom_test(testdir):
 
 
 @pytest.fixture(scope="session", autouse=True)
-def set_env(monkeypatch_session) -> None:
+def set_env(monkeypatch_session, pytestconfig: "Config") -> None:
+    try:
+        import coverage
+    except ImportError:
+        pass
+    else:
+        if coverage.Coverage.current():
+            coveragerc = os.path.join(str(pytestconfig.rootdir), ".coveragerc")
+            assert os.path.exists(coveragerc)
+            monkeypatch_session.setenv("COVERAGE_PROCESS_START", coveragerc)
+
     monkeypatch_session.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
     monkeypatch_session.delenv("PYTEST_ADDOPTS", raising=False)
 
