@@ -215,7 +215,10 @@ class WarningsChecker(WarningsRecorder):
     ) -> None:
         super().__init__()
 
-        self.expected_warning = validate_tup_type(expected_warning, Warning)
+        if expected_warning is None:
+            self.expected_warning = None
+        else:
+            self.expected_warning = validate_tup_type(expected_warning, Warning)
         self.match_expr = match_expr
 
     def __exit__(

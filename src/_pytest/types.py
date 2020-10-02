@@ -24,9 +24,7 @@ def collapse_tuples(obj) -> "Tuple":
 
 def validate_tup_type(
     type_or_types: "Union[_T, Tuple[_T, ...]]", base_type: "_T"
-) -> "Optional[Tuple[_T, ...]]":
-    if type_or_types is None:
-        return None
+) -> "Tuple[_T, ...]":
     types = collapse_tuples(type_or_types)
     for exc in types:
         if not isinstance(exc, type) or not issubclass(exc, base_type):
