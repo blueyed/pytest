@@ -174,6 +174,11 @@ def set_env(monkeypatch_session) -> None:
     monkeypatch_session.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
     monkeypatch_session.delenv("PYTEST_ADDOPTS", raising=False)
 
+    coveragerc = os.getenv("COVERAGE_RCFILE")
+    if coveragerc:
+        assert os.path.exists(coveragerc)
+        monkeypatch_session.setenv("COVERAGE_PROCESS_START", coveragerc)
+
 
 @pytest.fixture
 def symlink_or_skip():
