@@ -3,6 +3,7 @@ import warnings
 from typing import Optional
 
 import pytest
+from _pytest.recwarn import WarningsChecker
 from _pytest.recwarn import WarningsRecorder
 
 
@@ -50,14 +51,13 @@ class TestWarningsRecorderChecker:
             warnings.warn("test", DeprecationWarning, 2)
 
     def test_typechecking(self) -> None:
-        from _pytest.recwarn import WarningsChecker
-
-        with pytest.raises(TypeError):
-            WarningsChecker(5)  # type: ignore
-        with pytest.raises(TypeError):
-            WarningsChecker(("hi", RuntimeWarning))  # type: ignore
-        with pytest.raises(TypeError):
-            WarningsChecker([DeprecationWarning, RuntimeWarning])  # type: ignore
+        msg = "exceptions must be derived from Warning, not <class '{}'>"
+        with pytest.raises(TypeError, match=msg.format("int")):
+            WarningsChecker(5)
+        with pytest.raises(TypeError, match=msg.format("str")):
+            WarningsChecker(("hi", RuntimeWarning))
+        with pytest.raises(TypeError, match=msg.format("list")):
+            WarningsChecker([DeprecationWarning, RuntimeWarning])
 
     def test_invalid_enter_exit(self) -> None:
         # wrap this test in WarningsRecorder to ensure warning state gets reset
