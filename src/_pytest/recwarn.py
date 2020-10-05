@@ -11,9 +11,9 @@ from typing import Pattern
 from typing import Tuple
 from typing import Union
 
+from .types import validate_tup_type
 from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
-from .types import validate_tup_type
 from _pytest.fixtures import yield_fixture
 from _pytest.outcomes import fail
 
