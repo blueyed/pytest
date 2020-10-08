@@ -26,10 +26,6 @@ jobs:
         - PYTEST_ADDOPTS="-ra --durations=50 -m 'py35_specific or acceptance_tests or integration'"
       before_install:
         - python -m pip install -U pip==19.3.1
-    # Coverage for Python 3.9
-    - python: '3.9-dev'
-      env:
-        - TOXENV=py39-coverage
 
 before_script:
   - python -m tox --notest -v --durations
