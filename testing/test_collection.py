@@ -679,7 +679,7 @@ class Test_getinitialnodes:
         x = subdir.ensure("x.py")
         subdir.ensure("__init__.py")
         with subdir.as_cwd():
-            config = testdir.parseconfigure(x)
+            config = testdir.parseconfigure(x, "--debug")
         col = testdir.getnode(config, x)
         assert col.name == "x.py"
         assert isinstance(col, pytest.Module)
