@@ -77,7 +77,7 @@ jobs:
 
     - name: Test
       env:
-        PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
+        PYTEST_ADDOPTS: "-ra --color=yes --durations=50 ${{ matrix.pytest_addopts }}"
         COLUMNS: "120"
         # UTF-8 mode for Windows (https://docs.python.org/3/using/windows.html#utf-8-mode).
         PYTHONUTF8: "1"
