@@ -159,6 +159,8 @@ jobs:
       env:
         PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
         COLUMNS: "120"
+        TOX_TESTENV_PASSENV: "PYTHONUTF8"
+        PYTHONUTF8: "1"
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
     - name: Report coverage
