@@ -80,15 +80,9 @@ You can also edit documentation files directly in the GitHub web interface,
 without using a local copy.  This can be convenient for small fixes.
 
 .. note::
-    Build the documentation locally with the following command:
 
-    .. code:: bash
-
-        $ tox -e docs
-
-    The built documentation should be available in ``doc/en/_build/html``.
-
-    Where 'en' refers to the documentation language.
+    The documentation can be built locally using `tox -e docs`
+    (or `make -C doc/en html`), and will be generated in `doc/en/_build/html`.
 
 .. _submitplugin:
 
