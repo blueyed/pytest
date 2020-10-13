@@ -392,11 +392,12 @@ def handle_changelog_draft(app: "sphinx.application.Sphinx") -> None:
         app.tags.add("changelog_towncrier_draft")
 
         logger.info("Writing _changelog_towncrier_draft...")
+        project_dir = os.path.abspath(os.path.join(__file__, "..", "..", ".."))
         proc = subprocess.run(
             ["towncrier", "--draft"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            cwd="../..",
+            cwd=project_dir,
         )
         if proc.returncode != 0:
             logger.error("ERROR: {}".format(proc.stderr.decode("utf8")))
