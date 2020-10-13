@@ -8,10 +8,13 @@ alabaster==0.7.12         # via sphinx
 babel==2.8.0              # via sphinx
 certifi==2020.6.20        # via requests
 chardet==3.0.4            # via requests
+click-default-group==1.2.2  # via towncrier
+click==7.1.2              # via click-default-group, towncrier
 docutils==0.16            # via sphinx
 idna==2.10                # via requests
 imagesize==1.2.0          # via sphinx
-jinja2==2.11.2            # via sphinx
+incremental==17.5.0       # via towncrier
+jinja2==2.11.2            # via sphinx, towncrier
 markupsafe==1.1.1         # via jinja2
 packaging==20.4           # via sphinx
 pygments-pytest==2.1.0    # via -r doc/en/requirements.in
@@ -30,6 +33,8 @@ sphinxcontrib-jsmath==1.0.1  # via sphinx
 sphinxcontrib-qthelp==1.0.3  # via sphinx
 sphinxcontrib-serializinghtml==1.1.4  # via sphinx
 sphinxcontrib-trio==1.1.2  # via -r doc/en/requirements.in
+toml==0.10.1              # via towncrier
+git+https://github.com/blueyed/towncrier.git@fix-get_package  # via -r doc/en/requirements.in
 urllib3==1.25.10          # via requests
 
 # The following packages are considered to be unsafe in a requirements file:
