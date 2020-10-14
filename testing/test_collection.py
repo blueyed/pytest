@@ -1041,65 +1041,92 @@ def test_fixture_scope_sibling_conftests(testdir):
     )
 
 
-def test_collect_init_tests(testdir):
+def test_collect_init_tests(testdir: "Testdir") -> None:
     """Check that we collect files from __init__.py files when they patch the 'python_files' (#3773)"""
     p = testdir.copy_example("collect/collect_init_tests")
+    package_line = "<Package {}>".format(testdir.tmpdir.join("tests"))
     result = testdir.runpytest(p, "--collect-only")
     result.stdout.fnmatch_lines(
         [
             "collected 2 items",
-            "<Package *",
+            "",
+            package_line,
             "  <Module __init__.py>",
             "    <Function test_init>",
             "  <Module test_foo.py>",
             "    <Function test_foo>",
-        ]
+            "",
+        ],
+        consecutive=True,
     )
     result = testdir.runpytest("./tests", "--collect-only")
     result.stdout.fnmatch_lines(
         [
             "collected 2 items",
-            "<Package *",
+            "",
+            package_line,
             "  <Module __init__.py>",
             "    <Function test_init>",
             "  <Module test_foo.py>",
             "    <Function test_foo>",
-        ]
+            "",
+        ],
+        consecutive=True,
     )
     # Ignores duplicates with "." and pkginit (#4310).
     result = testdir.runpytest("./tests", ".", "--collect-only")
     result.stdout.fnmatch_lines(
         [
             "collected 2 items",
-            "<Package */tests>",
+            "",
+            package_line,
             "  <Module __init__.py>",
             "    <Function test_init>",
             "  <Module test_foo.py>",
             "    <Function test_foo>",
-        ]
+            "",
+        ],
+        consecutive=True,
     )
     # Same as before, but different order.
     result = testdir.runpytest(".", "tests", "--collect-only")
     result.stdout.fnmatch_lines(
         [
             "collected 2 items",
-            "<Package */tests>",
+            "",
+            package_line,
             "  <Module __init__.py>",
             "    <Function test_init>",
             "  <Module test_foo.py>",
             "    <Function test_foo>",
-        ]
+            "",
+        ],
+        consecutive=True,
     )
     result = testdir.runpytest("./tests/test_foo.py", "--collect-only")
     result.stdout.fnmatch_lines(
-        ["<Package */tests>", "  <Module test_foo.py>", "    <Function test_foo>"]
+        [
+            "collected 1 item",
+            "",
+            package_line,
+            "  <Module test_foo.py>",
+            "    <Function test_foo>",
+            "",
+        ],
+        consecutive=True,
     )
-    result.stdout.no_fnmatch_line("*test_init*")
     result = testdir.runpytest("./tests/__init__.py", "--collect-only")
     result.stdout.fnmatch_lines(
-        ["<Package */tests>", "  <Module __init__.py>", "    <Function test_init>"]
+        [
+            "collected 1 item",
+            "",
+            package_line,
+            "  <Module __init__.py>",
+            "    <Function test_init>",
+            "",
+        ],
+        consecutive=True,
     )
-    result.stdout.no_fnmatch_line("*test_foo*")
 
 
 def test_collect_invalid_signature_message(testdir):
