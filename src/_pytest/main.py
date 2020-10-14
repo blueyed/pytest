@@ -458,7 +458,7 @@ class Session(nodes.FSCollector):
 
     pytest_collectreport = pytest_runtest_logreport
 
-    def isinitpath(self, path):
+    def isinitpath(self, path: "py.path.local") -> bool:
         return path in self._initialpaths
 
     def gethookproxy(self, fspath: py.path.local):
