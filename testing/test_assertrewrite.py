@@ -21,9 +21,14 @@ from _pytest.assertion.rewrite import get_cache_dir
 from _pytest.assertion.rewrite import PYC_TAIL
 from _pytest.assertion.rewrite import PYTEST_TAG
 from _pytest.assertion.rewrite import rewrite_asserts
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import ExitCode
 from _pytest.pathlib import Path
 from _pytest.pytester import Testdir
+
+if TYPE_CHECKING:
+    from typing import List
+    from typing import Set
 
 
 def setup_module(mod):
@@ -1250,14 +1255,14 @@ def test_rewrite_infinite_recursion(testdir, pytestconfig, monkeypatch):
 
 class TestEarlyRewriteBailout:
     @pytest.fixture
-    def hook(self, pytestconfig, monkeypatch, testdir):
+    def hook(self, pytestconfig, monkeypatch, testdir) -> AssertionRewritingHook:
         """Returns a patched AssertionRewritingHook instance so we can configure its initial paths and track
         if PathFinder.find_spec has been called.
         """
         import importlib.machinery
 
-        self.find_spec_calls = []
-        self.initial_paths = set()
+        self.find_spec_calls = []  # type: List[str]
+        self.initial_paths = set()  # type: Set[py.path.local]
 
         class StubSession:
             _initialpaths = self.initial_paths
@@ -1277,7 +1282,7 @@ class TestEarlyRewriteBailout:
         testdir.syspathinsert()
         return hook
 
-    def test_basic(self, testdir, hook):
+    def test_basic(self, testdir: "Testdir", hook: AssertionRewritingHook) -> None:
         """
         Ensure we avoid calling PathFinder.find_spec when we know for sure a certain
         module will not be rewritten to optimize assertion rewriting (#3918).
