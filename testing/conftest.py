@@ -54,21 +54,6 @@ def pytest_runtest_setup(item):
     pytest.skip("Not running {} test (use {})".format(mark, option))
 
 
-@pytest.hookimpl(hookwrapper=True, tryfirst=True)
-def pytest_collection_modifyitems(items):
-    """Prefer faster tests.
-
-    Use a hookwrapper to do this in the beginning, so e.g. --ff still works
-    correctly.
-    """
-    fast_items = []
-    slow_items = []
-    slowest_items = []
-    neutral_items = []
-
-    yield
-
-
 @pytest.fixture
 def tw_mock():
     """Returns a mock terminal writer"""
