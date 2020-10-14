@@ -606,7 +606,8 @@ class Package(Module):
     def gethookproxy(self, fspath: py.path.local):
         return super()._gethookproxy(fspath)
 
-    def isinitpath(self, path):
+    def isinitpath(self, path: "py.path.local") -> bool:
+        assert isinstance(path, py.path.local), repr(path)
         return path in self.session._initialpaths
 
     def collect(self):
