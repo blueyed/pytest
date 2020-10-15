@@ -1,6 +1,5 @@
 import os
 import sys
-import textwrap
 import types
 
 import attr
@@ -296,29 +295,6 @@ class TestGeneralUsage:
         result = testdir.runpytest()
         assert result.ret != 0
         assert "should be seen" in result.stdout.str()
-
-    @pytest.mark.skipif(
-        not hasattr(py.path.local, "mksymlinkto"),
-        reason="symlink not available on this platform",
-    )
-    def test_chdir(self, testdir):
-        testdir.tmpdir.join("py").mksymlinkto(py._pydir)
-        p = testdir.tmpdir.join("main.py")
-        p.write(
-            textwrap.dedent(
-                """\
-                import sys, os
-                sys.path.insert(0, '')
-                import py
-                print(py.__file__)
-                print(py.__path__)
-                os.chdir(os.path.dirname(os.getcwd()))
-                print(py.log)
-                """
-            )
-        )
-        result = testdir.runpython(p)
-        assert not result.ret
 
     def test_issue109_sibling_conftests_not_loaded(self, testdir):
         sub1 = testdir.mkdir("sub1")
