@@ -520,11 +520,16 @@ def _notin_text(term: str, text: str, verbose: int = 0) -> List[str]:
         wcwidth(ch) <= 0
         for ch in [ch for lines in [term, correct_text] for ch in lines]
     ):
+        from wcwidth import wcswidth
+
         newdiff = [
             "NOTE: Strings contain non-printable characters. Escaping them using repr()."
         ] + newdiff
+        repr_for_indent = repr(text[:index])
+        indent_offset = wcswidth(repr_for_indent)
+        assert indent_offset >= 0, (indent_offset, repr_for_indent)
         text = repr(text)
-        indent = " " * (index + 1)
+        indent = " " * (indent_offset - 1)
         marker = "+" * (len(repr(term)) - 2)
     else:
         indent = " " * index
