@@ -25,6 +25,25 @@ def test_ischildnode(baseid, nodeid, expected):
     assert result is expected
 
 
+def test_node_from_parent_kwonly(request: "FixtureRequest") -> None:
+    """`Node.from_parent` passes through keyword arguments only.
+
+    This can lead to confusing TypeErrors, but is kept like that for (backward) compatibility."""
+    session = request.session
+    with pytest.raises(
+        TypeError,
+        match=r"__init__\(\) missing 1 required positional argument: 'name'"
+    ):
+        nodes.Node.from_parent(session)
+    with pytest.raises(
+        TypeError,
+        match=r'^from_parent\(\) takes 2 positional arguments but 3 were given$'
+    ):
+        nodes.Node.from_parent(session, "myname")  # type: ignore[call-arg]
+    node = nodes.Node.from_parent(session, name="myname")
+    assert node.name == "myname"
+
+
 def test_node_from_parent_disallowed_arguments(request: "FixtureRequest") -> None:
     msg = "^{} is not a valid argument for from_parent$"
     with pytest.raises(TypeError, match=msg.format("session")):
