@@ -1220,6 +1220,13 @@ def test_reprcompare_notin_newline() -> None:
         r"  'aaafoo\nbbb'",
         r"?     +++++",
     ]
+    assert callop("not in", "foo", "aaa\nfoobbb") == [
+        r"'foo' not in 'aaa\nfoobbb'",
+        r"NOTE: Strings contain non-printable characters. Escaping them using repr().",
+        r"'foo' is contained here:",
+        r"  'aaa\nfoobbb'",
+        r"?       +++",
+    ]
 
 
 def test_reprcompare_whitespaces():
