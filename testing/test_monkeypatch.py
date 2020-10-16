@@ -186,8 +186,8 @@ def test_setenv_with_None(monkeypatch):
     assert "foo" not in os.environ
 
 
-def test_delenv():
-    name = "xyz1234"
+def test_delenv() -> None:
+    name = "pytest_xyz1234"
     assert name not in os.environ
     monkeypatch = MonkeyPatch()
     pytest.raises(KeyError, monkeypatch.delenv, name, raising=True)
@@ -203,8 +203,7 @@ def test_delenv():
         monkeypatch.undo()
         assert os.environ[name] == "1"
     finally:
-        if name in os.environ:
-            del os.environ[name]
+        del os.environ[name]
 
 
 class TestEnvironWarnings:
@@ -381,15 +380,15 @@ def test_issue156_undo_staticmethod(Sample):
     assert Sample.hello()
 
 
-def test_undo_class_descriptors_delattr():
+def test_undo_class_descriptors_delattr() -> None:
     class SampleParent:
         @classmethod
         def hello(_cls):
-            pass
+            raise NotImplementedError()
 
         @staticmethod
         def world():
-            pass
+            raise NotImplementedError()
 
     class SampleChild(SampleParent):
         pass
