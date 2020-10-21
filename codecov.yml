@@ -3,3 +3,18 @@ codecov:
   notify:
     after_n_builds: 11
     wait_for_ci: false
+coverage:
+  status:
+    changes: true
+    patch:
+      default:
+        target: 100%
+    # Split project status into tests and app.
+    project:
+      default: false
+      app:
+        paths:
+          - "!testing/"
+      tests:
+        paths:
+          - "testing/"
