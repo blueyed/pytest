@@ -876,7 +876,7 @@ class TestPDB:
         assert "1 failed" in rest
         self.flush(child)
 
-    def test_enter_leave_with_continue(self, testdir: Testdir) -> None:
+    def test_enter_leave_with_continue(self, testdir: "Testdir") -> None:
         testdir.makeconftest(
             """
             calls = []
@@ -911,7 +911,7 @@ class TestPDB:
         """
         )
         testdir.syspathinsert()
-        result = testdir.runpytest(str(p1), stdin="break f\nc\nc\nc\n")
+        result = testdir.runpytest(str(p1), stdin="break f\nc\nc\nclear 1\nc\n")
         assert result.ret == 0
 
     def test_pdb_custom_cls(self, testdir, custom_pdb_calls):
