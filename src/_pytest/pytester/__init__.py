@@ -1078,7 +1078,8 @@ class Testdir(Generic[AnyStr]):
         if isinstance(stdin, (bytes, str)):
 
             class EchoingInput(StringIO):
-                def readline(self, size=None) -> str:
+                # type ignored because of https://github.com/python/mypy/issues/9643.
+                def readline(self, size=None) -> str:  # type: ignore[override]
                     ret = super().readline(size)
                     if ret:
                         sys.stdout.write(ret)
