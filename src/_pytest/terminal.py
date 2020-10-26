@@ -823,7 +823,7 @@ class TerminalReporter:
 
         if config.inifile:
             line += ", inifile: {}".format(
-                _shorten_path(config.rootdir.bestrelpath(config.inifile))  # type: ignore  # (currently wrong)
+                _shorten_path(config.rootdir.bestrelpath(config.inifile))
             )
         cwd = _shorten_path(os.getcwd())
         if rootdir != cwd:
