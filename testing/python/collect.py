@@ -7,7 +7,6 @@ import pytest
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import ExitCode
 from _pytest.nodes import Collector
-from _pytest.pytester import Testdir
 
 if TYPE_CHECKING:
     from _pytest.pytester import Testdir
@@ -696,7 +695,7 @@ class TestFunction:
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(["* 3 passed in *"])
 
-    def test_function_originalname(self, testdir: Testdir) -> None:
+    def test_function_originalname(self, testdir: "Testdir") -> None:
         items = testdir.getitems(
             """
             import pytest
@@ -715,7 +714,7 @@ class TestFunction:
             "test_no_param",
         ]
 
-    def test_function_with_square_brackets(self, testdir: Testdir) -> None:
+    def test_function_with_square_brackets(self, testdir: "Testdir") -> None:
         """Check that Function._getobj uses originalname."""
         p1 = testdir.makepyfile(
             """
