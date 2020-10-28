@@ -4352,10 +4352,17 @@ def test__get_direct_parametrize_args(testdir: Testdir) -> None:
     """
     )
     result = testdir.runpytest(str(p1))
+    if sys.version_info >= (3, 10):
+        parametrize_name = "Metafunc.parametrize()"
+    else:
+        parametrize_name = "parametrize()"
+    typeerror = "TypeError: {} missing 2 required positional arguments: 'argnames' and 'argvalues'".format(
+        parametrize_name
+    )
     result.stdout.fnmatch_lines(
         [
-            "E   TypeError: parametrize() missing 2 required positional arguments: 'argnames' and 'argvalues'",
-            "ERROR collecting test.py (*python.py:*) - TypeError: *",
+            "E   {}".format(typeerror),
+            "ERROR collecting test.py (*python.py:*) - {}".format(typeerror),
             "=* 1 error in *",
         ]
     )

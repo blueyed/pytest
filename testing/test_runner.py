@@ -319,7 +319,7 @@ class BaseFunctionalTests:
         assert reps[5].nodeid.endswith("test_func")
         assert reps[5].failed
 
-    def test_exact_teardown_issue1206(self, testdir) -> None:
+    def test_exact_teardown_issue1206(self, testdir: "Testdir") -> None:
         """issue shadowing error with wrong number of arguments on teardown_method."""
         rec = testdir.inline_runsource(
             """
@@ -334,25 +334,27 @@ class BaseFunctionalTests:
         """
         )
         reps = rec.getreports("pytest_runtest_logreport")
-        print(reps)
         assert len(reps) == 3
-        #
+
         assert reps[0].nodeid.endswith("test_method")
         assert reps[0].passed
         assert reps[0].when == "setup"
-        #
+
         assert reps[1].nodeid.endswith("test_method")
         assert reps[1].passed
         assert reps[1].when == "call"
-        #
+
         assert reps[2].nodeid.endswith("test_method")
         assert reps[2].failed
         assert reps[2].when == "teardown"
-        assert reps[2].longrepr.reprcrash.message in (
-            # python3 error
-            "TypeError: teardown_method() missing 2 required positional arguments: 'y' and 'z'",
-            # python2 error
-            "TypeError: teardown_method() takes exactly 4 arguments (2 given)",
+        if sys.version_info >= (3, 10):
+            method_name = "TestClass.teardown_method()"
+        else:
+            method_name = "teardown_method()"
+        assert reps[2].longrepr.reprcrash.message == (
+            "TypeError: {} missing 2 required positional arguments: 'y' and 'z'".format(
+                method_name
+            )
         )
 
     def test_failure_in_setup_function_ignores_custom_repr(self, testdir) -> None:
