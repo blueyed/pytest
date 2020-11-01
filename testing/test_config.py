@@ -49,7 +49,7 @@ class TestParseIni:
     def test_getcfg_empty_path(self) -> None:
         """correctly handle zero length arguments (a la pytest '')"""
         ret = determine_setup(None, args=[""])
-        assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))  # type: ignore[comparison-overlap]  # noqa: F821
+        assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))
 
     def test_setupcfg_uses_toolpytest_with_pytest(self, testdir: "Testdir") -> None:
         p1 = testdir.makepyfile("def test(): pass")
