@@ -1344,34 +1344,36 @@ class TestTestdirMakefiles:
             Path("foo/bar").absolute()
         ]
 
-    def test_makefiles_dangling_symlink_outside(
-        self, testdir: Testdir, symlink_or_skip
+    def test_makefiles_symlink_outside(
+        self, testdir: "Testdir", symlink_or_skip, tmp_path: "Path"
     ) -> None:
-        symlink_or_skip(os.path.join("..", "outside"), "symlink")
+        target = Path(tmp_path / "outside_symlink_target")
+        symlink_or_skip(str(target), "symlink")  # dangling
+        abs_symlink = str(Path("symlink").absolute())
+
         with pytest.raises(ValueError) as excinfo:
             testdir.makefiles({"symlink": ""})
         assert str(excinfo.value) == "path is a dangling symlink: {!r}".format(
-            str(Path("symlink").absolute())
+            abs_symlink
         )
 
-    def test_makefiles_symlink_outside(self, testdir: Testdir, symlink_or_skip) -> None:
-        symlink_or_skip(os.path.join("..", "outside"), "symlink")
-        Path("../outside").resolve().touch()
+        target.touch()
         with pytest.raises(ValueError) as excinfo:
             testdir.makefiles({"symlink": ""})
-        assert str(excinfo.value) == "path exists already: {!r}".format(
-            str(Path("symlink").absolute())
-        )
+        assert str(excinfo.value) == "path exists already: {!r}".format(abs_symlink)
 
-        ret = testdir.makefiles({"symlink": ""}, clobber=True)
+        ret = testdir.makefiles({"symlink": "content"}, clobber=True)
         assert len(ret) == 1
         rp = ret[0]
-        assert (rp.name, rp.is_symlink(), rp.exists(), rp.is_absolute(),) == (
+        assert (rp.name, rp.is_symlink(), rp.exists(), rp.is_absolute()) == (
             "symlink",
             False,
             True,
             True,
         )
+        with open(rp.name, "r") as f:
+            assert f.read() == "content"
+        assert target.exists()
 
     def test_makefiles_dangling_symlink_inside(
         self, testdir: Testdir, symlink_or_skip
