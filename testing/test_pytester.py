@@ -1345,7 +1345,7 @@ class TestTestdirMakefiles:
         ]
 
     def test_makefiles_symlink_outside(
-        self, testdir: Testdir, symlink_or_skip, tmp_path: Path
+        self, testdir: "Testdir", symlink_or_skip, tmp_path: "Path"
     ) -> None:
         target = Path(tmp_path / "outside_symlink_target")
         symlink_or_skip(str(target), "symlink")  # dangling
