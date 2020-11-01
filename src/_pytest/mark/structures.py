@@ -21,6 +21,7 @@ EMPTY_PARAMETERSET_OPTION = "empty_parameter_set_mark"
 
 if TYPE_CHECKING:
     from typing import Dict
+    from typing import Tuple
 
 
 def istestfunc(func):
@@ -152,7 +153,7 @@ class Mark:
     #: name of the mark
     name = attr.ib(type=str)
     #: positional arguments of the mark decorator
-    args = attr.ib()  # type: List[object]
+    args = attr.ib()  # type: Tuple[object, ...]
     #: keyword arguments of the mark decorator
     kwargs = attr.ib()  # type: Dict[str, object]
 
