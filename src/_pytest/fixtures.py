@@ -317,7 +317,7 @@ class FuncFixtureInfo:
     # definitions.
     initialnames = attr.ib(type=tuple)
     names_closure = attr.ib()  # type: List[str]
-    name2fixturedefs = attr.ib()  # type: List[str, List[FixtureDef]]
+    name2fixturedefs = attr.ib()  # type: Dict[str, List[FixtureDef]]
 
     def prune_dependency_tree(self):
         """Recompute names_closure from initialnames and name2fixturedefs
