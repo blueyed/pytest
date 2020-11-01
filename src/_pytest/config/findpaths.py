@@ -122,9 +122,9 @@ def determine_setup(
     config: Optional["Config"] = None,
 ) -> "Tuple[py.path.local, Optional[py.path.local], Union[_SectionWrapper, Dict]]":
     dirs = get_dirs_from_args(args)
-    assert inifile is None or isinstance(inifile, str)
+    assert inifile is None or isinstance(inifile, str)  # TODO: remove
     if inifile:
-        assert isinstance(inifile, str)
+        assert isinstance(inifile, str)  # TODO: remove
         ret_inifile = py.path.local(inifile)  # type: Optional[py.path.local]
         iniconfig = py.iniconfig.IniConfig(inifile)
         is_cfg_file = inifile.endswith(".cfg")
