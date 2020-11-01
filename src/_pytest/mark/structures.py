@@ -13,10 +13,14 @@ import attr
 from .._code.source import getfslineno
 from ..compat import ascii_escaped
 from ..compat import NOTSET
+from ..compat import TYPE_CHECKING
 from _pytest.outcomes import fail
 from _pytest.warning_types import PytestUnknownMarkWarning
 
 EMPTY_PARAMETERSET_OPTION = "empty_parameter_set_mark"
+
+if TYPE_CHECKING:
+    from typing import Dict
 
 
 def istestfunc(func):
@@ -148,9 +152,9 @@ class Mark:
     #: name of the mark
     name = attr.ib(type=str)
     #: positional arguments of the mark decorator
-    args = attr.ib()  # List[object]
+    args = attr.ib()  # type: List[object]
     #: keyword arguments of the mark decorator
-    kwargs = attr.ib()  # Dict[str, object]
+    kwargs = attr.ib()  # type: Dict[str, object]
 
     #: source Mark for ids with parametrize Marks
     _param_ids_from = attr.ib(type=Optional["Mark"], default=None, repr=False)
