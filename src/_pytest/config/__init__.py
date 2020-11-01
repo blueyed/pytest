@@ -320,6 +320,11 @@ class PytestPluginManager(PluginManager):
         # Used to know when we are importing conftests after the pytest_configure stage
         self._configured = False
 
+        if sys.version_info < (3, 6):
+            from ..compat import order_preserving_dict
+
+            self._name2plugin = order_preserving_dict()
+
     def parse_hookimpl_opts(self, plugin, name):
         # pytest hooks are always prefixed with pytest_
         # so we avoid accessing possibly non-readable attributes
