@@ -28,9 +28,7 @@ def exists(path, ignore=EnvironmentError):
 
 def getcfg(
     args: "Iterable[py.path.local]", config: "Optional[Config]" = None
-) -> Tuple[
-    "Optional[py.path.local], Optional[py.path.local], Optional[_SectionWrapper]",
-]:
+) -> "Tuple[Optional[py.path.local], Optional[py.path.local], Optional[_SectionWrapper]]":
     """
     Search the list of arguments for a valid ini-file for pytest,
     and return a tuple of (rootdir, inifile, cfg-dict).
