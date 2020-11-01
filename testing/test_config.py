@@ -547,7 +547,7 @@ class TestConfigFromdictargs:
         assert config.option.verbose == 4
         assert config.option.capture == "no"
 
-    def test_inifilename(self, tmpdir) -> None:
+    def test_inifilename(self, tmpdir: "py.path.local") -> None:
         tmpdir.join("foo/bar.ini").ensure().write(
             textwrap.dedent(
                 """\
