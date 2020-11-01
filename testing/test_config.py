@@ -18,7 +18,6 @@ from _pytest.config.findpaths import determine_setup
 from _pytest.config.findpaths import get_common_ancestor
 from _pytest.config.findpaths import getcfg
 from _pytest.pathlib import Path
-from _pytest.pytester import Testdir
 
 if TYPE_CHECKING:
     from _pytest.pytester import Testdir
@@ -52,7 +51,7 @@ class TestParseIni:
         ret = determine_setup(None, args=[""])
         assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))  # type: ignore[comparison-overlap]  # noqa: F821
 
-    def test_setupcfg_uses_toolpytest_with_pytest(self, testdir: Testdir) -> None:
+    def test_setupcfg_uses_toolpytest_with_pytest(self, testdir: "Testdir") -> None:
         p1 = testdir.makepyfile("def test(): pass")
         testdir.makefile(
             ".cfg",
