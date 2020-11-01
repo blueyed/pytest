@@ -978,7 +978,7 @@ class Testdir(Generic[AnyStr]):
         values = list(cmdlineargs) + [p]
         return self.inline_run(*values)
 
-    def inline_genitems(self, *args):
+    def inline_genitems(self, *args) -> "Tuple[List[Item], HookRecorder]":
         """Run ``pytest.main(['--collectonly'])`` in-process.
 
         Runs the :py:func:`pytest.main` function to run all of pytest inside

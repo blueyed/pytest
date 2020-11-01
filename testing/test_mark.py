@@ -3,11 +3,15 @@ import sys
 from unittest import mock
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import ExitCode
 from _pytest.mark import EMPTY_PARAMETERSET_OPTION
 from _pytest.mark import MarkGenerator as Mark
 from _pytest.nodes import Collector
 from _pytest.nodes import Node
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
 class TestMark:
@@ -538,7 +542,7 @@ class TestFunctional:
         items, rec = testdir.inline_genitems(p)
         self.assert_markers(items, test_foo=("a", "b", "c"), test_bar=("a", "b", "d"))
 
-    def test_mark_closest(self, testdir):
+    def test_mark_closest(self, testdir: "Testdir") -> None:
         p = testdir.makepyfile(
             """
             import pytest
@@ -546,18 +550,21 @@ class TestFunctional:
             @pytest.mark.c(location="class")
             class Test:
                 @pytest.mark.c(location="function")
-                def test_has_own():
+                def test_has_own(self):
                     pass
 
-                def test_has_inherited():
+                def test_has_inherited(self):
                     pass
-
         """
         )
         items, rec = testdir.inline_genitems(p)
         has_own, has_inherited = items
-        assert has_own.get_closest_marker("c").kwargs == {"location": "function"}
-        assert has_inherited.get_closest_marker("c").kwargs == {"location": "class"}
+        has_own_marker = has_own.get_closest_marker("c")
+        has_inherited_marker = has_inherited.get_closest_marker("c")
+        assert has_own_marker
+        assert has_inherited_marker
+        assert has_own_marker.kwargs == {"location": "function"}
+        assert has_inherited_marker.kwargs == {"location": "class"}
         assert has_own.get_closest_marker("missing") is None
 
     def test_mark_with_wrong_marker(self, testdir):

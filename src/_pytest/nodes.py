@@ -279,7 +279,9 @@ class Node(metaclass=NodeMeta):
                 if name is None or getattr(mark, "name", None) == name:
                     yield node, mark
 
-    def get_closest_marker(self, name, default=None):
+    def get_closest_marker(
+        self, name: str, default: Optional[Mark] = None
+    ) -> Optional[Mark]:
         """return the first marker matching the name, from closest (for example function) to farther level (for example
         module level).
 
