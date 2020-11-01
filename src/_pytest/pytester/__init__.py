@@ -738,7 +738,7 @@ class Testdir(Generic[AnyStr]):
 
     def makefiles(
         self,
-        files: Mapping[str, str],
+        files: "Union[Mapping[str, str], Sequence[Tuple[str, str]]]",
         *,
         base_path: Optional[str] = None,
         dedent: bool = True,
@@ -750,8 +750,9 @@ class Testdir(Generic[AnyStr]):
         This is a more straight-forward API than the other helpers (e.g.
         :func:`makepyfile`).
 
-        :param Mapping[str,str] files:
-            Mapping of filenames to file contents.
+        :param Mapping[str,str]|Sequence[Tuple[str,str]] files:
+            Mapping of filenames to file contents, or a sequence with
+            filename/contents pairs.
 
             Absolute paths are handled, but have to be inside of :attr:`tmpdir`.
         :param base_path:
@@ -774,18 +775,24 @@ class Testdir(Generic[AnyStr]):
             base_path = os.path.abspath(base_path)
         else:
             base_path = os.getcwd()
-        validated_files = []
-        for k, v in files.items():
+        validated_files = []  # type: List[Tuple[Path, str]]
+        if isinstance(files, Mapping):
+            items = list(files.items())  # type: Sequence[Tuple[str, str]]
+        else:
+            items = files
+        for k, v in reversed(items):
             abspath = Path(os.path.normpath(os.path.join(base_path, k)))
             assert abspath.is_absolute(), abspath
             if clobber:
-                if not (abspath.is_file() or abspath.is_symlink()):
+                if abspath.exists() and not (abspath.is_file() or abspath.is_symlink()):
                     raise ValueError(
                         "path is not a file/symlink, not clobbering: {!r}".format(
                             str(abspath)
                         )
                     )
             else:
+                if any(x[0] == abspath for x in validated_files):
+                    raise ValueError("duplicate file path: {!r}".format(str(abspath)))
                 if abspath.exists():
                     raise ValueError("path exists already: {!r}".format(str(abspath)))
                 if abspath.is_symlink():
@@ -799,7 +806,7 @@ class Testdir(Generic[AnyStr]):
             validated_files.append((abspath, v))
 
         paths = []
-        for fpath, content in validated_files:
+        for fpath, content in reversed(validated_files):
             path = tmpdir_path.joinpath(fpath)
             if not path.parent.is_dir():
                 path.parent.mkdir(parents=True)
@@ -810,7 +817,7 @@ class Testdir(Generic[AnyStr]):
             if clobber:
                 if path.is_symlink():
                     path.unlink()
-                else:
+                elif path.exists():
                     assert path.is_file(), path
             else:
                 assert not path.exists(), path
