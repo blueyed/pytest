@@ -1,16 +1,16 @@
 repos:
 -   repo: https://github.com/psf/black
-    rev: 19.10b0
+    rev: 20.8b1
     hooks:
     -   id: black
         args: [--safe, --quiet]
 -   repo: https://github.com/asottile/blacken-docs
-    rev: v1.0.0
+    rev: v1.8.0
     hooks:
     -   id: blacken-docs
         additional_dependencies: [black==19.10b0]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.2.3
+    rev: v3.3.0
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
@@ -18,18 +18,18 @@ repos:
         args: [--remove]
     -   id: check-yaml
 -   repo: https://gitlab.com/pycqa/flake8
-    rev: 3.8.3
+    rev: 3.8.4
     hooks:
     -   id: flake8
         language_version: python3
         additional_dependencies: [flake8-typing-imports==1.9.0]
 -   repo: https://github.com/asottile/reorder_python_imports
-    rev: v1.4.0
+    rev: v2.3.6
     hooks:
     -   id: reorder-python-imports
         args: ['--application-directories=.:src', --py3-plus]
 -   repo: https://github.com/asottile/pyupgrade
-    rev: v1.18.0
+    rev: v2.7.3
     hooks:
     -   id: pyupgrade
         args: [--keep-percent-format]
