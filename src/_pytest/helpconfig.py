@@ -161,6 +161,8 @@ def showhelp(config: Config) -> None:
     indent = " " * indent_len
     for name in config._parser._ininames:
         help, type, default = config._parser._inidict[name]
+        if help is None:
+            continue
         if type is None:
             type = "string"
         spec = "{} ({}):".format(name, type)
@@ -183,10 +185,10 @@ def showhelp(config: Config) -> None:
             # Display help starting after the spec, following lines indented.
             print(" " * (indent_len - spec_len - 2), end="")
             wrapped = textwrap.wrap(help, wrap_width, break_on_hyphens=False)
-
-            print(wrapped[0])
-            for line in wrapped[1:]:
-                print(indent + line)
+            if wrapped:
+                print(wrapped[0])
+                for line in wrapped[1:]:
+                    print(indent + line)
 
     print()
     print("environment variables:")
