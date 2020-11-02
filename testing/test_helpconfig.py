@@ -50,6 +50,36 @@ def test_help(testdir: Testdir) -> None:
     result.stdout.no_fnmatch_line("logging:")
 
 
+def test_help_for_empty_ini_params(testdir: "Testdir") -> None:
+    testdir.makeconftest(
+        """
+        from argparse import SUPPRESS
+
+        def pytest_addoption(parser):
+            parser.addini("t_ini_none", None, default=True, type="bool")
+            parser.addini("t_ini_empty", "", default=True, type="bool")
+
+            parser.addoption("--t_opt_none", help=None)
+            parser.addoption("--t_opt_empty", help="")
+            parser.addoption("--t_opt_suppress", help=SUPPRESS)
+    """
+    )
+    result = testdir.runpytest("--help")
+    result.stdout.fnmatch_lines(
+        [
+            "custom options:",
+            "  --t_opt_none=T_OPT_NONE",
+            "  --t_opt_empty=T_OPT_EMPTY",
+            "",
+            "[pytest] ini-options in the first pytest.ini|tox.ini|setup.cfg file found:",
+            "  t_ini_empty (bool):   ",
+        ]
+    )
+    result_str = result.stdout.str()
+    assert "t_ini_none" not in result_str
+    assert "t_opt_suppress" not in result_str
+
+
 @pytest.mark.parametrize("method", ("runpytest_inprocess", "runpytest_subprocess"))
 def test_help_unconfigures_always(method: str, testdir: Testdir) -> None:
     testdir.makeconftest(
