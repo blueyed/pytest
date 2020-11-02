@@ -308,27 +308,6 @@ class TestPrunetraceback:
         result = testdir.runpytest(p)
         result.stdout.fnmatch_lines(["*ERROR collecting*", "*hello world*"])
 
-    @pytest.mark.xfail(reason="other mechanism for adding to reporting needed")
-    def test_collect_report_postprocessing(self, testdir):
-        p = testdir.makepyfile(
-            """
-            import not_exists
-        """
-        )
-        testdir.makeconftest(
-            """
-            import pytest
-            @pytest.hookimpl(hookwrapper=True)
-            def pytest_make_collect_report():
-                outcome = yield
-                rep = outcome.get_result()
-                rep.headerlines += ["header1"]
-                outcome.force_result(rep)
-        """
-        )
-        result = testdir.runpytest(p)
-        result.stdout.fnmatch_lines(["*ERROR collecting*", "*header1*"])
-
 
 class TestCustomConftests:
     def test_ignore_collect_path(self, testdir):
