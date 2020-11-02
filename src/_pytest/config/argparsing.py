@@ -266,10 +266,11 @@ class Argument:
         if "%default" in (attrs.get("help") or ""):
             warnings.warn(
                 'pytest now uses argparse. "%default" should be'
-                ' changed to "%(default)s" ',
+                ' changed to "%(default)s".',
                 DeprecationWarning,
-                stacklevel=3,
+                stacklevel=4,
             )
+            self._attrs["help"] = attrs["help"].replace("%default", "%(default)s")
         try:
             typ = attrs["type"]
         except KeyError:
@@ -325,18 +326,12 @@ class Argument:
 
     def attrs(self) -> Mapping[str, Any]:
         # update any attributes set by processopt
-        attrs = "default dest help".split()
-        attrs.append(self.dest)
-        for attr in attrs:
+        for attr in ("default", "dest"):
             try:
-                self._attrs[attr] = getattr(self, attr)
+                val = getattr(self, attr)
             except AttributeError:
-                pass
-        if self._attrs.get("help"):
-            a = self._attrs["help"]
-            a = a.replace("%default", "%(default)s")
-            # a = a.replace('%prog', '%(prog)s')
-            self._attrs["help"] = a
+                continue
+            self._attrs[attr] = val
         return self._attrs
 
     def _set_opt_strings(self, opts: Sequence[str]) -> None:

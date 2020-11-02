@@ -69,6 +69,16 @@ class TestParser:
         assert res["default"] == 42
         assert res["dest"] == "abc"
 
+    def test_argument_help_legacy_default(self) -> None:
+        with pytest.warns(DeprecationWarning) as recwarn:
+            argument = parseopt.Argument("-t", dest="t", help="foo (default: %default)")
+        assert len(recwarn) == 1
+        assert str(recwarn[0].message) == (
+            "pytest now uses argparse. "
+            '"%default" should be changed to "%(default)s".'
+        )
+        assert argument.attrs()["help"] == "foo (default: %(default)s)"
+
     def test_group_add_and_get(self, parser: parseopt.Parser) -> None:
         group = parser.getgroup("hello", description="desc")
         assert group.name == "hello"
