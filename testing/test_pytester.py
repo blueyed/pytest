@@ -1415,3 +1415,21 @@ class TestTestdirMakefiles:
         assert str(
             excinfo.value
         ) == "path is not a file/symlink, not clobbering: {!r}".format(str(directory))
+
+    def test_makefiles_sequence(self, testdir: "Testdir") -> None:
+        files = testdir.makefiles((("1", "foo"), ("2", "bar")))
+        assert tuple(x.name for x in files) == ("1", "2")
+        assert tuple(x.read_text() for x in files) == ("foo", "bar")
+
+    def test_makefiles_sequence_duplicate(self, testdir: "Testdir") -> None:
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles((("1", "foo"), ("2", "bar"), ("1", "foo2")))
+        assert str(excinfo.value) == "duplicate file path: {!r}".format(
+            str(testdir.tmpdir.join("1"))
+        )
+
+        files = testdir.makefiles(
+            (("1", "foo"), ("2", "bar"), ("1", "foo2")), clobber=True
+        )
+        assert tuple(x.name for x in files) == ("1", "2", "1")
+        assert tuple(x.read_text() for x in files) == ("foo2", "bar", "foo2")
