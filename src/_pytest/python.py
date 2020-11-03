@@ -1501,27 +1501,26 @@ class Function(PyobjMixin, nodes.Item):
         fixtures.fillfixtures(self)
 
     def _prunetraceback(self, excinfo: ExceptionInfo) -> None:
-        if hasattr(self, "_obj"):
-            code = _pytest._code.Code(get_real_func(self.obj))
-            path, firstlineno = code.path, code.firstlineno
-            traceback = excinfo.traceback
-            ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
+        code = _pytest._code.Code(get_real_func(self.obj))
+        path, firstlineno = code.path, code.firstlineno
+        traceback = excinfo.traceback
+        ntraceback = traceback.cut(path=path, firstlineno=firstlineno)
+        if ntraceback == traceback:
+            ntraceback = ntraceback.cut(path=path)
             if ntraceback == traceback:
-                ntraceback = ntraceback.cut(path=path)
-                if ntraceback == traceback:
-                    ntraceback = ntraceback.filter(filter_traceback)
-                    if not ntraceback:
-                        ntraceback = traceback
+                ntraceback = ntraceback.filter(filter_traceback)
+                if not ntraceback:
+                    ntraceback = traceback
 
-            ntraceback = ntraceback.filter()
-            if ntraceback:
-                excinfo.traceback = ntraceback
-            # issue364: mark all but first and last frames to
-            # only show a single-line message for each frame
-            if self.config.option.tbstyle == "auto":
-                if len(excinfo.traceback) > 2:
-                    for entry in excinfo.traceback[1:-1]:
-                        entry.set_repr_style("short")
+        ntraceback = ntraceback.filter()
+        if ntraceback:
+            excinfo.traceback = ntraceback
+        # issue364: mark all but first and last frames to
+        # only show a single-line message for each frame
+        if self.config.option.tbstyle == "auto":
+            if len(excinfo.traceback) > 2:
+                for entry in excinfo.traceback[1:-1]:
+                    entry.set_repr_style("short")
 
     def repr_failure(self, excinfo, outerr=None):
         assert outerr is None, "XXX outerr usage is deprecated"
