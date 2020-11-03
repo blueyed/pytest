@@ -270,7 +270,7 @@ class TestGeneralUsage:
                 "",
                 "During handling of the above exception, another exception occurred:",
                 "",
-                "ModuleNotFoundError: No module named 'qwerty'",
+                "{}: No module named 'qwerty'".format(exc_name),
                 "",
                 "The above exception was the direct cause of the following exception:",
                 "",
