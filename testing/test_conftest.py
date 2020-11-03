@@ -324,10 +324,11 @@ def test_no_conftest(testdir: Testdir) -> None:
     assert result.ret == ExitCode.NO_TESTS_COLLECTED
 
     expected_stderr = [
-        "ImportError while loading conftest '{}'.".format(conftest),
-        "conftest.py:1: in <module>",
-        "    assert 0",
-        "E   AssertionError: assert 0",
+        "ERROR: AssertionError while loading conftest '{}'.".format(conftest),
+        "  conftest.py:1: in <module>",
+        "      assert 0",
+        "  E   AssertionError: assert 0",
+        "",
     ]
     result = testdir.runpytest()
     assert result.ret == ExitCode.USAGE_ERROR
