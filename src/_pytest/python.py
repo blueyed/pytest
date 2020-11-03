@@ -1501,7 +1501,7 @@ class Function(PyobjMixin, nodes.Item):
         fixtures.fillfixtures(self)
 
     def _prunetraceback(self, excinfo: ExceptionInfo) -> None:
-        if hasattr(self, "_obj") and not self.config.option.fulltrace:
+        if hasattr(self, "_obj"):
             code = _pytest._code.Code(get_real_func(self.obj))
             path, firstlineno = code.path, code.firstlineno
             traceback = excinfo.traceback
