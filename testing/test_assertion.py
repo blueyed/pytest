@@ -841,9 +841,25 @@ class TestAssert_reprcompare:
 
 class TestAssert_reprcompare_dataclass:
     @pytest.mark.skipif(sys.version_info < (3, 7), reason="Dataclasses in Python3.7+")
-    def test_dataclasses(self, testdir):
-        p = testdir.copy_example("dataclasses/test_compare_dataclasses.py")
-        result = testdir.runpytest(p)
+    def test_dataclasses(self, testdir: "Testdir") -> None:
+        p1 = testdir.makepyfile(
+            """
+            from dataclasses import dataclass
+            from dataclasses import field
+
+            def test_dataclasses():
+                @dataclass
+                class SimpleDataObject:
+                    field_a: int = field()
+                    field_b: int = field()
+
+                left = SimpleDataObject(1, "b")
+                right = SimpleDataObject(1, "c")
+
+                assert left == right
+            """
+        )
+        result = testdir.runpytest(p1)
         result.assert_outcomes(failed=1, passed=0)
         result.stdout.fnmatch_lines(
             [
@@ -853,10 +869,7 @@ class TestAssert_reprcompare_dataclass:
             ]
         )
 
-    @pytest.mark.skipif(sys.version_info < (3, 7), reason="Dataclasses in Python3.7+")
-    def test_dataclasses_verbose(self, testdir):
-        p = testdir.copy_example("dataclasses/test_compare_dataclasses_verbose.py")
-        result = testdir.runpytest(p, "-vv")
+        result = testdir.runpytest(p1, "-vv")
         result.assert_outcomes(failed=1, passed=0)
         result.stdout.fnmatch_lines(
             [
@@ -868,19 +881,53 @@ class TestAssert_reprcompare_dataclass:
         )
 
     @pytest.mark.skipif(sys.version_info < (3, 7), reason="Dataclasses in Python3.7+")
-    def test_dataclasses_with_attribute_comparison_off(self, testdir):
-        p = testdir.copy_example(
-            "dataclasses/test_compare_dataclasses_field_comparison_off.py"
+    def test_dataclasses_with_attribute_comparison_off(self, testdir: "Testdir") -> None:
+        p1 = testdir.makepyfile(
+            """
+            from dataclasses import dataclass
+            from dataclasses import field
+
+            def test_dataclasses():
+                @dataclass
+                class SimpleDataObject:
+                    field_a: int = field()
+                    field_b: int = field(compare=False)
+
+                left = SimpleDataObject(1, "b")
+                right = SimpleDataObject(1, "c")
+
+                assert left == right
+            """
         )
-        result = testdir.runpytest(p, "-vv")
+        result = testdir.runpytest(p1)
         result.assert_outcomes(failed=0, passed=1)
 
     @pytest.mark.skipif(sys.version_info < (3, 7), reason="Dataclasses in Python3.7+")
-    def test_comparing_two_different_data_classes(self, testdir):
-        p = testdir.copy_example(
-            "dataclasses/test_compare_two_different_dataclasses.py"
+    def test_comparing_two_different_data_classes(self, testdir: "Testdir") -> None:
+        p1 = testdir.makepyfile(
+            """
+            from dataclasses import dataclass
+            from dataclasses import field
+
+
+            def test_comparing_two_different_data_classes():
+                @dataclass
+                class SimpleDataObjectOne:
+                    field_a: int = field()
+                    field_b: int = field()
+
+                @dataclass
+                class SimpleDataObjectTwo:
+                    field_a: int = field()
+                    field_b: int = field()
+
+                left = SimpleDataObjectOne(1, "b")
+                right = SimpleDataObjectTwo(1, "c")
+
+                assert left != right
+            """
         )
-        result = testdir.runpytest(p, "-vv")
+        result = testdir.runpytest(p1, "-vv")
         result.assert_outcomes(failed=0, passed=1)
 
 
