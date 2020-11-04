@@ -437,7 +437,7 @@ class FixtureRequest:
     @scopeproperty()
     def fspath(self) -> py.path.local:
         """ the file system path of the test module which collected this test. """
-        return self._pyfuncitem.fspath
+        return self._pyfuncitem.fspath  # type: ignore[no-any-return]
 
     @property
     def keywords(self):
