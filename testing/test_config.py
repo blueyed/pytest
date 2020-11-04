@@ -27,7 +27,10 @@ class TestParseIni:
     @pytest.mark.parametrize(
         "section, filename", [("pytest", "pytest.ini"), ("tool:pytest", "setup.cfg")]
     )
-    def test_getcfg_and_config(self, testdir, tmpdir, section, filename) -> None:
+    def test_getcfg_and_config(
+        self, section: str, filename: str, testdir: "Testdir"
+    ) -> None:
+        tmpdir = testdir.tmpdir
         sub = tmpdir.mkdir("sub")
         sub.chdir()
         tmpdir.join(filename).write(

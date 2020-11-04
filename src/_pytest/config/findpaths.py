@@ -1,10 +1,4 @@
 import os
-from typing import Iterable
-from typing import List
-from typing import Optional
-from typing import Tuple
-
-import py.path
 
 from .exceptions import UsageError
 from _pytest.compat import TYPE_CHECKING
@@ -12,11 +6,16 @@ from _pytest.outcomes import fail
 
 if TYPE_CHECKING:
     from typing import Dict
+    from typing import Iterable
+    from typing import List
+    from typing import Optional
+    from typing import Tuple
     from typing import Union
 
-    from . import Config  # noqa: F401
-
+    import py.path
     from py.iniconfig import _SectionWrapper  # noqa: F401
+
+    from . import Config  # noqa: F401
 
 
 def exists(path, ignore=EnvironmentError):
@@ -27,7 +26,7 @@ def exists(path, ignore=EnvironmentError):
 
 
 def getcfg(
-    args: "Iterable[py.path.local]", config: "Optional[Config]" = None
+    dirs: "Iterable[py.path.local]", config: "Optional[Config]" = None
 ) -> "Tuple[Optional[py.path.local], Optional[py.path.local], Optional[_SectionWrapper]]":
     """
     Search the list of arguments for a valid ini-file for pytest,
@@ -36,7 +35,7 @@ def getcfg(
     note: config is optional and used only to issue warnings explicitly (#2891).
     """
     inibasenames = ["pytest.ini", "tox.ini", "setup.cfg"]
-    for arg in args:
+    for arg in dirs:
         for base in arg.parts(reverse=True):
             for inibasename in inibasenames:
                 p = base.join(inibasename)
@@ -120,9 +119,7 @@ def determine_setup(
     config: Optional["Config"] = None,
 ) -> "Tuple[py.path.local, Optional[py.path.local], Union[_SectionWrapper, Dict]]":
     dirs = get_dirs_from_args(args)
-    assert inifile is None or isinstance(inifile, str)  # TODO: remove
     if inifile:
-        assert isinstance(inifile, str)  # TODO: remove
         ret_inifile = py.path.local(inifile)  # type: Optional[py.path.local]
         iniconfig = py.iniconfig.IniConfig(inifile)
         is_cfg_file = inifile.endswith(".cfg")
