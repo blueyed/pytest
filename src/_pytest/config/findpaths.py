@@ -1,4 +1,10 @@
 import os
+from typing import Iterable
+from typing import List
+from typing import Optional
+from typing import Tuple
+
+import py.path
 
 from .exceptions import UsageError
 from _pytest.compat import TYPE_CHECKING
@@ -6,13 +12,8 @@ from _pytest.outcomes import fail
 
 if TYPE_CHECKING:
     from typing import Dict
-    from typing import Iterable
-    from typing import List
-    from typing import Optional
-    from typing import Tuple
     from typing import Union
 
-    import py.path
     from py.iniconfig import _SectionWrapper  # noqa: F401
 
     from . import Config  # noqa: F401
