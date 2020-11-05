@@ -154,12 +154,10 @@ class Cache:
             self._ensure_supporting_files()
         data = json.dumps(value, indent=2, sort_keys=True)
         try:
-            f = path.open("w")
-        except OSError:
-            self.warn("cache could not write path {path}", path=path)
-        else:
-            with f:
+            with path.open("w") as f:
                 f.write(data)
+        except OSError as exc:
+            self.warn("could not write cache path {path}: {exc}", path=path, exc=exc)
 
     def _ensure_supporting_files(self):
         """Create supporting files in the cache dir that are not really part of the cache."""

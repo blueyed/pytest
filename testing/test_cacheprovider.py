@@ -35,8 +35,9 @@ class TestNewAPI:
     @pytest.mark.filterwarnings("default")
     def test_cache_writefail_uses_warnings(self, testdir):
         testdir.makeini("[pytest]")
-        testdir.tmpdir.join(".pytest_cache").write("gone wrong")
-        config = testdir.parseconfigure()
+        cache_file_instead_of_dir = testdir.tmpdir.join(".pytest_cache")
+        cache_file_instead_of_dir.write("")
+        config = testdir.parseconfigure("-s")
         cache = config.cache
         with warnings.catch_warnings(record=True) as warnrecords:
             cache.set("test/broken", [])
@@ -45,6 +46,25 @@ class TestNewAPI:
         assert re.match(
             r"could not create cache path .*, setting readonly\.$",
             str(warnrecords[0].message),
+        )
+        cache_file_instead_of_dir.remove()
+        assert config.option.cache_readonly
+
+        # No failure when writing file fails with cache being read-only.
+        cache_file = cache._getvaluepath("test/broken")
+        cache_file.parent.mkdir(parents=True)
+        cache_file.touch(0)
+        assert cache.set("test/broken", []) is None
+
+        # Failure when writing file.
+        config.option.cache_readonly = False
+        with warnings.catch_warnings(record=True) as wr:
+            cache.set("test/broken", [])
+        assert len(wr) == 1
+        assert wr[0].filename == __file__
+        assert re.match(
+            r"^could not write cache path .*broken: .*broken'$",
+            str(wr[0].message),
         )
 
     @pytest.mark.skipif(sys.platform.startswith("win"), reason="no chmod on windows")
