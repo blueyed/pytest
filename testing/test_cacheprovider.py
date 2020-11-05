@@ -52,8 +52,7 @@ class TestNewAPI:
 
         # No failure when writing file fails with cache being read-only.
         cache_file = cache._getvaluepath("test/broken")
-        cache_file.parent.mkdir(parents=True)
-        cache_file.touch(0)
+        cache_file.mkdir(parents=True)
         assert cache.set("test/broken", []) is None
 
         # Failure when writing file.
