@@ -82,7 +82,6 @@ class Cache:
 
         warnings.warn(
             PytestCacheWarning(fmt.format(**args) if args else fmt),
-            self._config.hook,
             stacklevel=3,
         )
 
