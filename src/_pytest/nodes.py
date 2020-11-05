@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from typing import TypeVar
 
     from _pytest._code.code import _TracebackStyle
-    from _pytest.main import Session  # circular import
+    from _pytest.main import Session
 
     _N = TypeVar("_N", bound="Node")
 
