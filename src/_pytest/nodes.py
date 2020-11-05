@@ -3,6 +3,7 @@ import warnings
 from functools import lru_cache
 from typing import Any
 from typing import Dict
+from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Set
@@ -92,6 +93,8 @@ class Node(metaclass=NodeMeta):
     """ base class for Collector and Item the test collection tree.
     Collector subclasses have children, Items are terminal nodes."""
 
+    _keywords = None  # type: Optional[NodeKeywords]
+
     def __init__(
         self,
         name: str,
@@ -126,11 +129,8 @@ class Node(metaclass=NodeMeta):
         #: filesystem path where this node was collected from (can be None)
         self.fspath = fspath or getattr(parent, "fspath", None)  # type: py.path.local
 
-        #: keywords/markers collected from all scopes
-        self.keywords = NodeKeywords(self)
-
-        #: the marker objects belonging to this node
-        self.own_markers = []  # type: List[Mark]
+        #: The (manually added) marks belonging to this node (start, end).
+        self._own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
 
         #: allow adding of extra keywords to use for matching
         self.extra_keyword_matches = set()  # type: Set[str]
@@ -172,6 +172,18 @@ class Node(metaclass=NodeMeta):
     def ihook(self):
         """ fspath sensitive hook proxy used to call pytest hooks"""
         return self.session.gethookproxy(self.fspath)
+
+    @property
+    def own_markers(self) -> List[Mark]:
+        """The marker objects belonging to this node."""
+        return self._own_markers[0] + self._own_markers[1]
+
+    @property
+    def keywords(self) -> NodeKeywords:
+        """keywords/markers collected from all scopes."""
+        if self._keywords is None:
+            self._keywords = NodeKeywords(self)
+        return self._keywords
 
     def __repr__(self):
         return "<{} nodeid={!r}>".format(
@@ -255,11 +267,11 @@ class Node(metaclass=NodeMeta):
             raise ValueError("is not a string or pytest.mark.* Marker")
         self.keywords[marker_.name] = marker
         if append:
-            self.own_markers.append(marker_.mark)
+            self._own_markers[1].append(marker_.mark)
         else:
-            self.own_markers.insert(0, marker_.mark)
+            self._own_markers[0].insert(0, marker_.mark)
 
-    def iter_markers(self, name=None):
+    def iter_markers(self, name: Optional[str] = None) -> Iterator[Mark]:
         """
         :param name: if given, filter the results by the name attribute
 

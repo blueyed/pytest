@@ -12,10 +12,12 @@ from collections import defaultdict
 from collections.abc import Sequence
 from functools import partial
 from types import ModuleType
+from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Iterable
 from typing import List
+from typing import Mapping
 from typing import Optional
 from typing import Tuple
 from typing import Union
@@ -58,6 +60,8 @@ from _pytest.warning_types import PytestCollectionWarning
 from _pytest.warning_types import PytestUnhandledCoroutineWarning
 
 if TYPE_CHECKING:
+    from typing_extensions import Literal
+
     from _pytest._io import TerminalWriter
 
 
@@ -180,7 +184,7 @@ def async_warn(pyfuncitem: "Function") -> None:
 
 
 @hookimpl(trylast=True)
-def pytest_pyfunc_call(pyfuncitem: "Function"):
+def pytest_pyfunc_call(pyfuncitem: "Function") -> "Literal[True]":
     testfunction = pyfuncitem.obj
     if iscoroutinefunction(testfunction) or (
         sys.version_info >= (3, 6) and inspect.isasyncgenfunction(testfunction)
@@ -263,7 +267,12 @@ class PyobjContext:
 
 
 class PyobjMixin(PyobjContext):
-    _ALLOW_MARKERS = True
+    _obj_markers = None  # type: Optional[List[Mark]]
+
+    # Function and attributes that the mixin needs (for type-checking only).
+    if TYPE_CHECKING:
+        _keywords = None  # type: Optional[nodes.NodeKeywords]
+        _own_markers = ([], [])  # type: Tuple[List[Mark], List[Mark]]
 
     @property
     def obj(self):
@@ -271,19 +280,23 @@ class PyobjMixin(PyobjContext):
         obj = getattr(self, "_obj", None)
         if obj is None:
             self._obj = obj = self._getobj()
-            # XXX evil hack
-            # used to avoid Instance collector marker duplication
-            if self._ALLOW_MARKERS:
-                self.own_markers.extend(get_unpacked_marks(self.obj))
         return obj
 
     @obj.setter
-    def obj(self, value):
+    def obj(self, value) -> None:
         self._obj = value
+        self._obj_markers = None
+        self._keywords = None
 
     def _getobj(self):
         """Gets the underlying Python object. May be overwritten by subclasses."""
         return getattr(self.parent.obj, self.name)
+
+    @property
+    def own_markers(self) -> List[Mark]:
+        if self._obj_markers is None:
+            self._obj_markers = get_unpacked_marks(self.obj)
+        return self._own_markers[0] + self._obj_markers + self._own_markers[1]
 
     def getmodpath(self, stopatmodule=True, includemodule=False):
         """ return python path relative to the containing module. """
@@ -751,13 +764,13 @@ class Class(PyCollector):
 
 
 class Instance(PyCollector):
-    _ALLOW_MARKERS = False  # hack, destroy later
-    # instances share the object with their parents in a way
-    # that duplicates markers instances if not taken out
-    # can be removed at node structure reorganization time
-
     def _getobj(self):
         return self.parent.obj()
+
+    @property
+    def own_markers(self) -> List[Mark]:
+        # Do not include markers from obj, coming from Class already.
+        return self._own_markers[0] + self._own_markers[1]
 
     def collect(self):
         self.session._fixturemanager.parsefactories(self)
@@ -781,14 +794,15 @@ def hasnew(obj):
 
 
 class CallSpec2:
-    def __init__(self, metafunc):
+    def __init__(self, metafunc: "Metafunc") -> None:
         self.metafunc = metafunc
-        self.funcargs = {}
-        self._idlist = []
-        self.params = {}
-        self._arg2scopenum = {}  # used for sorting parametrized resources
-        self.marks = []
-        self.indices = {}
+        self.funcargs = {}  # type: Dict[str, object]
+        self._idlist = []  # type: List[str]
+        self.params = {}  # type: Dict[str, object]
+        # Used for sorting parametrized resources.
+        self._arg2scopenum = {}  # type: Dict[str, int]
+        self.marks = []  # type: List[Mark]
+        self.indices = {}  # type: Dict[str, int]
 
     def copy(self):
         cs = CallSpec2(self.metafunc)
@@ -1395,9 +1409,6 @@ class Function(PyobjMixin, nodes.Item):
     Python test function.
     """
 
-    # disable since functions handle it themselves
-    _ALLOW_MARKERS = False
-
     def __init__(
         self,
         name,
@@ -1406,7 +1417,7 @@ class Function(PyobjMixin, nodes.Item):
         config=None,
         callspec: Optional[CallSpec2] = None,
         callobj=NOTSET,
-        keywords=None,
+        keywords: Optional[Mapping[str, Any]] = None,
         session=None,
         fixtureinfo: Optional[FuncFixtureInfo] = None,
         originalname=None,
@@ -1416,31 +1427,11 @@ class Function(PyobjMixin, nodes.Item):
         if callobj is not NOTSET:
             self.obj = callobj
 
-        self.keywords.update(self.obj.__dict__)
-        self.own_markers.extend(get_unpacked_marks(self.obj))
+        self._callspec = callspec
         if callspec:
-            self.callspec = callspec
-            # this is total hostile and a mess
-            # keywords are broken by design by now
-            # this will be redeemed later
-            for mark in callspec.marks:
-                # feel free to cry, this was broken for years before
-                # and keywords cant fix it per design
-                self.keywords[mark.name] = mark
-            self.own_markers.extend(normalize_mark_list(callspec.marks))
-        if keywords:
-            self.keywords.update(keywords)
-
-        # todo: this is a hell of a hack
-        # https://github.com/pytest-dev/pytest/issues/4569
-
-        self.keywords.update(
-            {
-                mark.name: True
-                for mark in self.iter_markers()
-                if mark.name not in self.keywords
-            }
-        )
+            # XXX: only set for existing hasattr checks..!
+            self.callspec = self._callspec
+        self._keywords_arg = keywords
 
         if fixtureinfo is None:
             fixtureinfo = self.session._fixturemanager.getfixtureinfo(
@@ -1471,6 +1462,44 @@ class Function(PyobjMixin, nodes.Item):
     def function(self):
         "underlying python 'function' object"
         return getimfunc(self.obj)
+
+    @property
+    def own_markers(self) -> List[Mark]:
+        if self._obj_markers is None:
+            self._obj_markers = get_unpacked_marks(self.obj)
+            if self._callspec:
+                self._obj_markers += normalize_mark_list(self._callspec.marks)
+        return self._own_markers[0] + self._obj_markers + self._own_markers[1]
+
+    @property
+    def keywords(self) -> "nodes.NodeKeywords":
+        if self._keywords is not None:
+            return self._keywords
+
+        keywords = super().keywords
+        keywords.update(self.obj.__dict__)
+        if self._callspec:
+            # this is total hostile and a mess
+            # keywords are broken by design by now
+            # this will be redeemed later
+            for mark in self._callspec.marks:
+                # feel free to cry, this was broken for years before
+                # and keywords cant fix it per design
+                self.keywords[mark.name] = mark
+        if self._keywords_arg:
+            keywords.update(self._keywords_arg)
+
+        # todo: this is a hell of a hack
+        # https://github.com/pytest-dev/pytest/issues/4569
+        keywords.update(
+            {
+                mark.name: True
+                for mark in self.iter_markers()
+                if mark.name not in self.keywords
+            }
+        )
+        self._keywords = keywords
+        return self._keywords
 
     def _getobj(self):
         name = self.name
