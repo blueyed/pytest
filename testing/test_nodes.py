@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 from _pytest import nodes
 from _pytest.compat import TYPE_CHECKING
@@ -30,14 +32,22 @@ def test_node_from_parent_kwonly(request: "FixtureRequest") -> None:
 
     This can lead to confusing TypeErrors, but is kept like that for (backward) compatibility."""
     session = request.session
+    if sys.version_info >= (3, 10):
+        prefix_name = "nodes.Node."
+    else:
+        prefix_name = ""
     with pytest.raises(
         TypeError,
-        match=r"__init__\(\) missing 1 required positional argument: 'name'"
+        match=r"^{}__init__\(\) missing 1 required positional argument: 'name'$".format(
+            prefix_name
+        ),
     ):
         nodes.Node.from_parent(session)
     with pytest.raises(
         TypeError,
-        match=r'^from_parent\(\) takes 2 positional arguments but 3 were given$'
+        match=r'^{}from_parent\(\) takes 2 positional arguments but 3 were given$'.format(
+            prefix_name
+        )
     ):
         nodes.Node.from_parent(session, "myname")  # type: ignore[call-arg]
     node = nodes.Node.from_parent(session, name="myname")
