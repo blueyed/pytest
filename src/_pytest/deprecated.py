@@ -40,11 +40,6 @@ FIXTURE_POSITIONAL_ARGUMENTS = PytestDeprecationWarning(
     "as a keyword argument instead."
 )
 
-NODE_USE_FROM_PARENT = UnformattedWarning(
-    PytestDeprecationWarning,
-    "direct construction of {name} has been deprecated, please use {name}.from_parent",
-)
-
 JUNIT_XML_DEFAULT_FAMILY = PytestDeprecationWarning(
     "The 'junit_family' default value will change to 'xunit2' in pytest 6.0.\n"
     "Add 'junit_family=xunit1' to your pytest.ini file to keep the current format "

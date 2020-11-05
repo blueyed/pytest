@@ -36,7 +36,7 @@ class TestMetafunc:
 
         names = fixtures.getfuncargnames(func)
         fixtureinfo = FuncFixtureInfoMock(names)  # type: Any
-        definition = DefinitionMock._create(func)  # type: Any
+        definition = DefinitionMock(func)  # type: Any
         return python.Metafunc(definition, fixtureinfo, config)
 
     def test_no_funcargs(self) -> None:

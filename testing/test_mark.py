@@ -1019,13 +1019,13 @@ def test_mark_fixture(testdir):
     assert reprec.countoutcomes() == [3, 0, 0]
 
 
-def test_addmarker_order():
+def test_addmarker_order() -> None:
     session = mock.Mock()
     session.own_markers = []
     session.parent = None
     session.nodeid = ""
     session.listchain = lambda: [session]
-    node = Node.from_parent(session, name="Test")
+    node = Node("Test", parent=session)
     node.add_marker("foo")
     node.add_marker("bar")
     node.add_marker("baz", append=False)

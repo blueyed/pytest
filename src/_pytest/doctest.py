@@ -112,9 +112,9 @@ def pytest_collect_file(path, parent):
     config = parent.config
     if path.ext == ".py":
         if config.option.doctestmodules and not _is_setup_py(config, path, parent):
-            return DoctestModule.from_parent(parent, fspath=path)
+            return DoctestModule(path, parent)
     elif _is_doctest(config, path, parent):
-        return DoctestTextfile.from_parent(parent, fspath=path)
+        return DoctestTextfile(path, parent)
 
 
 def _is_setup_py(config, path, parent):
@@ -220,16 +220,6 @@ class DoctestItem(pytest.Item):
         self.dtest = dtest
         self.obj = None
         self.fixture_request = None
-
-    @classmethod
-    def from_parent(  # type: ignore
-        cls, parent: "Union[DoctestTextfile, DoctestModule]", *, name, runner, dtest
-    ):
-        # incompatible signature due to to imposed limits on sublcass
-        """
-        the public named constructor
-        """
-        return super().from_parent(name=name, parent=parent, runner=runner, dtest=dtest)
 
     def setup(self):
         if self.dtest is not None:
@@ -389,9 +379,7 @@ class DoctestTextfile(pytest.Module):
         parser = doctest.DocTestParser()
         test = parser.get_doctest(text, globs, name, filename, 0)
         if test.examples:
-            yield DoctestItem.from_parent(
-                self, name=test.name, runner=runner, dtest=test
-            )
+            yield DoctestItem(test.name, self, runner, test)
 
 
 def _check_all_skipped(test):
@@ -500,9 +488,7 @@ class DoctestModule(pytest.Module):
 
         for test in finder.find(module, module.__name__):
             if test.examples:  # skip empty doctests
-                yield DoctestItem.from_parent(
-                    self, name=test.name, runner=runner, dtest=test
-                )
+                yield DoctestItem(test.name, self, runner, test)
 
 
 def _setup_fixtures(doctest_item):

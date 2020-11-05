@@ -1230,7 +1230,7 @@ def test_handles_non_python_items(testdir: Testdir):
                 pytest.fail("failure")
 
         def pytest_collect_file(path, parent):
-            return MyItem.from_parent(parent, name="fooitem")
+            return MyItem("fooitem", parent)
         """
     )
     result = testdir.runpytest("-p", "pytester", str(p1))
