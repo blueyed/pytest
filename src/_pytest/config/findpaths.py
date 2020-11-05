@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from typing import Dict
     from typing import Union
 
+    from py.iniconfig import _SectionWrapper  # noqa: F401
+
     from . import Config  # noqa: F401
 
 
@@ -24,7 +26,9 @@ def exists(path, ignore=EnvironmentError):
         return False
 
 
-def getcfg(args, config=None):
+def getcfg(
+    dirs: "Iterable[py.path.local]", config: "Optional[Config]" = None
+) -> "Tuple[Optional[py.path.local], Optional[py.path.local], Optional[_SectionWrapper]]":
     """
     Search the list of arguments for a valid ini-file for pytest,
     and return a tuple of (rootdir, inifile, cfg-dict).
@@ -32,17 +36,13 @@ def getcfg(args, config=None):
     note: config is optional and used only to issue warnings explicitly (#2891).
     """
     inibasenames = ["pytest.ini", "tox.ini", "setup.cfg"]
-    args = [x for x in args if not str(x).startswith("-")]
-    if not args:
-        args = [py.path.local()]
-    for arg in args:
-        arg = py.path.local(arg)
+    for arg in dirs:
         for base in arg.parts(reverse=True):
             for inibasename in inibasenames:
                 p = base.join(inibasename)
                 if exists(p):
                     try:
-                        iniconfig = py.iniconfig.IniConfig(p)
+                        iniconfig = py.iniconfig.IniConfig(str(p))
                     except py.iniconfig.ParseError as exc:
                         raise UsageError(str(exc))
 
@@ -61,7 +61,7 @@ def getcfg(args, config=None):
                         return base, p, iniconfig["pytest"]
                     elif inibasename == "pytest.ini":
                         # allowed to be empty
-                        return base, p, {}
+                        return base, p, None
     return None, None, None
 
 
@@ -118,11 +118,12 @@ def determine_setup(
     args: List[str],
     rootdir_cmd_arg: Optional[str] = None,
     config: Optional["Config"] = None,
-) -> Tuple[py.path.local, Optional[str], "Union[py.iniconfig._SectionWrapper, Dict]"]:
+) -> "Tuple[py.path.local, Optional[py.path.local], Union[_SectionWrapper, Dict]]":
     dirs = get_dirs_from_args(args)
     if inifile:
+        ret_inifile = py.path.local(inifile)  # type: Optional[py.path.local]
         iniconfig = py.iniconfig.IniConfig(inifile)
-        is_cfg_file = str(inifile).endswith(".cfg")
+        is_cfg_file = inifile.endswith(".cfg")
         sections = ["tool:pytest", "pytest"] if is_cfg_file else ["pytest"]
         inicfg = None  # type: Optional[py.iniconfig._SectionWrapper]
         for section in sections:
@@ -132,14 +133,14 @@ def determine_setup(
                 continue
             if is_cfg_file and section == "pytest" and config is not None:
                 fail(
-                    CFG_PYTEST_SECTION.format(filename=str(inifile)), pytrace=False
+                    CFG_PYTEST_SECTION.format(filename=inifile), pytrace=False
                 )
             break
         if rootdir_cmd_arg is None:
-            rootdir = get_common_ancestor(dirs)
+            rootdir = get_common_ancestor(dirs)  # type: Optional[py.path.local]
     else:
         ancestor = get_common_ancestor(dirs)
-        rootdir, inifile, inicfg = getcfg([ancestor], config=config)
+        rootdir, ret_inifile, inicfg = getcfg([ancestor], config=config)
         if rootdir is None and rootdir_cmd_arg is None:
             for possible_rootdir in ancestor.parts(reverse=True):
                 if possible_rootdir.join("setup.py").exists():
@@ -147,7 +148,7 @@ def determine_setup(
                     break
             else:
                 if dirs != [ancestor]:
-                    rootdir, inifile, inicfg = getcfg(dirs, config=config)
+                    rootdir, ret_inifile, inicfg = getcfg(dirs, config=config)
                 if rootdir is None:
                     if config is not None:
                         cwd = config.invocation_dir
@@ -165,4 +166,5 @@ def determine_setup(
                     rootdir
                 )
             )
-    return rootdir, inifile, inicfg or {}
+    assert rootdir
+    return rootdir, ret_inifile, inicfg or {}
