@@ -50,6 +50,7 @@ def test_help(testdir: Testdir) -> None:
     result.stdout.no_fnmatch_line("logging:")
 
 
+@pytest.mark.pypy_specific  # for "is argparse.SUPPRESS" check.
 def test_help_for_empty_ini_params(testdir: "Testdir") -> None:
     testdir.makeconftest(
         """
