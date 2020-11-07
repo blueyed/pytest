@@ -2031,7 +2031,7 @@ class TestProgressOutputStyle:
             """
         )
 
-        result = testdir.runpytest(str(p1))
+        result = testdir.runpytest(p1)
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
