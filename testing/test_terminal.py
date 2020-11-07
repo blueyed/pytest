@@ -2009,6 +2009,37 @@ class TestProgressOutputStyle:
             )
         )
 
+    def test_skipped(self, testdir: Testdir) -> None:
+        p1 = testdir.makepyfile(
+            """
+            import pytest
+
+            n = 0
+
+            @pytest.fixture
+            def skip_in_setup():
+                global n
+                n += 1
+                if n % 2:
+                    pytest.skip("...")
+                yield
+
+
+            @pytest.mark.parametrize("n", range(5))
+            def test(n, skip_in_setup):
+                pass
+            """
+        )
+
+        result = testdir.runpytest(p1)
+        assert result.ret == 0
+        result.stdout.fnmatch_lines(
+            [
+                "test_skipped.py s.s.s * [[]100%[]]",
+                "*= 2 passed, 3 skipped in*",
+            ]
+        )
+
     def test_colored_progress(self, testdir, monkeypatch, color_mapping):
         monkeypatch.setenv("PY_COLORS", "1")
         testdir.makepyfile(

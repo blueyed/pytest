@@ -573,7 +573,7 @@ class TerminalReporter:
         else:
             markup = None
         self._add_stats(category, [rep])
-        if rep.when == "call" or (rep.when == "setup" and rep.failed):
+        if rep.when == "call" or (rep.when == "setup" and not rep.passed):
             self._progress_items_reported += 1
         if not letter and not word:
             # probably passed setup/teardown
