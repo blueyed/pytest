@@ -64,7 +64,7 @@ class Code:
         return self.raw == other.raw
 
     # Ignore type because of https://github.com/python/mypy/issues/4266.
-    __hash__ = None  # type: ignore
+    __hash__ = None  # type: ignore[assignment]
 
     def __ne__(self, other):
         return not self == other
@@ -885,9 +885,9 @@ class FormattedExcinfo:
                 max_frames=max_frames,
                 total=len(traceback),
             )  # type: Optional[str]
-            # Type ignored because adding two instaces of a List subtype
+            # Type ignored because adding two instances of a List subtype
             # currently incorrectly has type List instead of the subtype.
-            traceback = traceback[:max_frames] + traceback[-max_frames:]  # type: ignore
+            traceback = traceback[:max_frames] + traceback[-max_frames:]  # type: ignore[assignment]
         else:
             if recursionindex is not None:
                 extraline = "!!! Recursion detected (same locals & position)"
@@ -943,7 +943,7 @@ class FormattedExcinfo:
         return ExceptionChainRepr(repr_chain)
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class TerminalRepr:
     def __str__(self) -> str:
         # FYI this is called from pytest-xdist's serialization of exception
@@ -960,7 +960,7 @@ class TerminalRepr:
         raise NotImplementedError()
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ExceptionRepr(TerminalRepr):
     def __attrs_post_init__(self):
         self.sections = []  # type: List[Tuple[str, str, str]]
@@ -974,7 +974,7 @@ class ExceptionRepr(TerminalRepr):
             tw.line(content)
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ExceptionChainRepr(ExceptionRepr):
     chain = attr.ib(
         type=Sequence[
@@ -998,7 +998,7 @@ class ExceptionChainRepr(ExceptionRepr):
         super().toterminal(tw)
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprExceptionInfo(ExceptionRepr):
     reprtraceback = attr.ib(type="ReprTraceback")
     reprcrash = attr.ib(type="ReprFileLocation")
@@ -1008,7 +1008,7 @@ class ReprExceptionInfo(ExceptionRepr):
         super().toterminal(tw)
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprTraceback(TerminalRepr):
     reprentries = attr.ib(type=Sequence[Union["ReprEntry", "ReprEntryNative"]])
     extraline = attr.ib(type=Optional[str])
@@ -1042,7 +1042,7 @@ class ReprTracebackNative(ReprTraceback):
         self.extraline = None
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprEntryNative(TerminalRepr):
     lines = attr.ib(type=Sequence[str])
     style = "native"  # type: _TracebackStyle
@@ -1051,7 +1051,7 @@ class ReprEntryNative(TerminalRepr):
         tw.write("".join(self.lines))
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprEntry(TerminalRepr):
     lines = attr.ib(type=Sequence[str])
     reprfuncargs = attr.ib(type=Optional["ReprFuncArgs"])
@@ -1140,7 +1140,7 @@ class ReprFileLocation(TerminalRepr):
             tw.line(": {}".format(self._get_short_msg()))
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprLocals(TerminalRepr):
     lines = attr.ib(type=Sequence[str])
 
@@ -1149,7 +1149,7 @@ class ReprLocals(TerminalRepr):
             tw.line(indent + line)
 
 
-@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprFuncArgs(TerminalRepr):
     args = attr.ib(type=Sequence[Tuple[str, object]])
 
