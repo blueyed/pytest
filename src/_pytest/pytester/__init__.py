@@ -599,7 +599,7 @@ class Testdir(Generic[AnyStr]):
         self._mod_collections = (
             WeakKeyDictionary()
         )  # type: WeakKeyDictionary[Module, List[Union[Item, Collector]]]
-        name = self._name = request.node.name
+        name = self._name = request.node.originalname or request.node.name
         self.tmpdir = tmpdir_factory.mktemp(name, numbered=True)  # type: py.path.local
         """The base temporary directory.
 
