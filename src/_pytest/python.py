@@ -1411,7 +1411,9 @@ class Function(PyobjMixin, nodes.Item):
         fixtureinfo: Optional[FuncFixtureInfo] = None,
         originalname=None,
     ) -> None:
-        super().__init__(name, parent, config=config, session=session)
+        super().__init__(
+            name, parent, config=config, session=session, originalname=originalname
+        )
         self._args = args
         if callobj is not NOTSET:
             self.obj = callobj
@@ -1449,12 +1451,6 @@ class Function(PyobjMixin, nodes.Item):
         self._fixtureinfo = fixtureinfo  # type: FuncFixtureInfo
         self.fixturenames = fixtureinfo.names_closure
         self._initrequest()
-
-        #: original function name, without any decorations (for example
-        #: parametrization adds a ``"[...]"`` suffix to function names).
-        #:
-        #: .. versionadded:: 3.0
-        self.originalname = originalname
 
     @classmethod
     def from_parent(cls, parent, **kw):  # todo: determine sound type limitations
