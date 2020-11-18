@@ -33,6 +33,7 @@ class TestNewAPI:
         assert val == -2
 
     @pytest.mark.filterwarnings("default")
+    @pytest.mark.pypy_specific
     def test_cache_writefail_uses_warnings(self, testdir):
         testdir.makeini("[pytest]")
         cache_file_instead_of_dir = testdir.tmpdir.join(".pytest_cache")
@@ -62,7 +63,7 @@ class TestNewAPI:
         assert len(wr) == 1
         assert wr[0].filename == __file__
         assert re.match(
-            r"^could not write cache path .*broken: .*broken'$",
+            r"^could not write cache path .*broken: .*broken'\)?$",
             str(wr[0].message),
         )
 
