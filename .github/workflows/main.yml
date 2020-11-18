@@ -123,7 +123,7 @@ jobs:
 
     # Caching.
     - name: set PY_CACHE_KEY
-      run: echo "::set-env name=PY_CACHE_KEY::$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')"
+      run: echo "PY_CACHE_KEY=$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')" >> $GITHUB_ENV
     - name: Cache .tox
       if: (matrix.tox_env != 'docs')
       uses: actions/cache@v1
