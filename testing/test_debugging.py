@@ -1403,6 +1403,7 @@ def test_pdb_in_thread_after_exit(testdir: "Testdir") -> None:
     p1 = testdir.makepyfile(
         """
         import threading
+        import time
 
         main_thread = threading.current_thread()
         evt = threading.Event()
@@ -1420,8 +1421,8 @@ def test_pdb_in_thread_after_exit(testdir: "Testdir") -> None:
                 evt.set()
                 assert main_thread.is_alive()
                 __import__('pdb').set_trace()
-                while not main_thread.is_alive():
-                    sleep(.01)
+                while main_thread.is_alive():
+                    time.sleep(.01)
                 __import__('pdb').set_trace()
                 print("target_" + "end")
 
