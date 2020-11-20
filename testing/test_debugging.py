@@ -1394,7 +1394,7 @@ def test_pdb_wrapper_class_is_reused(testdir):
     )
 
 
-def test_pdb_in_thread_after_exit(testdir):
+def test_pdb_in_thread_after_exit(testdir: "Testdir") -> None:
     """Ensure that pdb.set_trace works after main thread exited already.
 
     This tests both continuation after the main thread exited, and a new
@@ -1403,6 +1403,7 @@ def test_pdb_in_thread_after_exit(testdir):
     p1 = testdir.makepyfile(
         """
         import threading
+        import time
 
         main_thread = threading.current_thread()
         evt = threading.Event()
@@ -1420,7 +1421,8 @@ def test_pdb_in_thread_after_exit(testdir):
                 evt.set()
                 assert main_thread.is_alive()
                 __import__('pdb').set_trace()
-                assert not main_thread.is_alive()
+                while main_thread.is_alive():
+                    time.sleep(.01)
                 __import__('pdb').set_trace()
                 print("target_" + "end")
 
