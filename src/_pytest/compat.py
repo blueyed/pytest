@@ -16,7 +16,6 @@ from typing import Callable
 from typing import Generic
 from typing import IO
 from typing import Optional
-from typing import overload
 from typing import Tuple
 from typing import TypeVar
 from typing import Union
@@ -31,8 +30,9 @@ else:
 
 
 if TYPE_CHECKING:
-    from typing import List
     from types import ModuleType  # noqa: F401 (used in type string)
+    from typing import List
+    from typing import overload
     from typing import Type  # noqa: F401 (used in type string)
 
 
@@ -396,12 +396,6 @@ class CaptureAndPassthroughIO(CaptureIO):
         return self._other.write(s)
 
 
-if sys.version_info < (3, 5, 2):
-
-    def overload(f):  # noqa: F811
-        return f
-
-
 if getattr(attr, "__version_info__", ()) >= (19, 2):
     ATTRS_EQ_FIELD = "eq"
 else:
@@ -425,19 +419,20 @@ else:
             self.func = func
             self.__doc__ = func.__doc__
 
-        @overload
-        def __get__(
-            self, instance: None, owner: Optional["Type[_S]"] = ...
-        ) -> "cached_property[_S, _T]":
-            raise NotImplementedError()
+        if TYPE_CHECKING:
+            @overload
+            def __get__(
+                self, instance: None, owner: Optional["Type[_S]"] = ...
+            ) -> "cached_property[_S, _T]":
+                ...
 
-        @overload  # noqa: F811
-        def __get__(  # noqa: F811
-            self, instance: _S, owner: Optional["Type[_S]"] = ...
-        ) -> _T:
-            raise NotImplementedError()
+            @overload
+            def __get__(
+                self, instance: _S, owner: Optional["Type[_S]"] = ...
+            ) -> _T:
+                ...
 
-        def __get__(self, instance, owner=None):  # noqa: F811
+        def __get__(self, instance, owner=None):
             if instance is None:
                 return self
             value = instance.__dict__[self.func.__name__] = self.func(instance)

@@ -32,11 +32,11 @@ import _pytest
 from _pytest._io import TerminalWriter
 from _pytest._io.saferepr import safeformat
 from _pytest._io.saferepr import saferepr
-from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
 from _pytest.outcomes import OutcomeException
 
 if TYPE_CHECKING:
+    from typing import overload
     from typing import Type
     from typing_extensions import Literal
     from weakref import ReferenceType  # noqa: F401
@@ -362,15 +362,16 @@ class Traceback(List[TracebackEntry]):
                 return Traceback(x._rawentry, self._excinfo)
         return self
 
-    @overload
-    def __getitem__(self, key: int) -> TracebackEntry:
-        raise NotImplementedError()
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, key: int) -> TracebackEntry:
+            ...
 
-    @overload  # noqa: F811
-    def __getitem__(self, key: slice) -> "Traceback":  # noqa: F811
-        raise NotImplementedError()
+        @overload
+        def __getitem__(self, key: slice) -> "Traceback":
+            ...
 
-    def __getitem__(  # noqa: F811
+    def __getitem__(
         self, key: Union[int, slice]
     ) -> Union[TracebackEntry, "Traceback"]:
         if isinstance(key, slice):

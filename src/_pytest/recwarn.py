@@ -11,12 +11,12 @@ from typing import Pattern
 from typing import Tuple
 from typing import Union
 
-from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
 from _pytest.fixtures import yield_fixture
 from _pytest.outcomes import fail
 
 if TYPE_CHECKING:
+    from typing import overload
     from typing import Type
 
 
@@ -55,27 +55,28 @@ def deprecated_call(func=None, *args, **kwargs):
     return warns((DeprecationWarning, PendingDeprecationWarning), *args, **kwargs)
 
 
-@overload
+if TYPE_CHECKING:
+    @overload
+    def warns(
+        expected_warning: Optional[Union["Type[Warning]", Tuple["Type[Warning]", ...]]],
+        *,
+        match: "Optional[Union[str, Pattern]]" = ...
+    ) -> "WarningsChecker":
+        ...
+
+
+    @overload
+    def warns(
+        expected_warning: Optional[Union["Type[Warning]", Tuple["Type[Warning]", ...]]],
+        func: Callable,
+        *args: Any,
+        match: Optional[Union[str, "Pattern"]] = ...,
+        **kwargs: Any
+    ) -> Union[Any]:
+        ...
+
+
 def warns(
-    expected_warning: Optional[Union["Type[Warning]", Tuple["Type[Warning]", ...]]],
-    *,
-    match: "Optional[Union[str, Pattern]]" = ...
-) -> "WarningsChecker":
-    raise NotImplementedError()
-
-
-@overload  # noqa: F811
-def warns(  # noqa: F811
-    expected_warning: Optional[Union["Type[Warning]", Tuple["Type[Warning]", ...]]],
-    func: Callable,
-    *args: Any,
-    match: Optional[Union[str, "Pattern"]] = ...,
-    **kwargs: Any
-) -> Union[Any]:
-    raise NotImplementedError()
-
-
-def warns(  # noqa: F811
     expected_warning: Optional[Union["Type[Warning]", Tuple["Type[Warning]", ...]]],
     *args: Any,
     match: Optional[Union[str, "Pattern"]] = None,

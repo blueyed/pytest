@@ -36,7 +36,6 @@ from _pytest.capture import CLOSE_STDIN
 from _pytest.capture import CloseStdinType
 from _pytest.capture import MultiCapture
 from _pytest.capture import SysCapture
-from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
 from _pytest.config import _PluggyPlugin
 from _pytest.config import Config
@@ -56,6 +55,7 @@ from _pytest.tmpdir import TempdirFactory
 
 
 if TYPE_CHECKING:
+    from typing import overload
     from typing import Type
     from typing_extensions import Literal  # noqa: F401
 
@@ -1282,33 +1282,34 @@ class Testdir(Generic[AnyStr]):
                 return colitem
         return None
 
-    @overload
+    if TYPE_CHECKING:
+        @overload
+        def popen(
+            self,
+            cmdargs,
+            stdout: Optional[Union[int, IO]] = subprocess.PIPE,
+            stderr: Optional[Union[int, IO]] = subprocess.PIPE,
+            stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
+            *,
+            encoding: None = ...,
+            **kw
+        ) -> "subprocess.Popen[bytes]":
+            ...
+
+        @overload
+        def popen(
+            self,
+            cmdargs,
+            stdout: Optional[Union[int, IO]] = subprocess.PIPE,
+            stderr: Optional[Union[int, IO]] = subprocess.PIPE,
+            stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
+            *,
+            encoding: str,
+            **kw
+        ) -> "subprocess.Popen[str]":
+            ...
+
     def popen(
-        self,
-        cmdargs,
-        stdout: Optional[Union[int, IO]] = subprocess.PIPE,
-        stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
-        *,
-        encoding: None = ...,
-        **kw
-    ) -> "subprocess.Popen[bytes]":
-        ...
-
-    @overload
-    def popen(  # noqa: F811
-        self,
-        cmdargs,
-        stdout: Optional[Union[int, IO]] = subprocess.PIPE,
-        stderr: Optional[Union[int, IO]] = subprocess.PIPE,
-        stdin: Optional[Union[CloseStdinType, bytes, str, int, IO]] = CLOSE_STDIN,
-        *,
-        encoding: str,
-        **kw
-    ) -> "subprocess.Popen[str]":
-        ...
-
-    def popen(  # noqa: F811
         self,
         cmdargs,
         stdout: Optional[Union[int, IO]] = subprocess.PIPE,
