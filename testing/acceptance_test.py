@@ -853,22 +853,6 @@ class TestInvocationVariants:
         assert result.ret
         result.stderr.fnmatch_lines(["ERROR*file*or*package*not*found*"])
 
-    @pytest.mark.xfail(reason="decide: feature or bug")
-    def test_noclass_discovery_if_not_testcase(self, testdir):
-        testpath = testdir.makepyfile(
-            """
-            import unittest
-            class TestHello(object):
-                def test_hello(self):
-                    assert self.attr
-
-            class RealTest(unittest.TestCase, TestHello):
-                attr = 42
-        """
-        )
-        reprec = testdir.inline_run(testpath)
-        reprec.assertoutcome(passed=1)
-
     def test_doctest_id(self, testdir):
         testdir.makefile(
             ".txt",
