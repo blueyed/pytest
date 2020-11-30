@@ -1,12 +1,15 @@
 import gc
 
 import pytest
+from _pytest.compat import TYPE_CHECKING
 from _pytest.config import ExitCode
-from _pytest.pytester import Testdir
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
 
 
-def test_simple_unittest(testdir):
-    testpath = testdir.makepyfile(
+def test_simple_unittest(testdir: "Testdir") -> None:
+    p1 = testdir.makepyfile(
         """
         import unittest
         class MyTestCase(unittest.TestCase):
@@ -16,9 +19,34 @@ def test_simple_unittest(testdir):
                 self.assertEqual('foo', 'bar')
     """
     )
-    reprec = testdir.inline_run(testpath)
-    assert reprec.matchreport("testpassing").passed
-    assert reprec.matchreport("test_failing").failed
+    result = testdir.runpytest(p1, "-rap")
+    result.stdout.fnmatch_lines(
+        [
+            "collected 2 items",
+            "",
+            "test_simple_unittest.py F. *",
+            "",
+            "=*= FAILURES =*=",
+            "_*_ MyTestCase.test_failing _*_",
+            "",
+            "self = <test_simple_unittest.MyTestCase testMethod=test_failing>",
+            "",
+            "    def test_failing(self):",
+            ">       self.assertEqual('foo', 'bar')",
+            "E       AssertionError: 'foo' != 'bar'",
+            "E       - foo",
+            "E       + bar",
+            "",
+            "test_simple_unittest.py:6: AssertionError: 'foo' != 'bar'...",
+            "=*= short test summary info =*=",
+            "FAILED test_simple_unittest.py:6::MyTestCase::test_failing"
+            r" - AssertionError: 'foo' != 'bar'\n- foo\n+ bar",
+            "PASSED test_simple_unittest.py::MyTestCase::testpassing",
+            "=*= 1 failed, 1 passed in *s =*=",
+        ],
+        consecutive=True,
+    )
+    assert result.ret == 1
 
 
 def test_runTest_method(testdir):
@@ -744,7 +772,7 @@ def test_unorderable_types(testdir):
     assert result.ret == ExitCode.NO_TESTS_COLLECTED
 
 
-def test_order(testdir: Testdir) -> None:
+def test_order(testdir: "Testdir") -> None:
     """Test for unittest's behavior to sort tests by default (via TestLoader).
 
     This could be made configurable maybe."""
