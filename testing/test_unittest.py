@@ -692,8 +692,8 @@ def test_djangolike_testcase(testdir):
     )
 
 
-def test_unittest_not_shown_in_traceback(testdir):
-    testdir.makepyfile(
+def test_unittest_not_shown_in_traceback(testdir: "Testdir") -> None:
+    p1 = testdir.makepyfile(
         """
         import unittest
         class t(unittest.TestCase):
@@ -702,8 +702,26 @@ def test_unittest_not_shown_in_traceback(testdir):
                 self.assertEqual(x, 4)
     """
     )
-    res = testdir.runpytest()
-    res.stdout.no_fnmatch_line("*failUnlessEqual*")
+    result = testdir.runpytest(p1)
+    result.stdout.fnmatch_lines(
+        [
+            "=*= FAILURES =*=",
+            "_*_ t.test_hello _*_",
+            "",
+            "self = <test_unittest_not_shown_in_traceback.t testMethod=test_hello>",
+            "",
+            "    def test_hello(self):",
+            "        x = 3",
+            ">       self.assertEqual(x, 4)",
+            "E       AssertionError: 3 != 4",
+            "",
+            "test_unittest_not_shown_in_traceback.py:5: AssertionError: 3 != 4",
+            "=*= short test summary info =*=",
+            "FAILED test_unittest_not_shown_in_traceback.py:5::t::test_hello - AssertionError: 3 != 4",
+            "=*= 1 failed in *s =*=",
+        ],
+        consecutive=True,
+    )
 
 
 def test_unorderable_types(testdir):
