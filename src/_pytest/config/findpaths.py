@@ -14,9 +14,9 @@ if TYPE_CHECKING:
     from typing import Dict
     from typing import Union
 
-    from py.iniconfig import _SectionWrapper  # noqa: F401
+    from py.iniconfig import SectionWrapper
 
-    from . import Config  # noqa: F401
+    from . import Config
 
 
 def exists(path, ignore=OSError):
@@ -28,7 +28,7 @@ def exists(path, ignore=OSError):
 
 def getcfg(
     dirs: "Iterable[py.path.local]", config: "Optional[Config]" = None
-) -> "Tuple[Optional[py.path.local], Optional[py.path.local], Optional[_SectionWrapper]]":
+) -> "Tuple[Optional[py.path.local], Optional[py.path.local], Optional[SectionWrapper]]":
     """
     Search the list of arguments for a valid ini-file for pytest,
     and return a tuple of (rootdir, inifile, cfg-dict).
@@ -118,14 +118,14 @@ def determine_setup(
     args: List[str],
     rootdir_cmd_arg: Optional[str] = None,
     config: Optional["Config"] = None,
-) -> "Tuple[py.path.local, Optional[py.path.local], Union[_SectionWrapper, Dict]]":
+) -> "Tuple[py.path.local, Optional[py.path.local], Union[SectionWrapper, Dict]]":
     dirs = get_dirs_from_args(args)
     if inifile:
         ret_inifile = py.path.local(inifile)  # type: Optional[py.path.local]
         iniconfig = py.iniconfig.IniConfig(inifile)
         is_cfg_file = inifile.endswith(".cfg")
         sections = ["tool:pytest", "pytest"] if is_cfg_file else ["pytest"]
-        inicfg = None  # type: Optional[py.iniconfig._SectionWrapper]
+        inicfg = None  # type: Optional[SectionWrapper]
         for section in sections:
             try:
                 inicfg = iniconfig[section]
