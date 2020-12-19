@@ -737,7 +737,14 @@ class TestInvocationVariants:
 
         # mixed module and filenames:
         monkeypatch.chdir("world")
-        result = testdir.runpytest("--pyargs", "-v", "ns_pkg.hello", "ns_pkg/world")
+        result = testdir.runpytest(
+            # https://github.com/pypa/setuptools/issues/2493
+            "-Wignore:the load_module():DeprecationWarning",
+            "--pyargs",
+            "-v",
+            "ns_pkg.hello",
+            "ns_pkg/world",
+        )
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
