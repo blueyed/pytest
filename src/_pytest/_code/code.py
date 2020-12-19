@@ -777,20 +777,11 @@ class FormattedExcinfo:
                 if name == "__builtins__":
                     lines.append("__builtins__ = <builtins>")
                 else:
-                    # This formatting could all be handled by the
-                    # _repr() function, which is only reprlib.Repr in
-                    # disguise, so is very configurable.
                     if self.truncate_locals:
                         str_repr = saferepr(value)
                     else:
                         str_repr = safeformat(value)
-                    # if len(str_repr) < 70 or not isinstance(value,
-                    #                            (list, tuple, dict)):
                     lines.append("{:<10} = {}".format(name, str_repr))
-                    # else:
-                    #    self._line("%-10s =\\" % (name,))
-                    #    # XXX
-                    #    pprint.pprint(value, stream=self.excinfowriter)
             return ReprLocals(lines)
         return None
 
