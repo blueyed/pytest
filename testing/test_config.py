@@ -492,19 +492,22 @@ class TestConfigAPI:
         assert len(values) == 2
         assert values == ["456", "123"]
 
-    def test_confcutdir_check_isdir(self, testdir):
+    def test_confcutdir_check_isdir(self, testdir: "Testdir") -> None:
         """Give an error if --confcutdir is not a valid directory (#2078)"""
-        exp_match = r"^--confcutdir must be a directory, given: "
-        with pytest.raises(pytest.UsageError, match=exp_match):
-            testdir.parseconfig(
-                "--confcutdir", testdir.tmpdir.join("file").ensure(file=1)
-            )
-        with pytest.raises(pytest.UsageError, match=exp_match):
-            testdir.parseconfig("--confcutdir", testdir.tmpdir.join("inexistant"))
-        config = testdir.parseconfig(
-            "--confcutdir", testdir.tmpdir.join("dir").ensure(dir=1)
-        )
-        assert config.getoption("confcutdir") == str(testdir.tmpdir.join("dir"))
+        root = testdir.tmpdir
+        with pytest.raises(
+            pytest.UsageError, match=r"^--confcutdir must be a directory, given: file$"
+        ):
+            testdir.parseconfig("--confcutdir", root.join("file").ensure().basename)
+        with pytest.raises(
+            pytest.UsageError,
+            match=r"^--confcutdir must be a directory, given: inexistant$",
+        ):
+            testdir.parseconfig("--confcutdir", "inexistant")
+        ccdir = root.join("dir").ensure(dir=True)
+        config = testdir.parseconfig("--confcutdir", "dir")
+        assert config.getoption("confcutdir") == "dir"
+        assert config.pluginmanager._confcutdir == ccdir
 
     @pytest.mark.parametrize(
         "names, expected",
