@@ -53,7 +53,6 @@ from _pytest.mark.structures import Mark
 from _pytest.mark.structures import normalize_mark_list
 from _pytest.outcomes import fail
 from _pytest.outcomes import skip
-from _pytest.pathlib import parts
 from _pytest.warning_types import PytestCollectionWarning
 from _pytest.warning_types import PytestUnhandledCoroutineWarning
 
@@ -610,14 +609,15 @@ class Package(Module):
         assert isinstance(path, py.path.local), repr(path)
         return path in self.session._initialpaths
 
-    def collect(self):
+    def collect(self) -> "Iterator[Union[nodes.Item, nodes.Collector]]":
         this_path = self.fspath.dirpath()
         init_module = this_path.join("__init__.py")
         if init_module.check(file=1) and path_matches_patterns(
             init_module, self.config.getini("python_files")
         ):
             yield Module.from_parent(self, fspath=init_module)
-        pkg_prefixes = set()
+
+        pkg_prefixes = set()  # type: Set[py.path.local]
         for path in this_path.visit(rec=self._recurse, bf=True, sort=True):
             # We will visit our own __init__.py file, in which case we skip it.
             is_file = path.isfile()
@@ -625,12 +625,12 @@ class Package(Module):
                 if path.basename == "__init__.py" and path.dirpath() == this_path:
                     continue
 
-            parts_ = parts(path.strpath)
-            if any(
-                pkg_prefix in parts_ and pkg_prefix.join("__init__.py") != path
-                for pkg_prefix in pkg_prefixes
-            ):
-                continue
+                parts_ = path.parts()
+                if any(
+                    pkg_prefix in parts_ and pkg_prefix.join("__init__.py") != path
+                    for pkg_prefix in pkg_prefixes
+                ):
+                    continue
 
             if is_file:
                 yield from self._collectfile(path)
