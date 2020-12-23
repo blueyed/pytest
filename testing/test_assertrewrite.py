@@ -1278,7 +1278,7 @@ class TestEarlyRewriteBailout:
         # use default patterns, otherwise we inherit pytest's testing config
         hook.fnpats[:] = ["test_*.py", "*_test.py"]
         monkeypatch.setattr(hook, "_find_spec", spy_find_spec)
-        hook.set_session(StubSession())
+        hook.set_session(StubSession())  # type: ignore[arg-type]
         testdir.syspathinsert()
         return hook
 
