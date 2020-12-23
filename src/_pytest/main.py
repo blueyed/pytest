@@ -379,7 +379,7 @@ class Session(nodes.FSCollector):
         )  # type: Dict[Tuple[Type[nodes.Collector], str], CollectReport]
 
         # Dirnames of pkgs with dunder-init files.
-        self._collection_pkg_roots = {}  # type: Dict[str, Package]
+        self._collection_pkg_roots = {}  # type: Dict[py.path.local, Package]
 
         self._bestrelpathcache = _bestrelpath_cache(
             config.rootdir
@@ -561,7 +561,7 @@ class Session(nodes.FSCollector):
                             col = self._collectfile(pkginit, handle_dupes=False)
                             if col:
                                 if isinstance(col[0], Package):
-                                    self._collection_pkg_roots[str(parent)] = col[0]
+                                    self._collection_pkg_roots[parent] = col[0]
                                 # always store a list in the cache, matchnodes expects it
                                 self._collection_node_cache1[col[0].fspath] = [col[0]]
 
@@ -570,21 +570,21 @@ class Session(nodes.FSCollector):
         if argpath.check(dir=1):
             assert not names, "invalid arg {!r}".format((argpath, names))
 
-            seen_dirs = set()  # type: Set[str]
+            seen_dirs = set()  # type: Set[py.path.local]
             for path in argpath.visit(
                 fil=self._visit_filter, rec=self._recurse, bf=True, sort=True
             ):
-                dirname = path.dirname
-                if dirname not in seen_dirs:
+                dirpath = path.dirpath()
+                if dirpath not in seen_dirs:
                     # Collect packages first.
-                    seen_dirs.add(dirname)
+                    seen_dirs.add(dirpath)
                     pkginit = path.dirpath().join("__init__.py")
                     if pkginit.exists():
                         for x in self._collectfile(pkginit):
                             yield x
                             if isinstance(x, Package):
-                                self._collection_pkg_roots[dirname] = x
-                if dirname in self._collection_pkg_roots:
+                                self._collection_pkg_roots[dirpath] = x
+                if dirpath in self._collection_pkg_roots:
                     # Do not collect packages here.
                     continue
 
@@ -601,7 +601,7 @@ class Session(nodes.FSCollector):
             if argpath in self._collection_node_cache1:
                 col = self._collection_node_cache1[argpath]
             else:
-                collect_root = self._collection_pkg_roots.get(argpath.dirname, self)
+                collect_root = self._collection_pkg_roots.get(argpath.dirpath(), self)
                 col = collect_root._collectfile(argpath, handle_dupes=False)
                 if col:
                     self._collection_node_cache1[argpath] = col
