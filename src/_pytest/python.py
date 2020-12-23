@@ -57,6 +57,9 @@ from _pytest.warning_types import PytestCollectionWarning
 from _pytest.warning_types import PytestUnhandledCoroutineWarning
 
 if TYPE_CHECKING:
+    from typing import Iterator
+    from typing import Set
+
     from _pytest._io import TerminalWriter
 
 
