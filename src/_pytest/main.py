@@ -35,6 +35,8 @@ RE_FNAME_LINENO = re.compile(r"^([^:].[^:]*):(\d+)?(-?)(\d+)?:?$")
 
 
 if TYPE_CHECKING:
+    from typing import Generator
+    from typing import Set
     from typing import Type
     from typing_extensions import Literal
 
@@ -377,7 +379,7 @@ class Session(nodes.FSCollector):
         )  # type: Dict[Tuple[Type[nodes.Collector], str], CollectReport]
 
         # Dirnames of pkgs with dunder-init files.
-        self._collection_pkg_roots = {}  # type: Dict[py.path.local, Package]
+        self._collection_pkg_roots = {}  # type: Dict[str, Package]
 
         self._bestrelpathcache = _bestrelpath_cache(
             config.rootdir
@@ -538,7 +540,9 @@ class Session(nodes.FSCollector):
         self._collection_node_cache3.clear()
         self._collection_pkg_roots.clear()
 
-    def _collect(self, argpath, names):
+    def _collect(
+        self, argpath: "py.path.local", names: "List[str]"
+    ) -> "Generator[Union[nodes.Item, nodes.Collector], None, None]":
         from _pytest.python import Package
 
         # Start with a Session root, and delve to argpath item (dir or file)
@@ -557,7 +561,7 @@ class Session(nodes.FSCollector):
                             col = self._collectfile(pkginit, handle_dupes=False)
                             if col:
                                 if isinstance(col[0], Package):
-                                    self._collection_pkg_roots[parent] = col[0]
+                                    self._collection_pkg_roots[str(parent)] = col[0]
                                 # always store a list in the cache, matchnodes expects it
                                 self._collection_node_cache1[col[0].fspath] = [col[0]]
 
@@ -566,21 +570,21 @@ class Session(nodes.FSCollector):
         if argpath.check(dir=1):
             assert not names, "invalid arg {!r}".format((argpath, names))
 
-            seen_dirs = set()
+            seen_dirs = set()  # type: Set[str]
             for path in argpath.visit(
                 fil=self._visit_filter, rec=self._recurse, bf=True, sort=True
             ):
-                dirpath = path.dirpath()
-                if dirpath not in seen_dirs:
+                dirname = path.dirname
+                if dirname not in seen_dirs:
                     # Collect packages first.
-                    seen_dirs.add(dirpath)
-                    pkginit = dirpath.join("__init__.py")
+                    seen_dirs.add(dirname)
+                    pkginit = path.dirpath().join("__init__.py")
                     if pkginit.exists():
                         for x in self._collectfile(pkginit):
                             yield x
                             if isinstance(x, Package):
-                                self._collection_pkg_roots[dirpath] = x
-                if dirpath in self._collection_pkg_roots:
+                                self._collection_pkg_roots[dirname] = x
+                if dirname in self._collection_pkg_roots:
                     # Do not collect packages here.
                     continue
 
@@ -614,7 +618,7 @@ class Session(nodes.FSCollector):
                     # file in it, which gets ignored by the default
                     # "python_files" option.
                     pass
-                return
+                return None
             yield from m
 
     @staticmethod
