@@ -189,25 +189,24 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         state.trace("early skip of rewriting module: {}".format(name))
         return True
 
-    def _should_rewrite(self, name: str, fn: str, state: "AssertionState") -> bool:
+    def _should_rewrite(self, name: str, path: "py.path.local", state: "AssertionState") -> bool:
         # always rewrite conftest files
-        if os.path.basename(fn) == "conftest.py":
-            state.trace("rewriting conftest file: {!r}".format(fn))
+        if path.basename == "conftest.py":
+            state.trace("rewriting conftest file: {}".format(path))
             return True
 
         if self.session is not None:
-            if self.session.isinitpath(py.path.local(fn)):
+            if self.session.isinitpath(path):
                 state.trace(
-                    "matched test file (was specified on cmdline): {!r}".format(fn)
+                    "matched test file (was specified on cmdline): {}".format(path)
                 )
                 return True
 
         # modules not passed explicitly on the command line are only
         # rewritten if they match the naming convention for test files
-        fn_path = PurePath(fn)
         for pat in self.fnpats:
-            if fnmatch_ex(pat, fn_path):
-                state.trace("matched test file {!r}".format(fn))
+            if fnmatch_ex(pat, path):
+                state.trace("matched test file {}".format(path))
                 return True
 
         return self._is_marked_for_rewrite(name, state)
