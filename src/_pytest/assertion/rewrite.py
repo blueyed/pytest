@@ -770,8 +770,9 @@ class AssertionRewriter(ast.NodeVisitor):
 
         """
         if isinstance(assert_.test, ast.Tuple) and len(assert_.test.elts) >= 1:
-            from _pytest.warning_types import PytestAssertRewriteWarning
             import warnings
+
+            from _pytest.warning_types import PytestAssertRewriteWarning
 
             warnings.warn_explicit(
                 PytestAssertRewriteWarning(
