@@ -18,7 +18,6 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
-from typing import TYPE_CHECKING
 
 import py.path
 
@@ -30,6 +29,7 @@ from _pytest.assertion.util import (  # noqa: F401
     format_explanation as _format_explanation,
 )
 from _pytest.compat import fspath
+from _pytest.compat import TYPE_CHECKING
 from _pytest.pathlib import fnmatch_ex
 from _pytest.pathlib import Path
 from _pytest.pathlib import PurePath
