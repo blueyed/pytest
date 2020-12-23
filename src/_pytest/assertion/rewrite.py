@@ -97,7 +97,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         else:
             fn = spec.origin
 
-        if not self._should_rewrite(name, fn, state):
+        if not self._should_rewrite(name, py.path.local(fn), state):
             return None
 
         return importlib.util.spec_from_file_location(
