@@ -786,12 +786,19 @@ class TerminalReporter:
         if not self.showheader:
             return
         self.write_sep("=", "test session starts", bold=True)
+
+        # Python version information.
         verinfo = platform.python_version()
+        pypy_info = getattr(sys, "pypy_version_info", None)
+        if pypy_info:
+            verinfo += "[pypy-{}-{}]".format(
+                ".".join(map(str, pypy_info[:3])), pypy_info[3]
+            )
+        revision = platform.python_revision()
+        if revision:
+            verinfo += " (revision {})".format(revision[:10])
         msg = "platform {} -- Python {}".format(sys.platform, verinfo)
-        pypy_version_info = getattr(sys, "pypy_version_info", None)
-        if pypy_version_info:
-            verinfo = ".".join(map(str, pypy_version_info[:3]))
-            msg += "[pypy-{}-{}]".format(verinfo, pypy_version_info[3])
+
         msg += ", pytest-{}, py-{}, pluggy-{}".format(
             pytest.__version__, py.__version__, pluggy.__version__
         )
