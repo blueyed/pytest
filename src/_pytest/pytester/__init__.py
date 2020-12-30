@@ -98,7 +98,7 @@ def pytest_configure(config):
         if checker.matching_platform():
             config.pluginmanager.register(checker)
 
-    config.pluginmanager.register(PytesterManageHome())
+    config.pluginmanager.register(PytesterManageEnv())
 
     config.addinivalue_line(
         "markers",
@@ -541,7 +541,7 @@ def _display_running(header: str, *args: str) -> None:
     print("{}: {}\n{}in: {}".format(header, args_str, indent, cwd))
 
 
-class PytesterManageHome:
+class PytesterManageEnv:
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_runtest_setup(self):
         initial_home = os.getenv("HOME")
