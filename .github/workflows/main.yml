@@ -22,7 +22,7 @@ jobs:
         name: [
           "ubuntu-py39",
           "ubuntu-py38",
-          "ubuntu-py38 (pexpect, integration)",
+          "ubuntu-py38 (integration, jinja2, pexpect)",
           "ubuntu-pypy3",
 
           "macos-py36",
@@ -52,14 +52,14 @@ jobs:
             os: ubuntu-latest
             tox_env: "pypy3-coverage"
             pytest_addopts: "-m 'pypy_specific or acceptance_tests'"
-          - name: "ubuntu-py38 (pexpect, integration)"
+          - name: "ubuntu-py38 (integration, jinja2, pexpect)"
             python: "3.8"
             os: ubuntu-latest
             # NOTE: the lsof factor is not really useful currently, with its
             # warnings being ignored.  This uses it here only to cover the
             # LsofFdLeakChecker itself.
             # (https://github.com/blueyed/pytest/issues/195)
-            tox_env: "py38-lsof-pexpect-coverage"
+            tox_env: "py38-jinja2-lsof-pexpect-coverage"
             pytest_addopts: "-m 'uses_pexpect or integration'"
             script_prefix: "env -u COLUMNS"
 
