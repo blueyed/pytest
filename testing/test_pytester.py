@@ -1433,3 +1433,21 @@ class TestTestdirMakefiles:
         )
         assert tuple(x.name for x in files) == ("1", "2", "1")
         assert tuple(x.read_text() for x in files) == ("foo2", "bar", "foo2")
+
+
+def test_home_used_from_fixture(testdir: "Testdir") -> None:
+    p1 = testdir.makepyfile(
+        """
+        import os
+        import pytest
+
+        @pytest.fixture
+        def fix():
+            os.environ["HOME"] = "/new/home"
+
+        def test(testdir, fix):
+            assert os.environ["HOME"] == "/new/home"
+        """
+    )
+    result = testdir.runpytest(p1, "-ppytester")
+    assert result.ret == 0

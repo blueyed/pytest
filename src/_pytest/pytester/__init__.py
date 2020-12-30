@@ -98,6 +98,8 @@ def pytest_configure(config):
         if checker.matching_platform():
             config.pluginmanager.register(checker)
 
+    config.pluginmanager.register(PytesterManageEnv())
+
     config.addinivalue_line(
         "markers",
         "pytester_example_path(*path_segments): join the given path "
@@ -539,42 +541,50 @@ def _display_running(header: str, *args: str) -> None:
     print("{}: {}\n{}in: {}".format(header, args_str, indent, cwd))
 
 
-@pytest.hookimpl(hookwrapper=True, trylast=True)
-def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
-    """Setup/activate testdir's monkeypatching only during test calls.
-
-    When it would be done via the instance/fixture directly it would also be
-    active during teardown (e.g. with the terminal plugin's reporting), where
-    it might mess with the column width etc.
-    """
-    try:
-        funcargs = item.funcargs
-    except AttributeError:
-        testdir = None
-    else:
-        testdir = funcargs.get("testdir")
-    if not isinstance(testdir, Testdir):
+class PytesterManageEnv:
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+    def pytest_runtest_setup(self):
+        initial_home = os.getenv("HOME")
         yield
-        return
+        self._initial_home_changed = os.getenv("HOME") != initial_home
 
-    mp = testdir.monkeypatch
-    mp.setenv("PYTEST_DEBUG_TEMPROOT", str(testdir.test_tmproot))
-    # Ensure no unexpected caching via tox.
-    mp.delenv("TOX_ENV_DIR", raising=False)
-    # Discard outer pytest options.
-    mp.delenv("PYTEST_ADDOPTS", raising=False)
-    # Ensure no user config is used.
-    tmphome = str(testdir.tmpdir)
-    mp.setenv("HOME", tmphome)
-    mp.setenv("USERPROFILE", tmphome)
-    # Do not use colors for inner runs by default.
-    mp.setenv("PY_COLORS", "0")
+    @pytest.hookimpl(hookwrapper=True, trylast=True)
+    def pytest_runtest_call(self, item: Function) -> Generator[None, None, None]:
+        """Setup/activate testdir's monkeypatching only during test calls.
 
-    mp.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
-    try:
-        yield
-    finally:
-        mp.undo()
+        When it would be done via the instance/fixture directly it would also be
+        active during teardown (e.g. with the terminal plugin's reporting), where
+        it might mess with the column width etc.
+        """
+        try:
+            funcargs = item.funcargs
+        except AttributeError:
+            testdir = None
+        else:
+            testdir = funcargs.get("testdir")
+        if not isinstance(testdir, Testdir):
+            yield
+            return
+
+        mp = testdir.monkeypatch
+        mp.setenv("PYTEST_DEBUG_TEMPROOT", str(testdir.test_tmproot))
+        # Ensure no unexpected caching via tox.
+        mp.delenv("TOX_ENV_DIR", raising=False)
+        # Discard outer pytest options.
+        mp.delenv("PYTEST_ADDOPTS", raising=False)
+        # Ensure no user config is used.
+        if not self._initial_home_changed:
+            tmphome = str(testdir.tmpdir)
+            mp.setenv("HOME", tmphome)
+            mp.setenv("USERPROFILE", tmphome)
+        # Do not use colors for inner runs by default.
+        mp.setenv("PY_COLORS", "0")
+
+        mp.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
+        try:
+            yield
+        finally:
+            mp.undo()
 
 
 class Testdir(Generic[AnyStr]):
