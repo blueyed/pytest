@@ -55,11 +55,9 @@ from _pytest.python import Module
 from _pytest.reports import TestReport
 from _pytest.tmpdir import TempdirFactory
 
-
 if TYPE_CHECKING:
     from typing import Any
     from typing import Type
-    from typing_extensions import Literal  # noqa: F401
 
     import pexpect
 
@@ -903,6 +901,7 @@ class Testdir(Generic[AnyStr]):
 
         """
         import warnings
+
         from _pytest.warning_types import PYTESTER_COPY_EXAMPLE
 
         warnings.warn(PYTESTER_COPY_EXAMPLE, stacklevel=2)
