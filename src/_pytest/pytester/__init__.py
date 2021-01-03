@@ -30,6 +30,7 @@ from weakref import WeakKeyDictionary
 
 import py.path
 
+import _pytest.terminal
 import pytest
 from _pytest._code import Source
 from _pytest.capture import CLOSE_STDIN
@@ -56,6 +57,7 @@ from _pytest.tmpdir import TempdirFactory
 
 
 if TYPE_CHECKING:
+    from typing import Any
     from typing import Type
     from typing_extensions import Literal  # noqa: F401
 
@@ -542,20 +544,53 @@ def _display_running(header: str, *args: str) -> None:
 
 
 class PytesterManageEnv:
+    """Setup/activate testdir's monkeypatching only during test calls.
+
+    When it would be done via the instance/fixture directly it would also be
+    active during teardown (e.g. with the terminal plugin's reporting), where
+    it might mess with the column width etc.
+    """
     @pytest.hookimpl(hookwrapper=True, tryfirst=True)
     def pytest_runtest_setup(self):
-        initial_home = os.getenv("HOME")
+        self._initial_env = {
+            k: os.getenv(k)
+            for k in (
+                "HOME",
+                "PYTEST_ADDOPTS",
+                "PYTEST_DEBUG_TEMPROOT",
+                "PY_COLORS",
+                "TOX_ENV_DIR",
+                "USERPROFILE",
+            )
+        }
+        self._initial_attr = {
+            (
+                _pytest.terminal,
+                "get_terminal_width",
+            ): _pytest.terminal.get_terminal_width,
+        }
         yield
-        self._initial_home_changed = os.getenv("HOME") != initial_home
+
+    def is_unchanged(self, initial: "Any", current: "Any") -> bool:
+        if initial is None:
+            return current is None
+        else:
+            return bool(initial == current)
+
+    def setenv(self, mp: "MonkeyPatch", key: str, value: "Optional[str]") -> None:
+        initial = self._initial_env[key]
+        current = os.getenv(key)
+        if self.is_unchanged(initial, current):
+            mp.setenv(key, value)
+
+    def setattr(self, mp: "MonkeyPatch", target: object, name: str, value: "Any") -> None:
+        initial = self._initial_attr[(target, name)]
+        current = getattr(target, name)
+        if self.is_unchanged(initial, current):
+            mp.setattr(target, name, value)
 
     @pytest.hookimpl(hookwrapper=True, trylast=True)
     def pytest_runtest_call(self, item: Function) -> Generator[None, None, None]:
-        """Setup/activate testdir's monkeypatching only during test calls.
-
-        When it would be done via the instance/fixture directly it would also be
-        active during teardown (e.g. with the terminal plugin's reporting), where
-        it might mess with the column width etc.
-        """
         try:
             funcargs = item.funcargs
         except AttributeError:
@@ -567,20 +602,19 @@ class PytesterManageEnv:
             return
 
         mp = testdir.monkeypatch
-        mp.setenv("PYTEST_DEBUG_TEMPROOT", str(testdir.test_tmproot))
+        self.setenv(mp, "PYTEST_DEBUG_TEMPROOT", str(testdir.test_tmproot))
         # Ensure no unexpected caching via tox.
-        mp.delenv("TOX_ENV_DIR", raising=False)
+        self.setenv(mp, "TOX_ENV_DIR", None)
         # Discard outer pytest options.
-        mp.delenv("PYTEST_ADDOPTS", raising=False)
+        self.setenv(mp, "PYTEST_ADDOPTS", None)
         # Ensure no user config is used.
-        if not self._initial_home_changed:
-            tmphome = str(testdir.tmpdir)
-            mp.setenv("HOME", tmphome)
-            mp.setenv("USERPROFILE", tmphome)
+        tmphome = str(testdir.tmpdir)
+        self.setenv(mp, "HOME", tmphome)
+        self.setenv(mp, "USERPROFILE", tmphome)
         # Do not use colors for inner runs by default.
-        mp.setenv("PY_COLORS", "0")
+        self.setenv(mp, "PY_COLORS", "0")
 
-        mp.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
+        self.setattr(mp, _pytest.terminal, "get_terminal_width", lambda: 80)
         try:
             yield
         finally:
