@@ -170,6 +170,14 @@ jobs:
         CODECOV_TOKEN: d79f3a85-e675-4d75-8f55-3d0e4a99ebe8
       run: "bash .ci/report-coverage.sh -n '${{ matrix.name }}' -F 'GHA,${{ runner.os }}'"
 
+    - name: Report coverage (deepsource)
+      if: always() && (contains(matrix.tox_env, '-coverage'))
+      env:
+        DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
+      run:
+        - curl https://deepsource.io/cli | sh
+        - ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.xml
+
   deploy:
     if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && github.repository == 'pytest-dev/pytest'
     runs-on: ubuntu-latest
