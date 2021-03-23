@@ -1,8 +1,4 @@
 """ hook specifications for pytest plugins, invoked from main.py and builtin plugins.  """
-from typing import Any
-from typing import Optional
-from typing import Tuple
-from typing import Union
 
 from pluggy import HookspecMarker
 
@@ -11,7 +7,11 @@ from _pytest.compat import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import warnings
+    from typing import Any
     from typing import List
+    from typing import Optional
+    from typing import Tuple
+    from typing import Union
 
     from _pytest.config import Config
     from _pytest.main import Session
@@ -173,7 +173,7 @@ def pytest_load_initial_conftests(early_config, parser, args):
 
 
 @hookspec(firstresult=True)
-def pytest_collection(session: "Session") -> Optional[Any]:
+def pytest_collection(session: "Session") -> "Optional[Any]":
     """Perform the collection protocol for the given session.
 
     Stops at first non-None result, see :ref:`firstresult`.
@@ -202,7 +202,7 @@ def pytest_collection_finish(session):
 @hookspec(firstresult=True)
 def pytest_ignore_collect(
     path, config: "Config"
-) -> Optional[Union[bool, Tuple[bool, Optional[str]]]]:
+) -> "Optional[Union[bool, Tuple[bool, Optional[str]]]]":
     """ return True to prevent considering this path for collection.
     This hook is consulted for all files and directories prior to calling
     more specific hooks.
@@ -617,7 +617,7 @@ def pytest_warning_recorded(
     warning_message: "warnings.WarningMessage",
     when: str,
     nodeid: str,
-    location: Tuple[str, int, str],
+    location: "Tuple[str, int, str]",
 ):
     """
     Process a warning captured by the internal pytest warnings plugin.
