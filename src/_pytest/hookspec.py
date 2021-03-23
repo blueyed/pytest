@@ -1,5 +1,4 @@
 """ hook specifications for pytest plugins, invoked from main.py and builtin plugins.  """
-
 from pluggy import HookspecMarker
 
 from .deprecated import WARNING_CAPTURED_HOOK
