@@ -27,7 +27,10 @@ class TestParseIni:
     @pytest.mark.parametrize(
         "section, filename", [("pytest", "pytest.ini"), ("tool:pytest", "setup.cfg")]
     )
-    def test_getcfg_and_config(self, testdir, tmpdir, section, filename):
+    def test_getcfg_and_config(
+        self, section: str, filename: str, testdir: "Testdir"
+    ) -> None:
+        tmpdir = testdir.tmpdir
         sub = tmpdir.mkdir("sub")
         sub.chdir()
         tmpdir.join(filename).write(
@@ -41,15 +44,17 @@ class TestParseIni:
             )
         )
         _, _, cfg = getcfg([sub])
+        assert cfg
         assert cfg["name"] == "value"
         config = testdir.parseconfigure(sub)
         assert config.inicfg["name"] == "value"
 
-    def test_getcfg_empty_path(self):
+    def test_getcfg_empty_path(self) -> None:
         """correctly handle zero length arguments (a la pytest '')"""
-        getcfg([""])
+        ret = determine_setup(None, args=[""])
+        assert ret[:2] == (py.path.local(), py.path.local("tox.ini"))
 
-    def test_setupcfg_uses_toolpytest_with_pytest(self, testdir):
+    def test_setupcfg_uses_toolpytest_with_pytest(self, testdir: "Testdir") -> None:
         p1 = testdir.makepyfile("def test(): pass")
         testdir.makefile(
             ".cfg",
@@ -62,7 +67,11 @@ class TestParseIni:
             % p1.basename,
         )
         result = testdir.runpytest()
-        result.stdout.fnmatch_lines(["*, inifile: setup.cfg, *", "* 1 passed in *"])
+        result.stdout.fnmatch_lines([
+                "rootdir: ~ (*), inifile: setup.cfg, *",
+                "* 1 passed in *",
+            ]
+        )
         assert result.ret == 0
 
     def test_append_parse_args(self, testdir, tmpdir, monkeypatch):
@@ -483,19 +492,22 @@ class TestConfigAPI:
         assert len(values) == 2
         assert values == ["456", "123"]
 
-    def test_confcutdir_check_isdir(self, testdir):
+    def test_confcutdir_check_isdir(self, testdir: "Testdir") -> None:
         """Give an error if --confcutdir is not a valid directory (#2078)"""
-        exp_match = r"^--confcutdir must be a directory, given: "
-        with pytest.raises(pytest.UsageError, match=exp_match):
-            testdir.parseconfig(
-                "--confcutdir", testdir.tmpdir.join("file").ensure(file=1)
-            )
-        with pytest.raises(pytest.UsageError, match=exp_match):
-            testdir.parseconfig("--confcutdir", testdir.tmpdir.join("inexistant"))
-        config = testdir.parseconfig(
-            "--confcutdir", testdir.tmpdir.join("dir").ensure(dir=1)
-        )
-        assert config.getoption("confcutdir") == str(testdir.tmpdir.join("dir"))
+        root = testdir.tmpdir
+        with pytest.raises(
+            pytest.UsageError, match=r"^--confcutdir must be a directory, given: file$"
+        ):
+            testdir.parseconfig("--confcutdir", root.join("file").ensure().basename)
+        with pytest.raises(
+            pytest.UsageError,
+            match=r"^--confcutdir must be a directory, given: inexistant$",
+        ):
+            testdir.parseconfig("--confcutdir", "inexistant")
+        ccdir = root.join("dir").ensure(dir=True)
+        config = testdir.parseconfig("--confcutdir", "dir")
+        assert config.getoption("confcutdir") == "dir"
+        assert config.pluginmanager._confcutdir == ccdir
 
     @pytest.mark.parametrize(
         "names, expected",
@@ -541,7 +553,7 @@ class TestConfigFromdictargs:
         assert config.option.verbose == 4
         assert config.option.capture == "no"
 
-    def test_inifilename(self, tmpdir):
+    def test_inifilename(self, tmpdir: "py.path.local") -> None:
         tmpdir.join("foo/bar.ini").ensure().write(
             textwrap.dedent(
                 """\
@@ -566,13 +578,14 @@ class TestConfigFromdictargs:
         )
         with cwd.ensure(dir=True).as_cwd():
             config = Config.fromdictargs(option_dict, ())
+            expected_inifile = py.path.local(inifile)
 
         assert config.args == [str(cwd)]
         assert config.option.inifilename == inifile
         assert config.option.capture == "no"
 
         # this indicates this is the file used for getting configuration values
-        assert config.inifile == inifile
+        assert config.inifile == expected_inifile
         assert config.inicfg.get("name") == "value"
         assert config.inicfg.get("should_not_be_set") is None
 

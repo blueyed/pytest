@@ -44,7 +44,7 @@ class Parser:
         self._groups = []  # type: List[OptionGroup]
         self._processopt = processopt
         self._usage = usage
-        self._inidict = {}  # type: Dict[str, Tuple[str, Optional[str], Any]]
+        self._inidict = {}  # type: Dict[str, Tuple[Optional[str], Optional[str], Any]]
         self._ininames = []  # type: List[str]
         self.extra_info = {}  # type: Dict[str, Any]
 
@@ -195,7 +195,7 @@ class Parser:
     def addini(
         self,
         name: str,
-        help: str,
+        help: "Optional[str]",
         type: Optional["Literal['pathlist', 'args', 'linelist', 'bool', 'int']"] = None,
         *args,
         **kwargs
@@ -203,6 +203,7 @@ class Parser:
         """ register an ini-file option.
 
         :param str name: name of the ini-variable
+        :param help: help text to display (``None`` suppresses it).
         :param str type: type of the variable, one of
           ``pathlist``, ``args``, ``linelist``, ``bool``, or ``int``.
         :kwparam default: default value if no ini-file option exists but is queried.
@@ -265,10 +266,11 @@ class Argument:
         if "%default" in (attrs.get("help") or ""):
             warnings.warn(
                 'pytest now uses argparse. "%default" should be'
-                ' changed to "%(default)s" ',
+                ' changed to "%(default)s".',
                 DeprecationWarning,
-                stacklevel=3,
+                stacklevel=4,
             )
+            self._attrs["help"] = attrs["help"].replace("%default", "%(default)s")
         try:
             typ = attrs["type"]
         except KeyError:
@@ -324,18 +326,12 @@ class Argument:
 
     def attrs(self) -> Mapping[str, Any]:
         # update any attributes set by processopt
-        attrs = "default dest help".split()
-        attrs.append(self.dest)
-        for attr in attrs:
+        for attr in ("default", "dest"):
             try:
-                self._attrs[attr] = getattr(self, attr)
+                val = getattr(self, attr)
             except AttributeError:
-                pass
-        if self._attrs.get("help"):
-            a = self._attrs["help"]
-            a = a.replace("%default", "%(default)s")
-            # a = a.replace('%prog', '%(prog)s')
-            self._attrs["help"] = a
+                continue
+            self._attrs[attr] = val
         return self._attrs
 
     def _set_opt_strings(self, opts: Sequence[str]) -> None:

@@ -98,6 +98,8 @@ def pytest_configure(config):
         if checker.matching_platform():
             config.pluginmanager.register(checker)
 
+    config.pluginmanager.register(PytesterManageEnv())
+
     config.addinivalue_line(
         "markers",
         "pytester_example_path(*path_segments): join the given path "
@@ -539,42 +541,50 @@ def _display_running(header: str, *args: str) -> None:
     print("{}: {}\n{}in: {}".format(header, args_str, indent, cwd))
 
 
-@pytest.hookimpl(hookwrapper=True, trylast=True)
-def pytest_runtest_call(item: Function) -> Generator[None, None, None]:
-    """Setup/activate testdir's monkeypatching only during test calls.
-
-    When it would be done via the instance/fixture directly it would also be
-    active during teardown (e.g. with the terminal plugin's reporting), where
-    it might mess with the column width etc.
-    """
-    try:
-        funcargs = item.funcargs
-    except AttributeError:
-        testdir = None
-    else:
-        testdir = funcargs.get("testdir")
-    if not isinstance(testdir, Testdir):
+class PytesterManageEnv:
+    @pytest.hookimpl(hookwrapper=True, tryfirst=True)
+    def pytest_runtest_setup(self):
+        initial_home = os.getenv("HOME")
         yield
-        return
+        self._initial_home_changed = os.getenv("HOME") != initial_home
 
-    mp = testdir.monkeypatch
-    mp.setenv("PYTEST_DEBUG_TEMPROOT", str(testdir.test_tmproot))
-    # Ensure no unexpected caching via tox.
-    mp.delenv("TOX_ENV_DIR", raising=False)
-    # Discard outer pytest options.
-    mp.delenv("PYTEST_ADDOPTS", raising=False)
-    # Ensure no user config is used.
-    tmphome = str(testdir.tmpdir)
-    mp.setenv("HOME", tmphome)
-    mp.setenv("USERPROFILE", tmphome)
-    # Do not use colors for inner runs by default.
-    mp.setenv("PY_COLORS", "0")
+    @pytest.hookimpl(hookwrapper=True, trylast=True)
+    def pytest_runtest_call(self, item: Function) -> Generator[None, None, None]:
+        """Setup/activate testdir's monkeypatching only during test calls.
 
-    mp.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
-    try:
-        yield
-    finally:
-        mp.undo()
+        When it would be done via the instance/fixture directly it would also be
+        active during teardown (e.g. with the terminal plugin's reporting), where
+        it might mess with the column width etc.
+        """
+        try:
+            funcargs = item.funcargs
+        except AttributeError:
+            testdir = None
+        else:
+            testdir = funcargs.get("testdir")
+        if not isinstance(testdir, Testdir):
+            yield
+            return
+
+        mp = testdir.monkeypatch
+        mp.setenv("PYTEST_DEBUG_TEMPROOT", str(testdir.test_tmproot))
+        # Ensure no unexpected caching via tox.
+        mp.delenv("TOX_ENV_DIR", raising=False)
+        # Discard outer pytest options.
+        mp.delenv("PYTEST_ADDOPTS", raising=False)
+        # Ensure no user config is used.
+        if not self._initial_home_changed:
+            tmphome = str(testdir.tmpdir)
+            mp.setenv("HOME", tmphome)
+            mp.setenv("USERPROFILE", tmphome)
+        # Do not use colors for inner runs by default.
+        mp.setenv("PY_COLORS", "0")
+
+        mp.setattr("_pytest.terminal.get_terminal_width", lambda: 80)
+        try:
+            yield
+        finally:
+            mp.undo()
 
 
 class Testdir(Generic[AnyStr]):
@@ -738,7 +748,7 @@ class Testdir(Generic[AnyStr]):
 
     def makefiles(
         self,
-        files: Mapping[str, str],
+        files: "Union[Mapping[str, str], Sequence[Tuple[str, str]]]",
         *,
         base_path: Optional[str] = None,
         dedent: bool = True,
@@ -750,8 +760,9 @@ class Testdir(Generic[AnyStr]):
         This is a more straight-forward API than the other helpers (e.g.
         :func:`makepyfile`).
 
-        :param Mapping[str,str] files:
-            Mapping of filenames to file contents.
+        :param Mapping[str,str]|Sequence[Tuple[str,str]] files:
+            Mapping of filenames to file contents, or a sequence with
+            filename/contents pairs.
 
             Absolute paths are handled, but have to be inside of :attr:`tmpdir`.
         :param base_path:
@@ -774,18 +785,24 @@ class Testdir(Generic[AnyStr]):
             base_path = os.path.abspath(base_path)
         else:
             base_path = os.getcwd()
-        validated_files = []
-        for k, v in files.items():
+        validated_files = []  # type: List[Tuple[Path, str]]
+        if isinstance(files, Mapping):
+            items = list(files.items())  # type: Sequence[Tuple[str, str]]
+        else:
+            items = files
+        for k, v in reversed(items):
             abspath = Path(os.path.normpath(os.path.join(base_path, k)))
             assert abspath.is_absolute(), abspath
             if clobber:
-                if not (abspath.is_file() or abspath.is_symlink()):
+                if abspath.exists() and not (abspath.is_file() or abspath.is_symlink()):
                     raise ValueError(
                         "path is not a file/symlink, not clobbering: {!r}".format(
                             str(abspath)
                         )
                     )
             else:
+                if any(x[0] == abspath for x in validated_files):
+                    raise ValueError("duplicate file path: {!r}".format(str(abspath)))
                 if abspath.exists():
                     raise ValueError("path exists already: {!r}".format(str(abspath)))
                 if abspath.is_symlink():
@@ -799,7 +816,7 @@ class Testdir(Generic[AnyStr]):
             validated_files.append((abspath, v))
 
         paths = []
-        for fpath, content in validated_files:
+        for fpath, content in reversed(validated_files):
             path = tmpdir_path.joinpath(fpath)
             if not path.parent.is_dir():
                 path.parent.mkdir(parents=True)
@@ -810,7 +827,7 @@ class Testdir(Generic[AnyStr]):
             if clobber:
                 if path.is_symlink():
                     path.unlink()
-                else:
+                elif path.exists():
                     assert path.is_file(), path
             else:
                 assert not path.exists(), path

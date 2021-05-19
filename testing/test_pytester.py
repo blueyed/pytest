@@ -1344,34 +1344,36 @@ class TestTestdirMakefiles:
             Path("foo/bar").absolute()
         ]
 
-    def test_makefiles_dangling_symlink_outside(
-        self, testdir: Testdir, symlink_or_skip
+    def test_makefiles_symlink_outside(
+        self, testdir: "Testdir", symlink_or_skip, tmp_path: "Path"
     ) -> None:
-        symlink_or_skip(os.path.join("..", "outside"), "symlink")
+        target = Path(tmp_path / "outside_symlink_target")
+        symlink_or_skip(str(target), "symlink")  # dangling
+        abs_symlink = str(Path("symlink").absolute())
+
         with pytest.raises(ValueError) as excinfo:
             testdir.makefiles({"symlink": ""})
         assert str(excinfo.value) == "path is a dangling symlink: {!r}".format(
-            str(Path("symlink").absolute())
+            abs_symlink
         )
 
-    def test_makefiles_symlink_outside(self, testdir: Testdir, symlink_or_skip) -> None:
-        symlink_or_skip(os.path.join("..", "outside"), "symlink")
-        Path("../outside").resolve().touch()
+        target.touch()
         with pytest.raises(ValueError) as excinfo:
             testdir.makefiles({"symlink": ""})
-        assert str(excinfo.value) == "path exists already: {!r}".format(
-            str(Path("symlink").absolute())
-        )
+        assert str(excinfo.value) == "path exists already: {!r}".format(abs_symlink)
 
-        ret = testdir.makefiles({"symlink": ""}, clobber=True)
+        ret = testdir.makefiles({"symlink": "content"}, clobber=True)
         assert len(ret) == 1
         rp = ret[0]
-        assert (rp.name, rp.is_symlink(), rp.exists(), rp.is_absolute(),) == (
+        assert (rp.name, rp.is_symlink(), rp.exists(), rp.is_absolute()) == (
             "symlink",
             False,
             True,
             True,
         )
+        with open(rp.name, "r") as f:
+            assert f.read() == "content"
+        assert target.exists()
 
     def test_makefiles_dangling_symlink_inside(
         self, testdir: Testdir, symlink_or_skip
@@ -1413,3 +1415,39 @@ class TestTestdirMakefiles:
         assert str(
             excinfo.value
         ) == "path is not a file/symlink, not clobbering: {!r}".format(str(directory))
+
+    def test_makefiles_sequence(self, testdir: "Testdir") -> None:
+        files = testdir.makefiles((("1", "foo"), ("2", "bar")))
+        assert tuple(x.name for x in files) == ("1", "2")
+        assert tuple(x.read_text() for x in files) == ("foo", "bar")
+
+    def test_makefiles_sequence_duplicate(self, testdir: "Testdir") -> None:
+        with pytest.raises(ValueError) as excinfo:
+            testdir.makefiles((("1", "foo"), ("2", "bar"), ("1", "foo2")))
+        assert str(excinfo.value) == "duplicate file path: {!r}".format(
+            str(testdir.tmpdir.join("1"))
+        )
+
+        files = testdir.makefiles(
+            (("1", "foo"), ("2", "bar"), ("1", "foo2")), clobber=True
+        )
+        assert tuple(x.name for x in files) == ("1", "2", "1")
+        assert tuple(x.read_text() for x in files) == ("foo2", "bar", "foo2")
+
+
+def test_home_used_from_fixture(testdir: "Testdir") -> None:
+    p1 = testdir.makepyfile(
+        """
+        import os
+        import pytest
+
+        @pytest.fixture
+        def fix():
+            os.environ["HOME"] = "/new/home"
+
+        def test(testdir, fix):
+            assert os.environ["HOME"] == "/new/home"
+        """
+    )
+    result = testdir.runpytest(p1, "-ppytester")
+    assert result.ret == 0

@@ -30,6 +30,13 @@ jobs:
     - python: '3.10-dev'
       env:
         - TOXENV=py310-coverage
+      before_install:
+        # Upgrade setuptools to fix:
+        # > pkg_resources.DistributionNotFound: The 'importlib-metadata>=0.12'
+        # > distribution was not found and is required by pytest
+        # Regressed in pip/setuptools upgrade
+        # (https://github.com/python/cpython/commit/5f79f46612).
+        - python -m pip install -U setuptools==51.0.0
 
 before_script:
   - python -m tox --notest -v --durations

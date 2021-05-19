@@ -305,10 +305,7 @@ def getfslineno(obj: Any) -> Tuple[Union[str, py.path.local], int]:
         fspath = fn and py.path.local(fn) or ""
         lineno = -1
         if fspath:
-            try:
-                _, lineno = findsource(obj)
-            except IOError:
-                pass
+            _, lineno = findsource(obj)
         return fspath, lineno
     else:
         return code.path, code.firstlineno

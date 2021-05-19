@@ -473,7 +473,7 @@ class TestGeneralUsage:
         p = testdir.makepyfile(
             """
             def raise_error(obj):
-                raise IOError('source code not available')
+                raise OSError('source code not available')
 
             import inspect
             inspect.getsourcelines = raise_error
@@ -739,7 +739,14 @@ class TestInvocationVariants:
 
         # mixed module and filenames:
         monkeypatch.chdir("world")
-        result = testdir.runpytest("--pyargs", "-v", "ns_pkg.hello", "ns_pkg/world")
+        result = testdir.runpytest(
+            # https://github.com/pypa/setuptools/issues/2493
+            "-Wignore:the load_module():DeprecationWarning",
+            "--pyargs",
+            "-v",
+            "ns_pkg.hello",
+            "ns_pkg/world",
+        )
         assert result.ret == 0
         result.stdout.fnmatch_lines(
             [
@@ -854,22 +861,6 @@ class TestInvocationVariants:
         result = testdir.runpytest("--pyargs", "tpkgwhatv")
         assert result.ret
         result.stderr.fnmatch_lines(["ERROR*file*or*package*not*found*"])
-
-    @pytest.mark.xfail(reason="decide: feature or bug")
-    def test_noclass_discovery_if_not_testcase(self, testdir):
-        testpath = testdir.makepyfile(
-            """
-            import unittest
-            class TestHello(object):
-                def test_hello(self):
-                    assert self.attr
-
-            class RealTest(unittest.TestCase, TestHello):
-                attr = 42
-        """
-        )
-        reprec = testdir.inline_run(testpath)
-        reprec.assertoutcome(passed=1)
 
     def test_doctest_id(self, testdir):
         testdir.makefile(
