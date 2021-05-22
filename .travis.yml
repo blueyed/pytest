@@ -7,13 +7,15 @@ env:
   global:
     - PYTEST_ADDOPTS="-vv --showlocals --durations=100 --exitfirst"
     - PYTEST_COVERAGE=1
+    - TOX=git+https://github.com/blueyed/tox@master
+    - TOX_EXTRA_ARGS=--durations
 
 # setuptools-scm needs all tags in order to obtain a proper version
 git:
   depth: false
 
 install:
-  - python -m pip install git+https://github.com/blueyed/tox@master
+  - python -m pip install $TOX
 
 jobs:
   include:
@@ -39,6 +41,12 @@ jobs:
     - env: TOXENV=py35-xdist
       python: '3.5.9'
 
+    - env:
+        - TOXENV=py34-xdist
+        - TOX='tox==3.14.0'  # tox 3.14.1 dropped support for py34.
+        - TOX_EXTRA_ARGS=  # no --durations.
+      python: '3.4'
+
     - env: TOXENV=linting,docs,doctesting
       cache:
         directories:
@@ -57,9 +65,9 @@ before_script:
       export _PYTEST_TOX_COVERAGE_RUN="coverage run -m"
       export _PYTEST_TOX_EXTRA_DEP=coverage-enable-subprocess
     fi
-  - python -m tox --notest -v --durations
+  - python -m tox --notest -v $TOX_EXTRA_ARGS
 
-script: env COLUMNS=120 python -m tox -v --durations
+script: env COLUMNS=120 python -m tox -v $TOX_EXTRA_ARGS
 
 after_success:
   - |

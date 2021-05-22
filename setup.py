@@ -7,7 +7,9 @@ INSTALL_REQUIRES = [
     "py>=1.5.0",
     "six>=1.10.0",
     "packaging",
-    "attrs>=17.4.0",
+    # attrs 21.1.0 is broken on Python 3.4, but not marked as such.
+    'attrs>=17.4.0,<21;python_version=="3.4"',
+    'attrs>=17.4.0;python_version>="3.5"',
     'more-itertools>=4.0.0,<6.0.0;python_version<="2.7"',
     'more-itertools>=4.0.0;python_version>"2.7"',
     "atomicwrites>=1.0",
