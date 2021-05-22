@@ -9,9 +9,6 @@ on:
     tags:
       - "*"
   pull_request:
-    branches:
-      - my-master
-      - "[0-9]+.[0-9]+.x"
 
 jobs:
   tests:
