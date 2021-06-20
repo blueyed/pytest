@@ -1,0 +1,202 @@
+name: main
+
+on:
+  push:
+    branches:
+      - my-4.6-maintenance
+      - "[0-9]+.[0-9]+.x"
+    tags:
+      - "*"
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        name: [
+          "ubuntu-py39",
+          "ubuntu-py38",
+          "ubuntu-py38 (pexpect, integration)",
+          "ubuntu-pypy3",
+
+          "macos-py36",
+
+          "windows-py37 (1)",
+          "windows-py37 (2)",
+
+          "xdist",
+
+          "linting",
+          "docs",
+          "doctesting",
+          "mypy",
+        ]
+
+        include:
+          - name: "ubuntu-py39"
+            python: "3.9"
+            os: ubuntu-latest
+            tox_env: "py39-coverage"
+          - name: "ubuntu-py38"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "py38-numpy-oldattrs-twisted-coverage"
+          - name: "ubuntu-pypy3"
+            python: "pypy3"
+            os: ubuntu-latest
+            tox_env: "pypy3-coverage"
+            pytest_addopts: "-m 'pypy_specific or acceptance_tests'"
+          - name: "ubuntu-py38 (pexpect, integration)"
+            python: "3.8"
+            os: ubuntu-latest
+            # NOTE: the lsof factor is not really useful currently, with its
+            # warnings being ignored.  This uses it here only to cover the
+            # LsofFdLeakChecker itself.
+            # (https://github.com/blueyed/pytest/issues/195)
+            tox_env: "py38-lsof-pexpect-coverage"
+            pytest_addopts: "-m 'uses_pexpect or integration'"
+            script_prefix: "env -u COLUMNS"
+
+          # Coverage for:
+          # - osx
+          # - pygments
+          # - verbosity=1
+          - name: "macos-py36"
+            python: "3.6"
+            os: macos-latest
+            tox_env: "py36-pygments-coverage"
+            pytest_addopts: "--verbosity=1"
+
+          - name: "windows-py37 (1)"
+            python: "3.7"
+            os: windows-latest
+            tox_env: "py37-coverage-grouped"
+            # Coverage for:
+            # - verbosity=2
+            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=1"
+          - name: "windows-py37 (2)"
+            python: "3.7"
+            os: windows-latest
+            tox_env: "py37-coverage-grouped"
+            # Coverage for:
+            # - verbosity=2
+            pytest_addopts: "--verbosity=2 --test-group-count 2 --test-group=2"
+
+          - name: "xdist"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "py38-xdist-coverage"
+            pytest_addopts: "-m 'xdist_specific or acceptance_tests' -n 0"
+
+          - name: "linting"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "linting_ci"
+          - name: "docs"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "docs"
+          - name: "doctesting"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "doctesting-coverage"
+          - name: "mypy"
+            python: "3.8"
+            os: ubuntu-latest
+            tox_env: "mypy_ci"
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2000
+    - run: git fetch --tags origin
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+
+    # Caching.
+    - name: set PY_CACHE_KEY
+      run: echo "PY_CACHE_KEY=$(python -c 'import hashlib, sys;print(hashlib.sha256(sys.version.encode()+sys.executable.encode()).hexdigest())')" >> $GITHUB_ENV
+    - name: Cache .tox
+      if: (matrix.tox_env != 'docs')
+      uses: actions/cache@v1
+      with:
+        path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
+        key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*') }}"
+    - name: Cache .tox (docs)
+      if: (matrix.tox_env == 'docs')
+      uses: actions/cache@v1
+      with:
+        path: ${{ github.workspace }}/.tox/${{ matrix.tox_env }}
+        # Work around tox not rebuilding on changed requirements file (https://github.com/tox-dev/tox/issues/149).
+        key: "tox|${{ matrix.tox_env }}|${{ env.PY_CACHE_KEY }}|${{ hashFiles('tox.ini', 'setup.*', 'doc/en/requirements.txt') }}"
+    - name: Cache .pre-commit
+      if: (matrix.tox_env == 'linting_ci')
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pre-commit
+        key: pre-commit|${{ env.PY_CACHE_KEY }}|${{ hashFiles('.pre-commit-config.yaml') }}
+
+    - name: Install tox / version information
+      env:
+        PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      run: |
+        python -m pip --version
+        python -m pip install git+https://github.com/blueyed/tox@master
+        python -m pip list
+
+    - name: Setup tox environment
+      id: setup_tox
+      run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}
+
+    - name: Test
+      env:
+        PYTEST_ADDOPTS: "-ra --durations=50 ${{ matrix.pytest_addopts }}"
+        COLUMNS: "120"
+        # UTF-8 mode for Windows (https://docs.python.org/3/using/windows.html#utf-8-mode).
+        PYTHONUTF8: "1"
+        TOX_TESTENV_PASSENV: "PYTHONUTF8"
+      run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
+
+    - name: Report coverage
+      if: always() && (contains(matrix.tox_env, '-coverage') && (steps.setup_tox.outcome == 'success'))
+      env:
+        CODECOV_TOKEN: d79f3a85-e675-4d75-8f55-3d0e4a99ebe8
+      run: "bash .ci/report-coverage.sh -n '${{ matrix.name }}' -F 'GHA,${{ runner.os }}'"
+
+  deploy:
+    if: github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') && github.repository == 'pytest-dev/pytest'
+    runs-on: ubuntu-latest
+    needs: [tests]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 2000
+    - run: git fetch --tags origin
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: "3.7"
+    - name: Install dependencies
+      run: |
+        python -m pip --version
+        python -m pip install wheel setuptools git+https://github.com/blueyed/tox@master
+    - name: Build package
+      run: |
+        python setup.py sdist bdist_wheel
+    - name: Publish package to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.pypi_token }}
+    - name: Publish GitHub release notes
+      env:
+        GH_RELEASE_NOTES_TOKEN: ${{ secrets.release_notes }}
+      run: |
+        sudo apt-get install pandoc
+        tox -e publish-gh-release-notes
+
