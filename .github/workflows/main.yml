@@ -33,6 +33,7 @@ jobs:
           "docs",
           "doctesting",
           "mypy",
+          "mypy_ci_min",
         ]
 
         include:
@@ -104,9 +105,13 @@ jobs:
             os: ubuntu-latest
             tox_env: "doctesting-coverage"
           - name: "mypy"
-            python: "3.8"
+            python: "3.9"
             os: ubuntu-latest
-            tox_env: "mypy_ci"
+            tox_env: "mypy"
+          - name: "mypy_ci_min"
+            python: "3.5"
+            os: ubuntu-latest
+            tox_env: "mypy_ci_min"
 
     steps:
     - uses: actions/checkout@v2
