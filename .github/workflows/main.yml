@@ -33,6 +33,7 @@ jobs:
           "docs",
           "doctesting",
           "mypy",
+          "mypy_ci_min",
         ]
 
         include:
@@ -104,9 +105,13 @@ jobs:
             os: ubuntu-latest
             tox_env: "doctesting-coverage"
           - name: "mypy"
-            python: "3.8"
+            python: "3.9"
             os: ubuntu-latest
-            tox_env: "mypy_ci"
+            tox_env: "mypy"
+          - name: "mypy_ci_min"
+            python: "3.5"
+            os: ubuntu-latest
+            tox_env: "mypy_ci_min"
 
     steps:
     - uses: actions/checkout@v2
@@ -150,6 +155,7 @@ jobs:
         python -m pip list
 
     - name: Setup tox environment
+      id: setup_tox
       run: python -m tox --notest -v --durations -e ${{ matrix.tox_env }}
 
     - name: Test
@@ -162,7 +168,7 @@ jobs:
       run: "${{ matrix.script_prefix }} tox -e ${{ matrix.tox_env }}"
 
     - name: Report coverage
-      if: always() && (contains(matrix.tox_env, '-coverage'))
+      if: always() && (contains(matrix.tox_env, '-coverage') && (steps.setup_tox.outcome == 'success'))
       env:
         CODECOV_TOKEN: d79f3a85-e675-4d75-8f55-3d0e4a99ebe8
       run: "bash .ci/report-coverage.sh -n '${{ matrix.name }}' -F 'GHA,${{ runner.os }}'"
