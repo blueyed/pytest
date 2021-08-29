@@ -2463,7 +2463,10 @@ def test__get_pos() -> None:
 
 
 def test_crash_during_collection(testdir, monkeypatch) -> None:
-    from pluggy import hooks
+    try:
+        from pluggy import _hooks as pluggy_hooks
+    except ImportError:
+        from pluggy import hooks as pluggy_hooks
 
     def crash(obj):
         raise Exception("crash")
@@ -2479,8 +2482,7 @@ def test_crash_during_collection(testdir, monkeypatch) -> None:
             "*= ERRORS =*",
             "*_ ERROR collecting test_crash_during_collection.py _*",
             # XXX: shouldn't be cut off here.
-            "{}:*: in __call__".format(hooks.__file__),
-            "    return self._hookexec(self, self.get_hookimpls(), kwargs)",
+            "{}:*: in __call__".format(pluggy_hooks.__file__),
         ],
         consecutive=True,
     )
