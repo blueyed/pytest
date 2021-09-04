@@ -638,9 +638,9 @@ class TerminalReporter:
             self._tw.write(msg + "\n", **{main_color: True})
 
     @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtestloop(self) -> Generator[None, None, None]:
+    def pytest_runtestloop(self) -> Generator[None, "pluggy._callers._Result", None]:
         """Write final progress indicator."""
-        outcome = yield  # type: pluggy.callers._Result
+        outcome = yield
         if (
             getattr(self, "_tests_ran", False)
             and self.verbosity <= 0
@@ -866,7 +866,7 @@ class TerminalReporter:
     def pytest_ignore_collect(
         self, path: py.path.local
     ) -> Generator[
-        None, pluggy.callers._Result, None,
+        None, "pluggy._callers._Result", None,
     ]:
         """Register ignored files during collection for reporting."""
         outcome = yield
