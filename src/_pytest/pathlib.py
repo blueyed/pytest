@@ -23,7 +23,7 @@ from _pytest.warning_types import PytestWarning
 if sys.version_info[:2] >= (3, 6):
     from pathlib import Path, PurePath
 else:
-    from pathlib2 import Path, PurePath
+    from pathlib2 import Path, PurePath  # type: ignore[import]
 
 __all__ = ["Path", "PurePath"]
 
