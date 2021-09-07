@@ -1059,7 +1059,7 @@ class TestTracebackCutting:
         """
         )
         try:
-            import filter_traceback_entry_as_str
+            import filter_traceback_entry_as_str  # type: ignore[import]
 
             filter_traceback_entry_as_str.foo()
         except ValueError:

@@ -34,6 +34,7 @@ def main():
             ],  # fmt: on
             "checkqa-mypy": [
                 "mypy==v0.910",  # keep this in sync with .pre-commit-config.yaml.
+                "numpy",
                 "types-setuptools",
             ],
         },
