@@ -397,9 +397,11 @@ class CaptureAndPassthroughIO(CaptureIO):
 
 
 if sys.version_info < (3, 5, 2):
+    if TYPE_CHECKING:
+        _F = TypeVar("_F", bound=Callable[..., Any])
 
-    def overload(f):  # noqa: F811
-        return f
+    def overload(func: "_F") -> "_F":  # noqa: F811
+        return func
 
 
 if getattr(attr, "__version_info__", ()) >= (19, 2):

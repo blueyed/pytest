@@ -39,6 +39,7 @@ from _pytest.outcomes import OutcomeException
 if TYPE_CHECKING:
     from typing import Type
     from typing_extensions import Literal
+    from typing_extensions import SupportsIndex
     from weakref import ReferenceType  # noqa: F401
 
     from _pytest._code import Source
@@ -363,15 +364,15 @@ class Traceback(List[TracebackEntry]):
         return self
 
     @overload
-    def __getitem__(self, key: int) -> TracebackEntry:
-        raise NotImplementedError()
+    def __getitem__(self, key: "SupportsIndex") -> TracebackEntry:
+        ...
 
     @overload  # noqa: F811
     def __getitem__(self, key: slice) -> "Traceback":  # noqa: F811
-        raise NotImplementedError()
+        ...
 
     def __getitem__(  # noqa: F811
-        self, key: Union[int, slice]
+        self, key: Union["SupportsIndex", slice]
     ) -> Union[TracebackEntry, "Traceback"]:
         if isinstance(key, slice):
             return self.__class__(super().__getitem__(key))
