@@ -439,12 +439,12 @@ def test_syspath_prepend_with_namespace_packages(testdir, monkeypatch):
         lib.join("__init__.py").write("def check(): return %r" % dirname)
 
     monkeypatch.syspath_prepend("hello")
-    import ns_pkg.hello
+    import ns_pkg.hello  # type: ignore[import]
 
     assert ns_pkg.hello.check() == "hello"
 
     with pytest.raises(ImportError):
-        import ns_pkg.world
+        import ns_pkg.world  # type: ignore[import]
 
     # Prepending should call fixup_namespace_packages.
     monkeypatch.syspath_prepend("world")
@@ -457,17 +457,17 @@ def test_syspath_prepend_with_namespace_packages(testdir, monkeypatch):
     modules_tmpdir = tmpdir.mkdir("modules_tmpdir")
     monkeypatch.syspath_prepend(str(modules_tmpdir))
     modules_tmpdir.join("main_app.py").write("app = True")
-    from main_app import app  # noqa: F401
+    from main_app import app  # type: ignore[import]  # noqa: F401
 
 
 def test_mockimport(monkeypatch):
     monkeypatch.mockimport(("os.foo",), TypeError)
     with pytest.raises(TypeError):
-        import os.foo  # noqa: F401
+        import os.foo  # type: ignore[import]  # noqa: F401
 
     monkeypatch.mockimport("another", TypeError)
     with pytest.raises(TypeError):
-        import another  # noqa: F401
+        import another  # type: ignore[import]  # noqa: F401
 
     monkeypatch.mockimport("os")
     with pytest.raises(ImportError):

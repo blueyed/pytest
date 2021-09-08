@@ -256,7 +256,7 @@ class TestInlineRunModulesCleanup:
     def test_external_test_module_imports_not_cleaned_up(self, testdir) -> None:
         testdir.syspathinsert()
         testdir.makepyfile(imported="data = 'you son of a silly person'")
-        import imported
+        import imported  # type: ignore[import]
 
         test_mod = testdir.makepyfile(
             """

@@ -51,7 +51,7 @@ def test_pytest_collect_attribute(_sys_snapshot) -> None:
     assert pytest.collect.Item is pytest.Item  # type: ignore[attr-defined]
 
     with pytest.raises(ImportError):
-        import pytest.collect
+        import pytest.collect  # type: ignore[import]
 
     from pytest import collect
 
@@ -78,6 +78,6 @@ def test_pytest_circular_import(testdir: Testdir, symlink_or_skip) -> None:
     del sys.modules["pytest"]
 
     testdir.syspathinsert()
-    import another  # noqa: F401
+    import another  # type: ignore[import]  # noqa: F401
 
     assert "pytest" not in sys.modules
