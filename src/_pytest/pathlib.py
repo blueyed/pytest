@@ -362,11 +362,6 @@ def fnmatch_ex(pattern: str, path) -> bool:
     return fnmatch.fnmatch(name, pattern)
 
 
-def parts(s: str) -> Set[str]:
-    parts = s.split(sep)
-    return {sep.join(parts[: i + 1]) or sep for i in range(len(parts))}
-
-
 def _shorten_path(path: str, relative_to: str = None) -> str:
     if not os.path.isabs(path):
         return path
