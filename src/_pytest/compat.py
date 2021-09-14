@@ -23,7 +23,10 @@ from typing import Union
 import attr
 import py.path
 
-if sys.version_info < (3, 5, 2):
+if sys.version_info >= (3, 5, 2):
+    from typing import overload
+    from typing import TYPE_CHECKING
+else:
     TYPE_CHECKING = False  # type: bool
 
     if TYPE_CHECKING:
@@ -31,9 +34,6 @@ if sys.version_info < (3, 5, 2):
 
     def overload(func: "_F") -> "_F":
         return func
-else:
-    from typing import overload
-    from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
@@ -431,8 +431,8 @@ else:
         ) -> "cached_property[_S, _T]":
             raise NotImplementedError()
 
-        @overload
-        def __get__(
+        @overload  # noqa: F811
+        def __get__(  # noqa: F811
             self, instance: _S, owner: Optional["Type[_S]"] = ...
         ) -> _T:
             raise NotImplementedError()
