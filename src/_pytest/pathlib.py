@@ -14,7 +14,6 @@ from os.path import sep
 from posixpath import sep as posix_sep
 from typing import Iterable
 from typing import Iterator
-from typing import Set
 from typing import TypeVar
 from typing import Union
 
