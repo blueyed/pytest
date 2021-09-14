@@ -62,7 +62,7 @@ jobs:
             # warnings being ignored.  This uses it here only to cover the
             # LsofFdLeakChecker itself.
             # (https://github.com/blueyed/pytest/issues/195)
-            tox_env: "py38-jinja2-lsof-pexpect-coverage"
+            tox_env: "py38-decorator-jinja2-lsof-pexpect-coverage"
             pytest_addopts: "-m 'decorator_specific or jinja2_specific or uses_pexpect or integration'"
             script_prefix: "env -u COLUMNS"
 
