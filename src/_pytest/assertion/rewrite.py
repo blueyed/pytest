@@ -19,6 +19,8 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
+import py.path
+
 from _pytest._io.saferepr import safeformat
 from _pytest._io.saferepr import saferepr
 from _pytest._version import version
@@ -27,9 +29,14 @@ from _pytest.assertion.util import (  # noqa: F401
     format_explanation as _format_explanation,
 )
 from _pytest.compat import fspath
+from _pytest.compat import TYPE_CHECKING
 from _pytest.pathlib import fnmatch_ex
 from _pytest.pathlib import Path
 from _pytest.pathlib import PurePath
+
+if TYPE_CHECKING:
+    from _pytest.assertion import AssertionState
+    from _pytest.main import Session
 
 # pytest caches rewritten pycs in pycache dirs
 PYTEST_TAG = "{}-pytest-{}".format(sys.implementation.cache_tag, version)
@@ -46,7 +53,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
             self.fnpats = config.getini("python_files")
         except ValueError:
             self.fnpats = ["test_*.py", "*_test.py"]
-        self.session = None
+        self.session = None  # type: Optional[Session]
         self._rewritten_names = set()  # type: Set[str]
         self._must_rewrite = set()  # type: Set[str]
         # flag to guard against trying to rewrite a pyc file while we are already writing another pyc file,
@@ -56,7 +63,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         self._marked_for_rewrite_cache = {}  # type: Dict[str, bool]
         self._session_paths_checked = False
 
-    def set_session(self, session):
+    def set_session(self, session: "Optional[Session]") -> None:
         self.session = session
         self._session_paths_checked = False
 
@@ -90,7 +97,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         else:
             fn = spec.origin
 
-        if not self._should_rewrite(name, fn, state):
+        if not self._should_rewrite(name, py.path.local(fn), state):
             return None
 
         return importlib.util.spec_from_file_location(
@@ -182,30 +189,29 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         state.trace("early skip of rewriting module: {}".format(name))
         return True
 
-    def _should_rewrite(self, name, fn, state):
+    def _should_rewrite(self, name: str, path: "py.path.local", state: "AssertionState") -> bool:
         # always rewrite conftest files
-        if os.path.basename(fn) == "conftest.py":
-            state.trace("rewriting conftest file: {!r}".format(fn))
+        if path.basename == "conftest.py":
+            state.trace("rewriting conftest file: {}".format(path))
             return True
 
         if self.session is not None:
-            if self.session.isinitpath(fn):
+            if self.session.isinitpath(path):
                 state.trace(
-                    "matched test file (was specified on cmdline): {!r}".format(fn)
+                    "matched test file (was specified on cmdline): {}".format(path)
                 )
                 return True
 
         # modules not passed explicitly on the command line are only
         # rewritten if they match the naming convention for test files
-        fn_path = PurePath(fn)
         for pat in self.fnpats:
-            if fnmatch_ex(pat, fn_path):
-                state.trace("matched test file {!r}".format(fn))
+            if fnmatch_ex(pat, path):
+                state.trace("matched test file {}".format(path))
                 return True
 
         return self._is_marked_for_rewrite(name, state)
 
-    def _is_marked_for_rewrite(self, name: str, state):
+    def _is_marked_for_rewrite(self, name: str, state: "AssertionState") -> bool:
         try:
             return self._marked_for_rewrite_cache[name]
         except KeyError:

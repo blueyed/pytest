@@ -35,6 +35,8 @@ RE_FNAME_LINENO = re.compile(r"^([^:].[^:]*):(\d+)?(-?)(\d+)?:?$")
 
 
 if TYPE_CHECKING:
+    from typing import Generator
+    from typing import Set
     from typing import Type
     from typing_extensions import Literal
 
@@ -458,7 +460,7 @@ class Session(nodes.FSCollector):
 
     pytest_collectreport = pytest_runtest_logreport
 
-    def isinitpath(self, path):
+    def isinitpath(self, path: "py.path.local") -> bool:
         return path in self._initialpaths
 
     def gethookproxy(self, fspath: py.path.local):
@@ -538,7 +540,9 @@ class Session(nodes.FSCollector):
         self._collection_node_cache3.clear()
         self._collection_pkg_roots.clear()
 
-    def _collect(self, argpath, names):
+    def _collect(
+        self, argpath: "py.path.local", names: "List[str]"
+    ) -> "Generator[Union[nodes.Item, nodes.Collector], None, None]":
         from _pytest.python import Package
 
         # Start with a Session root, and delve to argpath item (dir or file)
@@ -566,7 +570,7 @@ class Session(nodes.FSCollector):
         if argpath.check(dir=1):
             assert not names, "invalid arg {!r}".format((argpath, names))
 
-            seen_dirs = set()
+            seen_dirs = set()  # type: Set[py.path.local]
             for path in argpath.visit(
                 fil=self._visit_filter, rec=self._recurse, bf=True, sort=True
             ):
@@ -574,7 +578,7 @@ class Session(nodes.FSCollector):
                 if dirpath not in seen_dirs:
                     # Collect packages first.
                     seen_dirs.add(dirpath)
-                    pkginit = dirpath.join("__init__.py")
+                    pkginit = path.dirpath().join("__init__.py")
                     if pkginit.exists():
                         for x in self._collectfile(pkginit):
                             yield x
@@ -597,7 +601,7 @@ class Session(nodes.FSCollector):
             if argpath in self._collection_node_cache1:
                 col = self._collection_node_cache1[argpath]
             else:
-                collect_root = self._collection_pkg_roots.get(argpath.dirname, self)
+                collect_root = self._collection_pkg_roots.get(argpath.dirpath(), self)
                 col = collect_root._collectfile(argpath, handle_dupes=False)
                 if col:
                     self._collection_node_cache1[argpath] = col
@@ -614,7 +618,7 @@ class Session(nodes.FSCollector):
                     # file in it, which gets ignored by the default
                     # "python_files" option.
                     pass
-                return
+                return None
             yield from m
 
     @staticmethod

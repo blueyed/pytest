@@ -14,7 +14,6 @@ from os.path import sep
 from posixpath import sep as posix_sep
 from typing import Iterable
 from typing import Iterator
-from typing import Set
 from typing import TypeVar
 from typing import Union
 
@@ -360,11 +359,6 @@ def fnmatch_ex(pattern: str, path) -> bool:
         if path.is_absolute() and not os.path.isabs(pattern):
             pattern = "*{}{}".format(os.sep, pattern)
     return fnmatch.fnmatch(name, pattern)
-
-
-def parts(s: str) -> Set[str]:
-    parts = s.split(sep)
-    return {sep.join(parts[: i + 1]) or sep for i in range(len(parts))}
 
 
 def _shorten_path(path: str, relative_to: str = None) -> str:
