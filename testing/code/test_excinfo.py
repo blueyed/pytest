@@ -251,8 +251,8 @@ class TestTraceback_f_g_h:
         recindex = traceback.recursionindex()
         assert recindex is None
 
-    def test_traceback_messy_recursion(self):
-        # XXX: simplified locally testable version
+    @pytest.mark.decorator_specific
+    def test_traceback_messy_recursion(self) -> None:
         decorator = pytest.importorskip("decorator").decorator
 
         def log(f, *k, **kw):
