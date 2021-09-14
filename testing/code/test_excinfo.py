@@ -358,11 +358,10 @@ def test_excinfo_no_sourcecode():
 
 
 @pytest.mark.jinja2_specific
-def test_excinfo_no_python_sourcecode(tmp_path: "Path"):
+def test_excinfo_no_python_sourcecode(tmp_path: "Path") -> None:
     jinja2 = pytest.importorskip("jinja2")
 
-    # XXX: simplified locally testable version
-    (tmp_path / "test.txt").write_text("{{ h()}}:")
+    (tmp_path / "test.txt").write_text("{{ h() }}:")
     loader = jinja2.FileSystemLoader(str(tmp_path))
     env = jinja2.Environment(loader=loader)
     template = env.get_template("test.txt")
@@ -371,7 +370,7 @@ def test_excinfo_no_python_sourcecode(tmp_path: "Path"):
     for item in excinfo.traceback:
         assert item.source
         if item.path.basename == "test.txt":  # type: ignore[union-attr]
-            assert str(item.source) == "{{ h()}}:"
+            assert str(item.source) == "{{ h() }}:"
             found += 1
     assert found == 1
 
