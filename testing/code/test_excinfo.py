@@ -357,6 +357,7 @@ def test_excinfo_no_sourcecode():
     assert s == '  File "<string>", line 1, in <module>\n    ???'
 
 
+@pytest.mark.jinja2_specific
 def test_excinfo_no_python_sourcecode(tmp_path: "Path"):
     jinja2 = pytest.importorskip("jinja2")
 
