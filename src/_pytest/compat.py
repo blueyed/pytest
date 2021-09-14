@@ -16,7 +16,6 @@ from typing import Callable
 from typing import Generic
 from typing import IO
 from typing import Optional
-from typing import overload
 from typing import Tuple
 from typing import TypeVar
 from typing import Union
@@ -26,7 +25,14 @@ import py.path
 
 if sys.version_info < (3, 5, 2):
     TYPE_CHECKING = False  # type: bool
+
+    if TYPE_CHECKING:
+        _F = TypeVar("_F", bound=Callable[..., Any])
+
+    def overload(func: "_F") -> "_F":
+        return func
 else:
+    from typing import overload
     from typing import TYPE_CHECKING
 
 
@@ -396,14 +402,6 @@ class CaptureAndPassthroughIO(CaptureIO):
         return self._other.write(s)
 
 
-if sys.version_info < (3, 5, 2):
-    if TYPE_CHECKING:
-        _F = TypeVar("_F", bound=Callable[..., Any])
-
-    def overload(func: "_F") -> "_F":  # noqa: F811
-        return func
-
-
 if getattr(attr, "__version_info__", ()) >= (19, 2):
     ATTRS_EQ_FIELD = "eq"
 else:
@@ -433,8 +431,8 @@ else:
         ) -> "cached_property[_S, _T]":
             raise NotImplementedError()
 
-        @overload  # noqa: F811
-        def __get__(  # noqa: F811
+        @overload
+        def __get__(
             self, instance: _S, owner: Optional["Type[_S]"] = ...
         ) -> _T:
             raise NotImplementedError()
