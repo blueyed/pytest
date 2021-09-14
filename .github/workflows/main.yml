@@ -65,6 +65,11 @@ jobs:
             tox_env: "py38-lsof-pexpect-coverage"
             pytest_addopts: "-m 'uses_pexpect or integration'"
             script_prefix: "env -u COLUMNS"
+          - name: "ubuntu-py35"
+            python: "3.5"
+            os: ubuntu-latest
+            tox_env: "py35-coverage"
+            pytest_addopts: "-m 'py35_specific or acceptance_tests or integration'"
 
           # Coverage for:
           # - osx
