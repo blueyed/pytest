@@ -13,6 +13,7 @@ from _pytest._code.code import ExceptionChainRepr
 from _pytest._code.code import ExceptionInfo
 from _pytest._code.code import FormattedExcinfo
 from _pytest._io import TerminalWriter
+from _pytest.compat import TYPE_CHECKING
 from _pytest.pytester import LineMatcher
 
 try:
@@ -21,6 +22,9 @@ except ImportError:
     invalidate_import_caches = None
 else:
     invalidate_import_caches = getattr(importlib, "invalidate_caches", None)
+
+if TYPE_CHECKING:
+    from _pytest.pathlib import Path
 
 
 @pytest.fixture
@@ -247,8 +251,8 @@ class TestTraceback_f_g_h:
         recindex = traceback.recursionindex()
         assert recindex is None
 
-    def test_traceback_messy_recursion(self):
-        # XXX: simplified locally testable version
+    @pytest.mark.decorator_specific
+    def test_traceback_messy_recursion(self) -> None:
         decorator = pytest.importorskip("decorator").decorator
 
         def log(f, *k, **kw):
@@ -353,20 +357,22 @@ def test_excinfo_no_sourcecode():
     assert s == '  File "<string>", line 1, in <module>\n    ???'
 
 
-def test_excinfo_no_python_sourcecode(tmpdir):
-    # XXX: simplified locally testable version
-    tmpdir.join("test.txt").write("{{ h()}}:")
-
+@pytest.mark.jinja2_specific
+def test_excinfo_no_python_sourcecode(tmp_path: "Path") -> None:
     jinja2 = pytest.importorskip("jinja2")
-    loader = jinja2.FileSystemLoader(str(tmpdir))
+
+    (tmp_path / "test.txt").write_text("{{ h() }}:")
+    loader = jinja2.FileSystemLoader(str(tmp_path))
     env = jinja2.Environment(loader=loader)
     template = env.get_template("test.txt")
     excinfo = pytest.raises(ValueError, template.render, h=h)
+    found = 0
     for item in excinfo.traceback:
-        print(item)  # XXX: for some reason jinja.Template.render is printed in full
-        item.source  # shouldn't fail
-        if item.path.basename == "test.txt":
-            assert str(item.source) == "{{ h()}}:"
+        assert item.source
+        if item.path.basename == "test.txt":  # type: ignore[union-attr]
+            assert str(item.source) == "{{ h() }}:"
+            found += 1
+    assert found == 1
 
 
 def test_entrysource_Queue_example():
