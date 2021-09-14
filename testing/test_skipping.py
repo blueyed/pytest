@@ -901,9 +901,12 @@ def test_errors_in_xfail_skip_expressions(testdir: "Testdir") -> None:
         """
     )
     result = testdir.runpytest(p1)
-    markline = "                ^"
-    if sys.version_info >= (3, 8) or hasattr(sys, "pypy_version_info"):
-        markline = markline[4:]
+    if sys.version_info >= (3, 10, 0, "b1"):
+        markline = "    ^"
+    elif sys.version_info >= (3, 8) or hasattr(sys, "pypy_version_info"):
+        markline = "           ^"
+    else:
+        markline = "               ^"
     result.stdout.fnmatch_lines(
         [
             "test_errors_in_xfail_skip_expressions.py EE. * [[]100%[]]",

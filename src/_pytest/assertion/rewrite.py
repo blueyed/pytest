@@ -664,11 +664,23 @@ class AssertionRewriter(ast.NodeVisitor):
                 ):
                     nodes.append(field)
 
-        imports = ast.Import(
-            names=[
+        if sys.version_info >= (3, 10, 0, "b1"):
+            names = [
+                ast.alias("builtins", "@py_builtins", lineno=lineno, col_offset=0),
+                ast.alias(
+                    "_pytest.assertion.rewrite",
+                    "@pytest_ar",
+                    lineno=lineno,
+                    col_offset=0,
+                ),
+            ]
+        else:
+            names = [
                 ast.alias("builtins", "@py_builtins"),
                 ast.alias("_pytest.assertion.rewrite", "@pytest_ar"),
-            ],
+            ]
+        imports = ast.Import(
+            names=names,
             lineno=lineno,
             col_offset=0,
         )
