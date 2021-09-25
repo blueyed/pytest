@@ -2633,7 +2633,6 @@ def test_getdimensions(monkeypatch):
     def mocked_get_terminal_size(fileno):
         calls.append(fileno)
         return os.terminal_size((0, 0))
-        raise OSError()
 
     monkeypatch.setattr(os, "get_terminal_size", mocked_get_terminal_size)
 
