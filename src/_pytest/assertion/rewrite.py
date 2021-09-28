@@ -664,7 +664,7 @@ class AssertionRewriter(ast.NodeVisitor):
                 ):
                     nodes.append(field)
 
-        if sys.version_info >= (3, 10, 0, "b1"):
+        if sys.version_info >= (3, 10, 0, "beta", 1):
             names = [
                 ast.alias("builtins", "@py_builtins", lineno=lineno, col_offset=0),
                 ast.alias(
