@@ -376,18 +376,14 @@ class WarningReport:
         return line
 
     def get_location(self, config: Config) -> str:
-        """
-        Returns the more user-friendly information about the location
-        of a warning.
-        """
+        """Return a user-friendly information about the location of a warning."""
         filename, linenum = self.fslocation[:2]
         relpath = config.invocation_dir.bestrelpath(py.path.local(filename))
         if not self.nodeid:
             return "{}:{}".format(relpath, linenum)
-        if self.nodeid.startswith(relpath):
+        if self.nodeid.startswith(relpath + "::"):
             names = self.nodeid[len(relpath) :]
-            if names.startswith("::"):
-                return "{}:{}{}".format(relpath, linenum, names)
+            return "{}:{}{}".format(relpath, linenum, names)
         return "{} ({}:{})".format(self.nodeid, relpath, linenum)
 
 
