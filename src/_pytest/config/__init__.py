@@ -499,12 +499,6 @@ class PytestPluginManager(PluginManager):
                 _ensure_removed_sysmodule(conftestpath.purebasename)
             try:
                 mod = conftestpath.pyimport()
-                if (
-                    hasattr(mod, "pytest_plugins")
-                    and self._configured
-                    and not self._using_pyargs
-                ):
-                    _fail_on_non_top_pytest_plugins(conftestpath, self._confcutdir)
             except Exception:
                 raise ConftestImportFailure(conftestpath, sys.exc_info())
 
