@@ -122,7 +122,7 @@ def test_syntaxerror_rerepresentation() -> None:
     ex = pytest.raises(SyntaxError, _pytest._code.compile, "xyz xyz")
     assert ex is not None
     assert ex.value.lineno == 1
-    if sys.version_info >= (3, 10, 0, "beta", 1):
+    if sys.version_info >= (3, 10, 0, "beta", 1) and  sys.version_info < (3, 10, 1):
         assert ex.value.offset == 1
     elif hasattr(sys, "pypy_version_info") or sys.version_info >= (3, 8):
         assert ex.value.offset == 5
