@@ -573,8 +573,10 @@ class ExceptionInfo(Generic[_E]):
             the exception representation is returned (so 'AssertionError: ' is
             removed from the beginning)
         """
+        from _pytest.main import Interrupted
+
         lines = format_exception_only(self.type, self.value)
-        if isinstance(self.value, OutcomeException):
+        if isinstance(self.value, (OutcomeException, Interrupted)):
             # Remove module prefix.
             assert lines[0].startswith(self.type.__module__), (lines[0], self.type)
             lines[0] = lines[0][len(self.type.__module__) + 1 :]

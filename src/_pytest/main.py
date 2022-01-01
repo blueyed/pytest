@@ -325,9 +325,7 @@ class NoMatch(Exception):
 
 
 class Interrupted(KeyboardInterrupt):
-    """ signals an interrupted test run. """
-
-    __module__ = "builtins"  # for py3
+    """Signals an interrupted test run."""
 
 
 class Failed(Exception):
