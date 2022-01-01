@@ -512,8 +512,9 @@ To use it, include in your top-most ``conftest.py`` file:
 
 
 
-.. autoclass:: Testdir()
+.. autoclass:: Testdir
     :members:
+    :exclude-members: Session
 
 .. autoclass:: RunResult()
     :members:
