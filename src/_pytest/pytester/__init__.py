@@ -601,6 +601,8 @@ class Testdir(Generic[AnyStr]):
     CLOSE_STDIN = CLOSE_STDIN
     """Sentinel to close stdin."""
 
+    Session = Session
+
     class TimeoutExpired(Exception):
         pass
 
@@ -910,8 +912,6 @@ class Testdir(Generic[AnyStr]):
             raise LookupError(
                 'example "{}" is not found as a file or directory'.format(example_path)
             )
-
-    Session = Session
 
     def getnode(self, config, arg):
         """Return the collection node of a file.
