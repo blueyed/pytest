@@ -1533,3 +1533,36 @@ def test_does_not_put_src_on_path(testdir):
     )
     result = testdir.runpytest()
     assert result.ret == ExitCode.OK
+
+
+@pytest.mark.windows_specific
+def test_collect_glob(testdir: "Testdir") -> None:
+    """Ensure that '*' gets handled properly.
+
+    This might be the case if `Path.exists()` would be used on it on Windows.
+
+    Ref: https://bugs.python.org/issue35306"""
+    result = testdir.runpytest("*")
+    assert result.ret == ExitCode.USAGE_ERROR
+    assert result.stderr.lines == ["ERROR: file not found: '*'", ""]
+
+    if sys.platform == "win32":
+        from py.error import ENOTDIR
+
+        # A file "*" cannot be created on Windows (`open` fails, pylib maps it).
+        with pytest.raises(ENOTDIR):
+            testdir.tmpdir.join("*").write("def test_pass(): pass")
+    else:
+        # Gets not collected without ".py" extension (despite of "python_files=*").
+        testdir.tmpdir.join("*").write("def test_pass(): pass")
+        result = testdir.runpytest("*", "-o", "python_files=*")
+        assert result.ret == ExitCode.USAGE_ERROR
+        result.stderr.lines == [
+            "ERROR: not found: {}/*".format(testdir.tmpdir),
+            "(no name '{}/*' in any of [])".format(testdir.tmpdir),
+        ]
+
+        # A file named "*.py" works.
+        testdir.tmpdir.join("*.py").write("def test_pass(): pass")
+        result = testdir.runpytest("*.py")
+        assert result.ret == ExitCode.OK
