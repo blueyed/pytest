@@ -19,6 +19,7 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
+import _pytest.config
 from _pytest._io.saferepr import safeformat
 from _pytest._io.saferepr import saferepr
 from _pytest._version import version
@@ -40,12 +41,9 @@ PYC_TAIL = "." + PYTEST_TAG + PYC_EXT
 class AssertionRewritingHook(importlib.abc.MetaPathFinder):
     """PEP302/PEP451 import hook which rewrites asserts."""
 
-    def __init__(self, config):
+    def __init__(self, config: "_pytest.config.Config"):
         self.config = config
-        try:
-            self.fnpats = config.getini("python_files")
-        except ValueError:
-            self.fnpats = ["test_*.py", "*_test.py"]
+        self.fnpats = self._get_fnpats(config)
         self.session = None
         self._rewritten_names = set()  # type: Set[str]
         self._must_rewrite = set()  # type: Set[str]
@@ -55,6 +53,24 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
         self._basenames_to_check_rewrite = {"conftest"}
         self._marked_for_rewrite_cache = {}  # type: Dict[str, bool]
         self._session_paths_checked = False
+
+    def _get_fnpats(self, config: "_pytest.config.Config") -> List[str]:
+        fnpats = config.getini("assert_rewrite_files")  # type: Optional[List[str]]
+        if fnpats is not None:
+            return fnpats
+
+        testpaths = config.getini("testpaths")
+        if testpaths is None:
+            try:
+                python_files = config.getini("python_files")  # type: List[str]
+            except ValueError:
+                python_files = ["test_*.py", "*_test.py"]
+            return python_files
+
+        fnpats = []
+        for tpath in testpaths:
+            fnpats += [tpath + os.path.sep + "**.py"]
+        return fnpats
 
     def set_session(self, session):
         self.session = session
