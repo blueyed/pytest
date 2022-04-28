@@ -19,10 +19,10 @@ from typing import Union
 import py.path
 
 from _pytest.compat import get_real_func
-from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from typing import overload
     from typing_extensions import Literal
 
 
@@ -62,15 +62,16 @@ class Source:
     # Ignore type because of https://github.com/python/mypy/issues/4266.
     __hash__ = None  # type: ignore
 
-    @overload
-    def __getitem__(self, key: int) -> str:
-        raise NotImplementedError()
+    if TYPE_CHECKING:
+        @overload
+        def __getitem__(self, key: int) -> str:
+            ...
 
-    @overload  # noqa: F811
-    def __getitem__(self, key: slice) -> "Source":  # noqa: F811
-        raise NotImplementedError()
+        @overload
+        def __getitem__(self, key: slice) -> "Source":
+            ...
 
-    def __getitem__(self, key: Union[int, slice]) -> Union[str, "Source"]:  # noqa: F811
+    def __getitem__(self, key: Union[int, slice]) -> Union[str, "Source"]:
         if isinstance(key, int):
             return self.lines[key]
         else:
@@ -160,29 +161,30 @@ class Source:
     def __str__(self) -> str:
         return "\n".join(self.lines)
 
-    @overload
+    if TYPE_CHECKING:
+        @overload
+        def compile(
+            self,
+            filename: Optional[str] = ...,
+            mode: str = ...,
+            flag: "Literal[0]" = ...,
+            dont_inherit: int = ...,
+            _genframe: Optional[FrameType] = ...,
+        ) -> CodeType:
+            ...
+
+        @overload
+        def compile(
+            self,
+            filename: Optional[str] = ...,
+            mode: str = ...,
+            flag: int = ...,
+            dont_inherit: int = ...,
+            _genframe: Optional[FrameType] = ...,
+        ) -> Union[CodeType, ast.AST]:
+            ...
+
     def compile(
-        self,
-        filename: Optional[str] = ...,
-        mode: str = ...,
-        flag: "Literal[0]" = ...,
-        dont_inherit: int = ...,
-        _genframe: Optional[FrameType] = ...,
-    ) -> CodeType:
-        raise NotImplementedError()
-
-    @overload  # noqa: F811
-    def compile(  # noqa: F811
-        self,
-        filename: Optional[str] = ...,
-        mode: str = ...,
-        flag: int = ...,
-        dont_inherit: int = ...,
-        _genframe: Optional[FrameType] = ...,
-    ) -> Union[CodeType, ast.AST]:
-        raise NotImplementedError()
-
-    def compile(  # noqa: F811
         self,
         filename: Optional[str] = None,
         mode: str = "exec",
@@ -234,29 +236,29 @@ class Source:
 #
 
 
-@overload
+if TYPE_CHECKING:
+    @overload
+    def compile_(
+        source: Union[str, bytes, ast.mod, ast.AST],
+        filename: Optional[str] = ...,
+        mode: str = ...,
+        flags: "Literal[0]" = ...,
+        dont_inherit: int = ...,
+    ) -> CodeType:
+        ...
+
+    @overload
+    def compile_(
+        source: Union[str, bytes, ast.mod, ast.AST],
+        filename: Optional[str] = ...,
+        mode: str = ...,
+        flags: int = ...,
+        dont_inherit: int = ...,
+    ) -> Union[CodeType, ast.AST]:
+        ...
+
+
 def compile_(
-    source: Union[str, bytes, ast.mod, ast.AST],
-    filename: Optional[str] = ...,
-    mode: str = ...,
-    flags: "Literal[0]" = ...,
-    dont_inherit: int = ...,
-) -> CodeType:
-    raise NotImplementedError()
-
-
-@overload  # noqa: F811
-def compile_(  # noqa: F811
-    source: Union[str, bytes, ast.mod, ast.AST],
-    filename: Optional[str] = ...,
-    mode: str = ...,
-    flags: int = ...,
-    dont_inherit: int = ...,
-) -> Union[CodeType, ast.AST]:
-    raise NotImplementedError()
-
-
-def compile_(  # noqa: F811
     source: Union[str, bytes, ast.mod, ast.AST],
     filename: Optional[str] = None,
     mode: str = "exec",

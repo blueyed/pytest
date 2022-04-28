@@ -21,12 +21,12 @@ from typing import Union
 from more_itertools.more import always_iterable
 
 import _pytest._code
-from _pytest.compat import overload
 from _pytest.compat import STRING_TYPES
 from _pytest.compat import TYPE_CHECKING
 from _pytest.outcomes import fail
 
 if TYPE_CHECKING:
+    from typing import overload
     from typing import Type  # noqa: F401 (used in type string)
 
 
@@ -543,26 +543,27 @@ def _is_numpy_array(obj):
 _E = TypeVar("_E", bound=BaseException)
 
 
-@overload
+if TYPE_CHECKING:
+    @overload
+    def raises(
+        expected_exception: Union["Type[_E]", Tuple["Type[_E]", ...]],
+        *,
+        match: "Optional[Union[str, Pattern]]" = ...
+    ) -> "RaisesContext[_E]":
+        ...
+
+
+    @overload
+    def raises(
+        expected_exception: Union["Type[_E]", Tuple["Type[_E]", ...]],
+        func: Callable,
+        *args: Any,
+        **kwargs: Any
+    ) -> _pytest._code.ExceptionInfo[_E]:
+        ...
+
+
 def raises(
-    expected_exception: Union["Type[_E]", Tuple["Type[_E]", ...]],
-    *,
-    match: "Optional[Union[str, Pattern]]" = ...
-) -> "RaisesContext[_E]":
-    ...  # pragma: no cover
-
-
-@overload  # noqa: F811
-def raises(  # noqa: F811
-    expected_exception: Union["Type[_E]", Tuple["Type[_E]", ...]],
-    func: Callable,
-    *args: Any,
-    **kwargs: Any
-) -> _pytest._code.ExceptionInfo[_E]:
-    ...  # pragma: no cover
-
-
-def raises(  # noqa: F811
     expected_exception: Union["Type[_E]", Tuple["Type[_E]", ...]],
     *args: Any,
     **kwargs: Any
