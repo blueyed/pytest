@@ -1243,7 +1243,7 @@ def test_handles_non_python_items(testdir: Testdir):
             "E       Failed: failure",
             "runtest_was_called",
             "*= short test summary info =*",
-            "FAILED ::fooitem (*runner.py:*) - failure",
+            "FAILED ::fooitem (conftest.py:7) - failure",
             "=* 1 failed in *",
         ]
     )

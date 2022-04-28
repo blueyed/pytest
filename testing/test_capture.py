@@ -1587,21 +1587,23 @@ def test_typeerror_encodedfile_write(testdir):
             sys.stdout.write(b"foo")
     """
     )
-    result_with_capture = testdir.runpytest(str(p))
-    result_with_capture.stdout.fnmatch_lines(
+    # With capturing.
+    result = testdir.runpytest(str(p))
+    result.stdout.fnmatch_lines(
         [
             '>       sys.stdout.write(b"foo")',
             "    def write*",
             "E           TypeError: write() argument must be str, not bytes",
-            "FAILED test_typeerror_encodedfile_write.py:3::test_fails - *",
+            "FAILED test_typeerror_encodedfile_write.py:3::test_fails (*_pytest/capture.py:*) - *",
         ]
     )
-    result_without_capture = testdir.runpytest("-s", str(p))
+    # Without capturing.
+    result = testdir.runpytest("-s", str(p))
     if getattr(sys, "pypy_version_info", None):
         exp_exc = "TypeError: unicode argument expected, got 'bytes'"
     else:
         exp_exc = "TypeError: write() argument must be str, not bytes"
-    result_without_capture.stdout.fnmatch_lines(
+    result.stdout.fnmatch_lines(
         [
             '>       sys.stdout.write(b"foo")',
             "E       " + exp_exc,

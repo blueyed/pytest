@@ -1340,15 +1340,6 @@ def _get_rep_reprcrash(
     if not rep.longrepr:
         return None
 
-    if isinstance(rep, TestReport) and not fulltrace:
-        # This uses the first traceback entry for the location in the test itself
-        # (rather than reprcrash, which might be less relevant for going to
-        # directly, e.g. pexpect failures in pytest itself).
-        try:
-            return rep.longrepr.reprtraceback.reprentries[0].reprfileloc
-        except AttributeError:
-            pass
-
     # Handle --tb=native, --tb=no.
     try:
         return rep.longrepr.reprcrash
@@ -1383,6 +1374,20 @@ def _get_pos(config: Config, rep: Union[CollectReport, TestReport]) -> str:
         if not testname:
             return "{}{}".format(path, linenostr)
         return "{}{}::{}".format(path, linenostr, testname)
+    try:
+        testloc = rep.longrepr.chain[0][0].reprentries[0].reprfileloc  # type: ignore[attr-defined]
+    except AttributeError:
+        pass
+    else:
+        if testloc.path == path:
+            # Inject lineno from test's frame.
+            return "{}:{}::{} ({}{})".format(
+                path,
+                testloc.lineno,
+                testname,
+                crash_path,
+                linenostr,
+            )
     return "{} ({}{})".format(desc, crash_path, linenostr)
 
 
