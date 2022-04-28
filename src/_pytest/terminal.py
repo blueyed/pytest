@@ -8,6 +8,7 @@ import inspect
 import linecache
 import os
 import platform
+import re
 import sys
 import time
 import warnings
@@ -50,6 +51,7 @@ if TYPE_CHECKING:
     from _pytest._code.code import _TracebackStyle
 
 REPORT_COLLECTING_RESOLUTION = 0.5
+RE_ESCAPE_NONCOLOR = re.compile(r'\x1b(?!\[[\d;]+m)')
 
 KNOWN_TYPES = (
     "failed",
@@ -63,6 +65,10 @@ KNOWN_TYPES = (
 )
 
 _REPORTCHARS_DEFAULT = "fE"
+
+
+def replace_non_color_escapes(s: str) -> str:
+    return RE_ESCAPE_NONCOLOR.sub('^[', s)
 
 
 def _getdimensions() -> Tuple[int, int]:
@@ -1172,6 +1178,7 @@ class TerminalReporter:
             self.section(secname, "-")
             if content[-1:] == "\n":
                 content = content[:-1]
+            content = replace_non_color_escapes(content)
             self._tw.line(content)
 
     def summary_stats(self) -> None:

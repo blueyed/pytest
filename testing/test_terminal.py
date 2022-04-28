@@ -25,6 +25,7 @@ from _pytest.terminal import _get_line_with_reprcrash_message
 from _pytest.terminal import _get_pos
 from _pytest.terminal import _plugin_nameversions
 from _pytest.terminal import getreportopt
+from _pytest.terminal import replace_non_color_escapes
 from _pytest.terminal import TerminalReporter
 
 try:
@@ -359,6 +360,23 @@ class TestTerminal:
         tr.write("hello")
         tr.rewrite("hey", erase=True)
         assert f.getvalue() == "hello" + "\r" + "hey" + (6 * " ")
+
+
+class TestTerminalUnit:
+    def test_replace_non_color_escapes(self) -> None:
+        f = replace_non_color_escapes
+
+        # without any escapes.
+        assert f("foo") == "foo"
+
+        # color escapes.
+        assert f('\x1b[32mINFO') == '\x1b[32mINFO'
+        assert f('\x1b[38;2;0;0;0m') == '\x1b[38;2;0;0;0m'
+
+        # non-color escapes.
+        # clears screen.
+        assert f('\033[2J\033[1;1H') == '^[[2J^[[1;1H'
+        assert f('\033') == '^['
 
 
 class TestCollectonly:
