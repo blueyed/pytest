@@ -1324,6 +1324,58 @@ def test_version_with_exception(testdir: "Testdir") -> None:
     )
 
 
+def test_usageerror_with_fulltrace(testdir: "Testdir") -> None:
+    testdir.makeconftest(
+        """
+        import pytest
+
+        def pytest_addoption(parser):
+            raise pytest.UsageError("my_usageerror")
+        """
+    )
+    result = testdir.runpytest()
+    assert result.stderr.lines == [
+        "ERROR: my_usageerror",
+        "",
+    ]
+    assert result.stdout.lines == []
+    assert result.ret == ExitCode.USAGE_ERROR
+
+    # Via sys.argv (subprocess).
+    result = testdir.runpytest_subprocess("--fulltrace")
+    assert result.stderr.lines[0:3] == [
+        "ERROR: my_usageerror",
+        "",
+        "Traceback (most recent call last):",
+    ]
+    result.stderr.fnmatch_lines(
+        [
+            "ERROR: my_usageerror",
+            "During handling of the above exception, another exception occurred:",
+            "_pytest.config.exceptions.UsageError: my_usageerror",
+        ]
+    )
+    assert result.stdout.lines == []
+    assert result.ret == ExitCode.USAGE_ERROR
+
+    # In-process (args to pytest.main).
+    result = testdir.runpytest_inprocess("--fulltrace")
+    assert result.stderr.lines[0:3] == [
+        "ERROR: my_usageerror",
+        "",
+        "Traceback (most recent call last):",
+    ]
+    result.stderr.fnmatch_lines(
+        [
+            "ERROR: my_usageerror",
+            "During handling of the above exception, another exception occurred:",
+            "_pytest.config.exceptions.UsageError: my_usageerror",
+        ]
+    )
+    assert result.stdout.lines == []
+    assert result.ret == ExitCode.USAGE_ERROR
+
+
 def test_help_formatter_uses_py_get_terminal_width(monkeypatch):
     from _pytest.config.argparsing import DropShorterLongHelpFormatter
 

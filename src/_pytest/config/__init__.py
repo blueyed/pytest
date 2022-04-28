@@ -104,9 +104,8 @@ def main(args=None, plugins=None) -> Union[int, ExitCode]:
             config = _prepareconfig(args, plugins)
         except ConftestImportFailure as e:
             exc_info = ExceptionInfo(e.excinfo)
-            tw = TerminalWriter(sys.stderr)
-            tw.line(
-                "ImportError while loading conftest '{e.path}'.".format(e=e), red=True
+            error = "{e.excinfo[0].__name__} while loading conftest '{e.path}'.".format(
+                e=e
             )
             exc_info.traceback = exc_info.traceback.filter(filter_traceback)
             exc_repr = (
@@ -115,9 +114,8 @@ def main(args=None, plugins=None) -> Union[int, ExitCode]:
                 else exc_info.exconly()
             )
             formatted_tb = str(exc_repr)
-            for line in formatted_tb.splitlines():
-                tw.line(line.rstrip(), red=True)
-            return ExitCode.USAGE_ERROR
+            error += "\n  " + "\n  ".join(formatted_tb.splitlines())
+            raise UsageError(error) from e.excinfo[1]
         else:
             try:
                 ret = config.hook.pytest_cmdline_main(
@@ -133,6 +131,11 @@ def main(args=None, plugins=None) -> Union[int, ExitCode]:
         tw = TerminalWriter(sys.stderr)
         for msg in e.args:
             tw.line("ERROR: {}\n".format(msg), red=True)
+        args = sys.argv[1:] if args is None else args
+        if "--fulltrace" in args or "--full-trace" in args:
+            import traceback
+
+            traceback.print_exc(file=sys.stderr)
         return ExitCode.USAGE_ERROR
 
 

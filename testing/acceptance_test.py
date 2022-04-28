@@ -215,7 +215,7 @@ class TestGeneralUsage:
         )
 
     @pytest.mark.filterwarnings("default")
-    def test_better_reporting_on_conftest_load_failure(self, testdir):
+    def test_better_reporting_on_conftest_load_failure(self, testdir: "Testdir") -> None:
         """Show a user-friendly traceback on conftest import failures (#486, #3332)"""
         testdir.makepyfile("")
         conftest = testdir.makeconftest(
@@ -242,16 +242,46 @@ class TestGeneralUsage:
         assert "--version" in result.stdout.str()
         assert result.ret == 0
 
+        exc_name = MODULE_NOT_FOUND_ERROR
         result = testdir.runpytest()
         assert result.stdout.lines == []
         assert result.stderr.lines == [
-            "ImportError while loading conftest '{}'.".format(conftest),
-            "conftest.py:3: in <module>",
-            "    foo()",
-            "conftest.py:2: in foo",
-            "    import qwerty",
-            "E   {}: No module named 'qwerty'".format(MODULE_NOT_FOUND_ERROR),
+            "ERROR: {} while loading conftest '{}'.".format(exc_name, conftest),
+            "  conftest.py:3: in <module>",
+            "      foo()",
+            "  conftest.py:2: in foo",
+            "      import qwerty",
+            "  E   {}: No module named 'qwerty'".format(exc_name),
+            "",
         ]
+
+        result = testdir.runpytest_subprocess("--fulltrace")  # subprocess for sys.argv
+        assert result.stdout.lines == []
+        result.stderr.fnmatch_lines(
+            [
+                "ERROR: {} while loading conftest '*'.".format(exc_name),
+                "  conftest.py:3: in <module>",
+                "      foo()",
+                "  conftest.py:2: in foo",
+                "      import qwerty",
+                "  E   {}: No module named 'qwerty'".format(exc_name),
+                "",
+                "Traceback (most recent call last):",
+                "",
+                "During handling of the above exception, another exception occurred:",
+                "",
+                "{}: No module named 'qwerty'".format(exc_name),
+                "",
+                "The above exception was the direct cause of the following exception:",
+                "",
+                "_pytest.config.exceptions.UsageError: * while loading conftest *.",
+                "  conftest.py:3: in <module>",
+                "      foo()",
+                "  conftest.py:2: in foo",
+                "      import qwerty",
+                "  E   {}: No module named 'qwerty'".format(exc_name),
+            ]
+        )
 
     def test_early_skip(self, testdir):
         testdir.mkdir("xyz")
