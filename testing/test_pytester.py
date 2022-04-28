@@ -1435,19 +1435,48 @@ class TestTestdirMakefiles:
         assert tuple(x.read_text() for x in files) == ("foo2", "bar", "foo2")
 
 
-def test_home_used_from_fixture(testdir: "Testdir") -> None:
+def test_env_used_from_fixture(testdir: "Testdir") -> None:
     p1 = testdir.makepyfile(
         """
         import os
+        import _pytest.terminal
         import pytest
 
         @pytest.fixture
         def fix():
+            orig_home = os.getenv("HOME")
             os.environ["HOME"] = "/new/home"
+            orig_userprofile = os.getenv("USERPROFILE")
 
-        def test(testdir, fix):
+            yield
+
+            try:
+                assert os.getenv("HOME") == "/new/home"  # Not changed/undone.
+                assert os.getenv("USERPROFILE") == orig_userprofile  # Undone.
+            finally:
+                os.environ["HOME"] = orig_home
+
+        def test_1(testdir, fix):
             assert os.environ["HOME"] == "/new/home"
+            assert os.environ["USERPROFILE"] == str(testdir.tmpdir)
+            assert _pytest.terminal.get_terminal_width() == 80
+
+        @pytest.fixture
+        def fix_get_terminal_width():
+            orig = _pytest.terminal.get_terminal_width
+            _pytest.terminal.get_terminal_width = lambda: 42
+
+            yield
+
+            try:
+                assert _pytest.terminal.get_terminal_width() == 42  # Not changed/undone.
+            finally:
+                _pytest.terminal.get_terminal_width = orig
+
+        def test_2(testdir, fix_get_terminal_width):
+            assert _pytest.terminal.get_terminal_width() == 42
         """
     )
     result = testdir.runpytest(p1, "-ppytester")
     assert result.ret == 0
+    result.stdout.fnmatch_lines(["*= 2 passed in *"])
