@@ -1598,27 +1598,21 @@ class TestPyCacheDir:
         "prefix, source, expected",
         [
             ("c:/tmp/pycs", "d:/projects/src/foo.py", "c:/tmp/pycs/projects/src"),
-            (None, "d:/projects/src/foo.py", "d:/projects/src/__pycache__"),
             ("/tmp/pycs", "/home/projects/src/foo.py", "/tmp/pycs/home/projects/src"),
-            (None, "/home/projects/src/foo.py", "/home/projects/src/__pycache__"),
         ],
     )
-    def test_get_cache_dir(self, monkeypatch, prefix, source, expected):
-        if prefix:
-            if sys.version_info < (3, 8):
-                pytest.skip("pycache_prefix not available in py<38")
-            monkeypatch.setattr(sys, "pycache_prefix", prefix)
+    def test_get_cache_dir(self, prefix, source, expected):
+        assert get_cache_dir(Path(source), prefix) == Path(expected)
 
-        assert get_cache_dir(Path(source)) == Path(expected)
-
-    @pytest.mark.skipif(
-        sys.version_info < (3, 8), reason="pycache_prefix not available in py<38"
-    )
     def test_sys_pycache_prefix_integration(self, tmp_path, monkeypatch, testdir):
         """Integration test for sys.pycache_prefix (#4730)."""
-        pycache_prefix = tmp_path / "my/pycs"
-        monkeypatch.setattr(sys, "pycache_prefix", str(pycache_prefix))
-        monkeypatch.setattr(sys, "dont_write_bytecode", False)
+        if sys.version_info >= (3, 8):
+            pycache_prefix = tmp_path / "my/pycs"
+            monkeypatch.setattr(sys, "pycache_prefix", str(pycache_prefix))
+            monkeypatch.setattr(sys, "dont_write_bytecode", False)
+        else:
+            testdir.makeini("[pytest]\ncache_dir = {}\n".format(str(tmp_path)))
+            pycache_prefix = tmp_path / "__pycache__"
 
         testdir.makepyfile(
             **{
@@ -1639,11 +1633,15 @@ class TestPyCacheDir:
         assert bar_init.is_file()
 
         # test file: rewritten, custom pytest cache tag
-        test_foo_pyc = get_cache_dir(test_foo) / ("test_foo" + PYC_TAIL)
+        test_foo_pyc = get_cache_dir(test_foo, pycache_prefix) / ("test_foo" + PYC_TAIL)
         assert test_foo_pyc.is_file()
 
         # normal file: not touched by pytest, normal cache tag
-        bar_init_pyc = get_cache_dir(bar_init) / "__init__.{cache_tag}.pyc".format(
-            cache_tag=sys.implementation.cache_tag
-        )
+        if sys.version_info >= (3, 8) and sys.pycache_prefix:
+            prefix = sys.pycache_prefix
+        else:
+            prefix = bar_init.parent / "__pycache__"
+        bar_init_pyc = get_cache_dir(
+            bar_init, prefix
+        ) / "__init__.{cache_tag}.pyc".format(cache_tag=sys.implementation.cache_tag)
         assert bar_init_pyc.is_file()
