@@ -27,6 +27,7 @@ from _pytest.assertion.util import (  # noqa: F401
     format_explanation as _format_explanation,
 )
 from _pytest.compat import fspath
+from _pytest.config import Config
 from _pytest.pathlib import fnmatch_ex
 from _pytest.pathlib import Path
 from _pytest.pathlib import PurePath
@@ -40,7 +41,7 @@ PYC_TAIL = "." + PYTEST_TAG + PYC_EXT
 class AssertionRewritingHook(importlib.abc.MetaPathFinder):
     """PEP302/PEP451 import hook which rewrites asserts."""
 
-    def __init__(self, config):
+    def __init__(self, config: Config) -> None:
         self.config = config
         try:
             self.fnpats = config.getini("python_files")
@@ -205,7 +206,7 @@ class AssertionRewritingHook(importlib.abc.MetaPathFinder):
 
         return self._is_marked_for_rewrite(name, state)
 
-    def _is_marked_for_rewrite(self, name: str, state):
+    def _is_marked_for_rewrite(self, name: str, state) -> bool:
         try:
             return self._marked_for_rewrite_cache[name]
         except KeyError:

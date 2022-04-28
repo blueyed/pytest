@@ -200,7 +200,7 @@ class TestImportHookInstallation:
 
             class DummyEntryPoint(object):
                 name = 'spam'
-                module_name = 'spam.py'
+                value = 'spamplugin'
                 group = 'pytest11'
 
                 def load(self):
