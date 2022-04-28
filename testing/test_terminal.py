@@ -123,9 +123,7 @@ class TestTerminal:
         rep.write_fspath_result(modcol.nodeid, ".")
         rep.write_line("hello world")
         lines = linecomp.stringio.getvalue().split("\n")
-        assert not lines[0]
-        assert lines[1].endswith(modcol.name + " .")
-        assert lines[2] == "hello world"
+        assert lines == ["", "{} .".format(modcol.name), "hello world", ""]
 
     def test_show_runtest_logstart(self, testdir, linecomp):
         item = testdir.getitem("def test_func(): pass")
@@ -1591,6 +1589,8 @@ def test_terminal_summary(testdir):
         """
         def pytest_terminal_summary(terminalreporter, exitstatus):
             w = terminalreporter
+            assert w.currentfspath is None
+            w.write("pytest_terminal_summary")
             w.section("hello")
             w.line("world")
             w.line("exitstatus: {0}".format(exitstatus))
@@ -1599,7 +1599,8 @@ def test_terminal_summary(testdir):
     result = testdir.runpytest()
     result.stdout.fnmatch_lines(
         """
-        *==== hello ====*
+        pytest_terminal_summary
+        ==*== hello ==*==
         world
         exitstatus: 5
     """
