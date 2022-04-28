@@ -3,6 +3,7 @@ import os
 import queue
 import sys
 import textwrap
+from io import StringIO
 from typing import Union
 
 import py.path
@@ -1043,10 +1044,11 @@ raise ValueError()
         """
         )
         excinfo = pytest.raises(ValueError, mod.f)
-        tw = TerminalWriter(stringio=True)
+        file = StringIO()
+        tw = TerminalWriter(file=file)
         repr = excinfo.getrepr(**reproptions)
         repr.toterminal(tw)
-        assert tw.stringio.getvalue()
+        assert file.getvalue()
 
     def test_traceback_repr_style(self, importasmod, tw_mock):
         mod = importasmod(
@@ -1262,11 +1264,12 @@ raise ValueError()
         getattr(excinfo.value, attr).__traceback__ = None
 
         r = excinfo.getrepr()
-        tw = TerminalWriter(stringio=True)
+        file = StringIO()
+        tw = TerminalWriter(file=file)
         tw.hasmarkup = False
         r.toterminal(tw)
 
-        matcher = LineMatcher(tw.stringio.getvalue().splitlines())
+        matcher = LineMatcher(file.getvalue().splitlines())
         matcher.fnmatch_lines(
             [
                 "ValueError: invalid value",
