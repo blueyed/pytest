@@ -1589,6 +1589,8 @@ class LineMatcher:
         from :code:`text.splitlines()`.
     """
 
+    ELLIPSIS = "..."
+
     def __init__(self, lines: List[str]) -> None:
         self.lines = lines
         self._log_output = []  # type: List[str]
@@ -1643,6 +1645,9 @@ class LineMatcher:
     @property
     def _log_text(self) -> str:
         return "\n".join(self._log_output)
+
+    def _reset(self) -> None:
+        self._log_output = []
 
     def fnmatch_lines(
         self,
@@ -1716,6 +1721,7 @@ class LineMatcher:
         """
         if not isinstance(lines2, collections.abc.Sequence):
             raise TypeError("invalid type for lines2: {}".format(type(lines2).__name__))
+        self._reset()
         lines2 = self._getlines(lines2)
         lines1 = self.lines[:]
         nextline = None
@@ -1723,28 +1729,49 @@ class LineMatcher:
         __tracebackhide__ = True
         wnick = len(match_nickname) + 1
         started = False
+        in_ellipsis = False
         for line in lines2:
+            if (complete or consecutive) and line == self.ELLIPSIS:
+                if in_ellipsis:
+                    raise ValueError("ellipsis following ellipsis")
+                in_ellipsis = True
+                # Has to match at least one line.
+                if not lines1:
+                    self._log("remains unmatched: {!r}".format(line))
+                    msg = "unmatched: {!r}".format(line)
+                    self._fail(msg)
+                nextline = lines1.pop(0)
+                self._log(
+                    "{:>{width}}".format(self.ELLIPSIS, width=wnick), repr(nextline)
+                )
+                continue
+
             nomatchprinted = False
             while lines1:
                 nextline = lines1.pop(0)
+                matched = False
                 if line == nextline:
                     self._log("exact match:", repr(line))
-                    started = True
-                    break
+                    matched = True
                 elif match_func(nextline, line):
                     self._log("%s:" % match_nickname, repr(line))
                     self._log(
                         "{:>{width}}".format("with:", width=wnick), repr(nextline)
                     )
+                    matched = True
+
+                if matched:
                     started = True
+                    if in_ellipsis:
+                        in_ellipsis = False
                     break
-                else:
-                    if not nomatchprinted:
-                        self._log(
-                            "{:>{width}}".format("nomatch:", width=wnick), repr(line)
-                        )
-                        nomatchprinted = True
-                    self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
+
+                if not nomatchprinted:
+                    self._log("{:>{width}}".format("nomatch:", width=wnick), repr(line))
+                    nomatchprinted = True
+                self._log("{:>{width}}".format("and:", width=wnick), repr(nextline))
+
+                if not in_ellipsis:
                     if complete:
                         self._fail(
                             "no complete match: {!r} with {!r}".format(line, nextline,)
@@ -1760,7 +1787,6 @@ class LineMatcher:
                 self._log("remains unmatched: {!r}".format(line))
                 msg = "unmatched: {!r}".format(line)
                 self._fail(msg)
-        self._log_output = []
 
     def no_fnmatch_line(self, pat: str) -> None:
         """Ensure captured lines do not match the given pattern, using ``fnmatch.fnmatch``.
@@ -1788,6 +1814,7 @@ class LineMatcher:
         :param str pat: the pattern to match lines
         """
         __tracebackhide__ = True
+        self._reset()
         nomatch_printed = False
         wnick = len(match_nickname) + 1
         for line in self.lines:
@@ -1801,13 +1828,10 @@ class LineMatcher:
                     self._log("{:>{width}}".format("nomatch:", width=wnick), repr(pat))
                     nomatch_printed = True
                 self._log("{:>{width}}".format("and:", width=wnick), repr(line))
-        self._log_output = []
 
     def _fail(self, msg: str) -> None:
         __tracebackhide__ = True
-        log_output = self._log_output
-        self._log_output = []
-        raise LineMatcherFailed(msg=msg, log_output=log_output)
+        raise LineMatcherFailed(msg=msg, log_output=self._log_output[:])
 
     def str(self) -> str:
         """Return the entire original text."""

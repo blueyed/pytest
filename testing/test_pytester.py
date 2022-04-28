@@ -601,6 +601,107 @@ def test_linematcher_complete():
     ]
 
 
+def test_linematcher_ellipsis() -> None:
+    lm = LineMatcher([str(x) for x in range(5)])
+
+    lm.fnmatch_lines(["0", "...", "4"], consecutive=True)
+    lm.fnmatch_lines(["...", "3"], consecutive=True)
+    lm.fnmatch_lines(["...", "4"], consecutive=True)
+    lm.fnmatch_lines(["0", "..."], consecutive=True)
+    lm.fnmatch_lines(["1", "..."], consecutive=True)
+    with pytest.raises(ValueError, match="^ellipsis following ellipsis$"):
+        lm.fnmatch_lines(["1", "...", "...", "4"], consecutive=True)
+
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["1", "...", "5"], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "unmatched: '5'",
+        "Log:",
+        "nomatch: '1'",
+        "    and: '0'",
+        "exact match: '1'",
+        "     ... '2'",
+        "nomatch: '5'",
+        "    and: '3'",
+        "    and: '4'",
+        "remains unmatched: '5'",
+    ]
+
+    # Ellipsis consumes at least one line.
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["1", "...", "2"], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "unmatched: '2'",
+        "Log:",
+        "nomatch: '1'",
+        "    and: '0'",
+        "exact match: '1'",
+        "     ... '2'",
+        "nomatch: '2'",
+        "    and: '3'",
+        "    and: '4'",
+        "remains unmatched: '2'",
+    ]
+
+    # Resets in_ellipsis.
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["0", "...", "2", "4"], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "no consecutive match: '4' with '3'",
+        "Log:",
+        "exact match: '0'",
+        "     ... '1'",
+        "exact match: '2'",
+        "nomatch: '4'",
+        "    and: '3'",
+    ]
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["0", "...", "*", "4"], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "no consecutive match: '4' with '3'",
+        "Log:",
+        "exact match: '0'",
+        "     ... '1'",
+        "fnmatch: '*'",
+        "   with: '2'",
+        "nomatch: '4'",
+        "    and: '3'",
+    ]
+
+    # With complete=True.
+    lm.fnmatch_lines(["0", "...", "4"], complete=True)
+    lm.fnmatch_lines(["0", "...", "2", "...", "4"], complete=True)
+    lm.fnmatch_lines(["...", "4"], complete=True)
+    lm.fnmatch_lines(["0", "..."], complete=True)
+
+
+def test_linematcher_ellipsis_start_end() -> None:
+    lm = LineMatcher(["0", "1"])
+    # Ellipsis at end.
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["1", "..."], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "unmatched: '...'",
+        "Log:",
+        "nomatch: '1'",
+        "    and: '0'",
+        "exact match: '1'",
+        "remains unmatched: '...'",
+    ]
+
+    # Ellipsis at start.
+    with pytest.raises(pytest.fail.Exception) as excinfo:
+        lm.fnmatch_lines(["...", "0"], consecutive=True)
+    assert str(excinfo.value).splitlines() == [
+        "unmatched: '0'",
+        "Log:",
+        "     ... '0'",
+        "nomatch: '0'",
+        "    and: '1'",
+        "remains unmatched: '0'",
+    ]
+
+
 @pytest.mark.parametrize("function", ["no_fnmatch_line", "no_re_match_line"])
 def test_linematcher_no_matching(function) -> None:
     if function == "no_fnmatch_line":
