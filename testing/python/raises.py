@@ -126,9 +126,19 @@ class TestRaises:
         result = testdir.runpytest()
         result.stdout.fnmatch_lines(["*2 failed*"])
 
-    def test_noclass(self):
-        with pytest.raises(TypeError):
-            pytest.raises("wrong", lambda: None)
+    def test_noclass_iterable(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match="^exceptions must be derived from BaseException, not str$",
+        ):
+            pytest.raises("wrong", lambda: None)  # type: ignore[call-overload]
+
+    def test_noclass_noniterable(self) -> None:
+        with pytest.raises(
+            TypeError,
+            match="^exceptions must be derived from BaseException, not int$",
+        ):
+            pytest.raises(41, lambda: None)  # type: ignore[call-overload]
 
     def test_invalid_arguments_to_raises(self):
         with pytest.raises(TypeError, match="unknown"):
@@ -283,3 +293,17 @@ class TestRaises:
             with pytest.raises(Exception, foo="bar"):
                 pass
         assert "Unexpected keyword arguments" in str(excinfo.value)
+
+    def test_expected_exception_is_not_a_baseexception(self) -> None:
+        msg = "^exceptions must be derived from BaseException, not {}$"
+        with pytest.raises(TypeError, match=msg.format("str")):
+            pytest.raises("hello")  # type: ignore[call-overload]
+
+        class NotAnException:
+            pass
+
+        with pytest.raises(TypeError, match=msg.format("NotAnException")):
+            pytest.raises(NotAnException)  # type: ignore[type-var]
+
+        with pytest.raises(TypeError, match=msg.format("str")):
+            pytest.raises(("hello", NotAnException))  # type: ignore[arg-type]

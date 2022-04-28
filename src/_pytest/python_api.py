@@ -1,11 +1,9 @@
-import inspect
 import math
 import pprint
 from collections.abc import Iterable
 from collections.abc import Mapping
 from collections.abc import Sized
 from decimal import Decimal
-from itertools import filterfalse
 from numbers import Number
 from types import TracebackType
 from typing import Any
@@ -18,9 +16,8 @@ from typing import Tuple
 from typing import TypeVar
 from typing import Union
 
-from more_itertools.more import always_iterable
-
 import _pytest._code
+from .types import validate_tup_type
 from _pytest.compat import overload
 from _pytest.compat import STRING_TYPES
 from _pytest.compat import TYPE_CHECKING
@@ -28,9 +25,6 @@ from _pytest.outcomes import fail
 
 if TYPE_CHECKING:
     from typing import Type  # noqa: F401 (used in type string)
-
-
-BASE_TYPE = (type, STRING_TYPES)
 
 
 def _non_numeric_type_error(value, at):
@@ -677,11 +671,8 @@ def raises(  # noqa: F811
         documentation for :ref:`the try statement <python:try>`.
     """
     __tracebackhide__ = True
-    for exc in filterfalse(
-        inspect.isclass, always_iterable(expected_exception, BASE_TYPE)
-    ):
-        msg = "exceptions must be derived from BaseException, not %s"
-        raise TypeError(msg % type(exc))
+
+    validate_tup_type(expected_exception, BaseException)
 
     message = "DID NOT RAISE {}".format(expected_exception)
 

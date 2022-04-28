@@ -3,6 +3,7 @@ import warnings
 from typing import Optional
 
 import pytest
+from _pytest.recwarn import WarningsChecker
 from _pytest.recwarn import WarningsRecorder
 
 
@@ -50,14 +51,19 @@ class TestWarningsRecorderChecker:
             warnings.warn("test", DeprecationWarning, 2)
 
     def test_typechecking(self) -> None:
-        from _pytest.recwarn import WarningsChecker
+        msg = "exceptions must be derived from Warning, not {}"
+        with pytest.raises(TypeError, match=msg.format("int")):
+            WarningsChecker(5)  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match=msg.format("str")):
+            WarningsChecker(("hi", RuntimeWarning))  # type: ignore[arg-type]
+        with pytest.raises(TypeError, match=msg.format("list")):
+            WarningsChecker([DeprecationWarning, RuntimeWarning])  # type: ignore[arg-type]
 
-        with pytest.raises(TypeError):
-            WarningsChecker(5)  # type: ignore
-        with pytest.raises(TypeError):
-            WarningsChecker(("hi", RuntimeWarning))  # type: ignore
-        with pytest.raises(TypeError):
-            WarningsChecker([DeprecationWarning, RuntimeWarning])  # type: ignore
+    def test_nested_tuples(self) -> None:
+        wc1 = WarningsChecker((DeprecationWarning, RuntimeWarning))
+        wc2 = WarningsChecker(((DeprecationWarning,), (RuntimeWarning,)))  # type: ignore[arg-type]
+        assert wc1.expected_warning == (DeprecationWarning, RuntimeWarning)
+        assert wc1.expected_warning == wc2.expected_warning
 
     def test_invalid_enter_exit(self) -> None:
         # wrap this test in WarningsRecorder to ensure warning state gets reset
