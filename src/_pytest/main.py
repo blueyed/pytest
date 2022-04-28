@@ -1,4 +1,5 @@
 """ core implementation of testing process: init, session, runtest loop. """
+import argparse
 import fnmatch
 import functools
 import importlib
@@ -41,6 +42,24 @@ if TYPE_CHECKING:
     from _pytest.python import Package
 
 
+class MoreQuietAction(argparse._CountAction):
+    """Count down and update the legacy `quiet` attribute.
+
+    Used to unify verbosity handling."""
+
+    def __call__(
+        self,
+        parser: argparse.ArgumentParser,
+        namespace: argparse.Namespace,
+        values: Union[str, Sequence[object], None],
+        option_string: Optional[str] = None,
+    ) -> None:
+        new_count = getattr(namespace, self.dest, 0) - 1
+        setattr(namespace, self.dest, new_count)
+        # TODO(Ronny Pfannschmidt): Deprecate config.quiet.
+        namespace.quiet = getattr(namespace, "quiet", 0) + 1
+
+
 def pytest_addoption(parser):
     parser.addini(
         "norecursedirs",
@@ -55,7 +74,31 @@ def pytest_addoption(parser):
         type="args",
         default=[],
     )
+
     group = parser.getgroup("general", "running and selection options")
+    group._addoption(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        dest="verbose",
+        help="increase verbosity.",
+    )
+    group._addoption(
+        "-q",
+        "--quiet",
+        action=MoreQuietAction,
+        default=0,
+        dest="verbose",
+        help="decrease verbosity.",
+    )
+    group._addoption(
+        "--verbosity",
+        dest="verbose",
+        type=int,
+        default=0,
+        help="set verbosity. Default is 0.",
+    )
     group._addoption(
         "-x",
         "--exitfirst",
@@ -164,6 +207,44 @@ def pytest_addoption(parser):
         dest="collect_in_virtualenv",
         default=False,
         help="Don't ignore tests in a local virtualenv directory",
+    )
+
+    group = parser.getgroup("tracebacks", "Traceback formatting")
+    group._addoption(
+        "--tb",
+        metavar="style",
+        action="store",
+        dest="tbstyle",
+        default="auto",
+        choices=["auto", "long", "short", "no", "line", "native"],
+        help=(
+            "traceback print mode (auto/long/short/line/native/no):\n"
+            " - auto (default): 'long' tracebacks for the first and last entry,"
+            " but 'short' style for the other entries\n"
+            " - long: exhaustive, informative traceback formatting\n"
+            " - short: shorter traceback format\n"
+            " - line: only one line per failure\n"
+            " - native: Python standard library formatting\n"
+            " - no: no traceback at all\n"
+        ),
+    )
+    group._addoption(
+        "--fulltrace",
+        "--full-trace",
+        action="store_true",
+        default=False,
+        help=(
+            "don't cut any tracebacks (default is to cut). "
+            "When used `-tb` defaults to 'long'."
+        ),
+    )
+    group._addoption(
+        "-l",
+        "--showlocals",
+        action="store_true",
+        dest="showlocals",
+        default=False,
+        help="show locals in tracebacks (disabled by default).",
     )
 
     group = parser.getgroup("debugconfig", "test session debugging and configuration")

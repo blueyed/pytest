@@ -857,7 +857,7 @@ class Config:
         return self
 
     def notify_exception(self, excinfo, option=None):
-        if option and getattr(option, "fulltrace", False):
+        if getattr(option, "fulltrace", False):
             style = "long"
         else:
             style = "native"
