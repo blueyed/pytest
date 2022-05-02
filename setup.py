@@ -33,7 +33,7 @@ def main():
                 "xmlschema",
             ],  # fmt: on
             "checkqa-mypy": [
-                "mypy==v0.910",  # keep this in sync with .pre-commit-config.yaml.
+                "mypy==v0.931",  # keep this in sync with .pre-commit-config.yaml.
                 "types-setuptools",
             ],
         },
