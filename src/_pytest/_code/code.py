@@ -32,6 +32,7 @@ import _pytest
 from _pytest._io import TerminalWriter
 from _pytest._io.saferepr import safeformat
 from _pytest._io.saferepr import saferepr
+from _pytest.compat import ATTRS_EQ_FIELD
 from _pytest.compat import overload
 from _pytest.compat import TYPE_CHECKING
 from _pytest.outcomes import OutcomeException
@@ -64,7 +65,7 @@ class Code:
         return self.raw == other.raw
 
     # Ignore type because of https://github.com/python/mypy/issues/4266.
-    __hash__ = None  # type: ignore
+    __hash__ = None  # type: ignore[assignment]
 
     def __ne__(self, other):
         return not self == other
@@ -814,9 +815,9 @@ class FormattedExcinfo:
             else:
                 message = ""
             path = self._makepath(entry.path)
-            filelocrepr = ReprFileLocation(path, entry.lineno + 1, message)
+            reprfileloc = ReprFileLocation(path, entry.lineno + 1, message)
             localsrepr = self.repr_locals(entry.locals)
-            return ReprEntry(lines, reprargs, localsrepr, filelocrepr, style)
+            return ReprEntry(lines, reprargs, localsrepr, reprfileloc, style)
         if excinfo:
             lines.extend(self.get_exconly(excinfo, indent=4))
         return ReprEntry(lines, None, None, None, style)
@@ -878,9 +879,9 @@ class FormattedExcinfo:
                 max_frames=max_frames,
                 total=len(traceback),
             )  # type: Optional[str]
-            # Type ignored because adding two instaces of a List subtype
+            # Type ignored because adding two instances of a List subtype
             # currently incorrectly has type List instead of the subtype.
-            traceback = traceback[:max_frames] + traceback[-max_frames:]  # type: ignore
+            traceback = traceback[:max_frames] + traceback[-max_frames:]  # type: ignore[assignment]
         else:
             if recursionindex is not None:
                 extraline = "!!! Recursion detected (same locals & position)"
@@ -936,6 +937,7 @@ class FormattedExcinfo:
         return ExceptionChainRepr(repr_chain)
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class TerminalRepr:
     def __str__(self) -> str:
         # FYI this is called from pytest-xdist's serialization of exception
@@ -952,8 +954,9 @@ class TerminalRepr:
         raise NotImplementedError()
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ExceptionRepr(TerminalRepr):
-    def __init__(self) -> None:
+    def __attrs_post_init__(self):
         self.sections = []  # type: List[Tuple[str, str, str]]
 
     def addsection(self, name: str, content: str, sep: str = "-") -> None:
@@ -965,19 +968,20 @@ class ExceptionRepr(TerminalRepr):
             tw.line(content)
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ExceptionChainRepr(ExceptionRepr):
-    def __init__(
-        self,
-        chain: Sequence[
+    chain = attr.ib(
+        type=Sequence[
             Tuple["ReprTraceback", Optional["ReprFileLocation"], Optional[str]]
-        ],
-    ) -> None:
-        super().__init__()
-        self.chain = chain
+        ]
+    )
+
+    def __attrs_post_init__(self):
+        super().__attrs_post_init__()
         # reprcrash and reprtraceback of the outermost (the newest) exception
         # in the chain
-        self.reprtraceback = chain[-1][0]
-        self.reprcrash = chain[-1][1]
+        self.reprtraceback = self.chain[-1][0]
+        self.reprcrash = self.chain[-1][1]
 
     def toterminal(self, tw: TerminalWriter) -> None:
         for element in self.chain:
@@ -988,20 +992,17 @@ class ExceptionChainRepr(ExceptionRepr):
         super().toterminal(tw)
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprExceptionInfo(ExceptionRepr):
-    def __init__(
-        self, reprtraceback: "ReprTraceback", reprcrash: "ReprFileLocation"
-    ) -> None:
-        super().__init__()
-        self.reprtraceback = reprtraceback
-        self.reprcrash = reprcrash
+    reprtraceback = attr.ib(type="ReprTraceback")
+    reprcrash = attr.ib(type="ReprFileLocation")
 
     def toterminal(self, tw: TerminalWriter) -> None:
         self.reprtraceback.toterminal(tw)
         super().toterminal(tw)
 
 
-@attr.s
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprTraceback(TerminalRepr):
     reprentries = attr.ib(type=Sequence[Union["ReprEntry", "ReprEntryNative"]])
     extraline = attr.ib(type=Optional[str])
@@ -1035,30 +1036,22 @@ class ReprTracebackNative(ReprTraceback):
         self.extraline = None
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprEntryNative(TerminalRepr):
+    lines = attr.ib(type=Sequence[str])
     style = "native"  # type: _TracebackStyle
-
-    def __init__(self, tblines: Sequence[str]) -> None:
-        self.lines = tblines
 
     def toterminal(self, tw: TerminalWriter) -> None:
         tw.write("".join(self.lines))
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprEntry(TerminalRepr):
-    def __init__(
-        self,
-        lines: Sequence[str],
-        reprfuncargs: Optional["ReprFuncArgs"],
-        reprlocals: Optional["ReprLocals"],
-        filelocrepr: Optional["ReprFileLocation"],
-        style: "_TracebackStyle",
-    ) -> None:
-        self.lines = lines
-        self.reprfuncargs = reprfuncargs
-        self.reprlocals = reprlocals
-        self.reprfileloc = filelocrepr
-        self.style = style
+    lines = attr.ib(type=Sequence[str])
+    reprfuncargs = attr.ib(type=Optional["ReprFuncArgs"])
+    reprlocals = attr.ib(type=Optional["ReprLocals"])
+    reprfileloc = attr.ib(type=Optional["ReprFileLocation"])
+    style = attr.ib(type="_TracebackStyle")
 
     @staticmethod
     def _color_error_lines(tw: TerminalWriter, lines: Sequence[str]) -> None:
@@ -1115,7 +1108,7 @@ class ReprEntry(TerminalRepr):
         )
 
 
-@attr.s
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprFileLocation(TerminalRepr):
     path = attr.ib(type=str, converter=str)
     lineno = attr.ib(type="Optional[int]")
@@ -1141,18 +1134,18 @@ class ReprFileLocation(TerminalRepr):
             tw.line(": {}".format(self._get_short_msg()))
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprLocals(TerminalRepr):
-    def __init__(self, lines: Sequence[str]) -> None:
-        self.lines = lines
+    lines = attr.ib(type=Sequence[str])
 
     def toterminal(self, tw: TerminalWriter, indent="") -> None:
         for line in self.lines:
             tw.line(indent + line)
 
 
+@attr.s(**{ATTRS_EQ_FIELD: False})  # type: ignore[call-overload]
 class ReprFuncArgs(TerminalRepr):
-    def __init__(self, args: Sequence[Tuple[str, object]]) -> None:
-        self.args = args
+    args = attr.ib(type=Sequence[Tuple[str, object]])
 
     def toterminal(self, tw: TerminalWriter) -> None:
         if self.args:
