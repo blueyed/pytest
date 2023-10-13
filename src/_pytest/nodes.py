@@ -548,13 +548,28 @@ class Item(Node):
 
     nextitem = None
 
-    def __init__(self, name, parent=None, config=None, session=None, nodeid=None):
+    def __init__(
+        self,
+        name,
+        parent=None,
+        config=None,
+        session=None,
+        nodeid=None,
+        *,
+        originalname: str = None
+    ):
         super().__init__(name, parent, config, session, nodeid=nodeid)
         self._report_sections = []  # type: List[Tuple[str, str, str]]
 
         #: user properties is a list of tuples (name, value) that holds user
         #: defined properties for this test.
         self.user_properties = []  # type: List[Tuple[str, Any]]
+
+        #: Original function name, without any decorations (for example
+        #: parametrization adds a ``"[...]"`` suffix to function names).
+        #:
+        #: .. versionadded:: 3.0
+        self.originalname = originalname
 
     def runtest(self) -> None:
         raise NotImplementedError("runtest must be implemented by Item subclass")
